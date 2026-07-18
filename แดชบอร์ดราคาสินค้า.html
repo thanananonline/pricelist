@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แดชบอร์ดราคาสินค้า - ธนานันท์ฮาร์ดแวร์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans Thai', 'Kanit', sans-serif; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
+  a { color: #2E2E86; }
+  a:hover { color: #23236A; }
+  button, input, select { font-family: inherit; }
+  .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+  .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+
+/* ---------- data ---------- */
+
+var STORAGE = {
+  overrides: "thananan_price_overrides",
+  customProducts: "thananan_custom_products",
+  concreteFolders: "thananan_concrete_folders",
+  tisFolders: "thananan_tis_folders",
+  contacts: "thananan_contact_info",
+  users: "thananan_users",
+};
+
+var CATEGORIES = [
+  { value: "all", label: "ทุกหมวดหมู่" },
+  { value: "concrete_pipe", label: "ผลิตภัณฑ์คอนกรีต - ท่อ" },
+  { value: "concrete_manhole", label: "ผลิตภัณฑ์คอนกรีต - บ่อพัก" },
+  { value: "concrete_pile", label: "ผลิตภัณฑ์คอนกรีต - เสาเข็ม" },
+  { value: "concrete_slab", label: "ผลิตภัณฑ์คอนกรีต - แผ่นพื้น" },
+  { value: "cement", label: "ปูนถุง" },
+  { value: "steel", label: "เหล็กเส้น / เหล็กรูปพรรณ" },
+];
+var CAT_LABEL = Object.fromEntries(CATEGORIES.map(function (c) { return [c.value, c.label]; }));
+
+var CAT_HUE = {
+  cement: 60, steel: 250,
+  concrete_pipe: 210, concrete_manhole: 90, concrete_pile: 25, concrete_slab: 130,
+};
+function img(cat) {
+  var h = CAT_HUE[cat] != null ? CAT_HUE[cat] : 60;
+  return { bg: "oklch(0.93 0.02 " + h + ")", stripe: "oklch(0.88 0.035 " + h + ")" };
+}
+
+var RAW_PRODUCTS_BASE = [
+  { id: "c1", cat: "cement", name: "ปูนซีเมนต์ปอร์ตแลนด์ ตราอินทรี ถุง 50 กก.", sku: "CEM-001", price: 145, oldPrice: null, unit: "ถุง", stock: 320 },
+  { id: "c2", cat: "cement", name: "ปูนซีเมนต์ผสม ตราเสือ ถุง 50 กก.", sku: "CEM-002", price: 128, oldPrice: 138, unit: "ถุง", stock: 210 },
+  { id: "c3", cat: "cement", name: "ปูนก่อสำเร็จรูป ตราจระเข้ ถุง 50 กก.", sku: "CEM-003", price: 132, oldPrice: null, unit: "ถุง", stock: 8 },
+  { id: "s1", cat: "steel", name: "เหล็กเส้นกลม RB9 มม. ยาว 10 ม.", sku: "STL-001", price: 98, oldPrice: null, unit: "เส้น", stock: 560 },
+  { id: "s2", cat: "steel", name: "เหล็กข้ออ้อย DB12 มม. ยาว 10 ม.", sku: "STL-002", price: 175, oldPrice: 190, unit: "เส้น", stock: 240 },
+  { id: "s3", cat: "steel", name: "เหล็กกล่องสี่เหลี่ยม 2x2 นิ้ว หนา 1.2 มม.", sku: "STL-003", price: 265, oldPrice: null, unit: "เส้น", stock: 12 },
+  { id: "k1", cat: "concrete_slab", name: "แผ่นพื้นคอนกรีตสำเร็จรูป ท้องเรียบ", sku: "CON-001", price: 245, oldPrice: null, unit: "แผ่น", stock: 220 },
+  { id: "k2", cat: "concrete_pipe", name: "ท่อคอนกรีตเสริมเหล็ก เส้นผ่านศูนย์กลาง 40 ซม.", sku: "CON-002", price: 620, oldPrice: 680, unit: "ท่อ", stock: 75 },
+  { id: "pp1", cat: "concrete_pipe", name: "ท่อ PVC สีฟ้า ชั้น 8.5 ขนาด 4 นิ้ว ยาว 4 ม.", sku: "PIP-001", price: 285, oldPrice: null, unit: "ท่อน", stock: 640 },
+  { id: "pp2", cat: "concrete_pipe", name: "ท่อ HDPE สำหรับประปา ขนาด 2 นิ้ว", sku: "PIP-002", price: 195, oldPrice: 215, unit: "เมตร", stock: 410 },
+  { id: "pp3", cat: "concrete_pipe", name: "ท่อระบายน้ำคอนกรีตเสริมเหล็ก ขนาด 60 ซม.", sku: "PIP-003", price: 890, oldPrice: null, unit: "ท่อน", stock: 32 },
+  { id: "pp4", cat: "concrete_manhole", name: "บ่อพัก คสล. สำเร็จรูป ขนาด 40x40 ซม.", sku: "PIP-004", price: 450, oldPrice: 490, unit: "บ่อ", stock: 58 },
+  { id: "pp5", cat: "concrete_manhole", name: "บ่อพักพลาสติก PP ฝาเหล็กหล่อ ขนาด 30 ซม.", sku: "PIP-005", price: 620, oldPrice: null, unit: "ชุด", stock: 7 },
+  { id: "pp6", cat: "concrete_manhole", name: "ฝาบ่อพักคอนกรีต พร้อมขอบเหล็ก ขนาด 40 ซม.", sku: "PIP-006", price: 320, oldPrice: null, unit: "ฝา", stock: 90 },
+  { id: "k3", cat: "concrete_pile", name: "เสาเข็มคอนกรีตอัดแรง หน้าตัด I26", sku: "CON-003", price: 890, oldPrice: null, unit: "ต้น", stock: 5 },
+];
+var RAW_PRODUCTS = RAW_PRODUCTS_BASE.map(function (p) { return Object.assign({}, p, { vat: "vat" }); });
+
+var DEFAULT_CONCRETE_FOLDERS = [
+  { id: "cf-pipe", name: "ท่อ", files: [] },
+  { id: "cf-manhole", name: "บ่อพัก", files: [] },
+  { id: "cf-pile", name: "เสาเข็ม", files: [] },
+  { id: "cf-slab", name: "แผ่นพื้น", files: [] },
+];
+var DEFAULT_TIS_FOLDERS = [
+  { id: "tis-pipe", name: "ท่อคอนกรีต", files: [] },
+  { id: "tis-manhole", name: "บ่อพัก", files: [] },
+  { id: "tis-pile", name: "เสาเข็ม", files: [] },
+  { id: "tis-slab", name: "แผ่นพื้น", files: [] },
+];
+var DEFAULT_CONTACTS = [
+  { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
+];
+var DEFAULT_USERS = [{ username: "admin", password: "1234", role: "admin" }];
+
+/* ---------- helpers ---------- */
+
+function fmt(n) { return Number(n).toLocaleString("th-TH"); }
+
+function esc(str) {
+  return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function loadJSON(key, fallback) {
+  try {
+    var v = JSON.parse(localStorage.getItem(key));
+    return v == null ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveJSON(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+}
+
+/* ---------- component ---------- */
+
+function Dashboard(root) {
+  this.root = root;
+  this.state = {
+    loggedIn: false,
+    authMode: "login",
+    authError: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    users: DEFAULT_USERS,
+    page: "price",
+    concreteFolders: DEFAULT_CONCRETE_FOLDERS,
+    activeConcreteFolderId: null,
+    newConcreteFolderName: "",
+    tisFolders: DEFAULT_TIS_FOLDERS,
+    activeTisFolderId: null,
+    newTisFolderName: "",
+    search: "",
+    category: "all",
+    sortBy: "name",
+    view: "grid",
+    overrides: {},
+    editingId: null,
+    editName: "",
+    editPrice: "",
+    editUnit: "",
+    editVat: "vat",
+    customProducts: [],
+    showAddForm: false,
+    newProdName: "",
+    newProdCat: "cement",
+    newProdPrice: "",
+    newProdUnit: "",
+    newProdVat: "vat",
+    newProdError: "",
+    newUserName: "",
+    newUserPassword: "",
+    newUserRole: "viewer",
+    userError: "",
+    contacts: DEFAULT_CONTACTS,
+    newContactName: "",
+    newContactDept: "",
+    newContactPhone: "",
+    newContactAddress: "",
+  };
+
+  this.componentDidMount();
+
+  var self = this;
+  root.addEventListener("click", function (e) { self.handleClick(e); });
+  root.addEventListener("submit", function (e) { self.handleSubmit(e); });
+  root.addEventListener("input", function (e) { self.handleFieldChange(e); });
+  root.addEventListener("change", function (e) { self.handleChange(e); });
+
+  this.render();
+}
+
+Dashboard.prototype.componentDidMount = function () {
+  this.state.overrides = loadJSON(STORAGE.overrides, {});
+  this.state.customProducts = loadJSON(STORAGE.customProducts, []);
+  var cf = loadJSON(STORAGE.concreteFolders, DEFAULT_CONCRETE_FOLDERS);
+  this.state.concreteFolders = Array.isArray(cf) ? cf : DEFAULT_CONCRETE_FOLDERS;
+  var tf = loadJSON(STORAGE.tisFolders, DEFAULT_TIS_FOLDERS);
+  this.state.tisFolders = Array.isArray(tf) ? tf : DEFAULT_TIS_FOLDERS;
+  var ct = loadJSON(STORAGE.contacts, DEFAULT_CONTACTS);
+  this.state.contacts = Array.isArray(ct) ? ct : DEFAULT_CONTACTS;
+  var us = loadJSON(STORAGE.users, DEFAULT_USERS);
+  this.state.users = (Array.isArray(us) && us.length) ? us : DEFAULT_USERS;
+};
+
+Dashboard.prototype.setState = function (patch) {
+  Object.assign(this.state, typeof patch === "function" ? patch(this.state) : patch);
+  this.render();
+};
+
+/* ---- event dispatch ---- */
+
+Dashboard.prototype.handleClick = function (e) {
+  var t = e.target.closest("[data-action]");
+  if (!t) return;
+  var action = t.dataset.action;
+  var d = t.dataset;
+  switch (action) {
+    case "logout": this.onLogout(); break;
+    case "nav": this.setState({ page: d.page }); break;
+    case "toggle-auth-mode": e.preventDefault(); this.onToggleMode(); break;
+    case "set-view": this.setState({ view: d.view }); break;
+    case "toggle-add-form": this.onToggleAddForm(); break;
+    case "start-edit": this.startEdit(d.id); break;
+    case "save-edit": this.saveEdit(d.id); break;
+    case "open-folder": this.openFolder(d.kind, d.id); break;
+    case "close-folder": this.closeFolder(d.kind); break;
+    case "remove-folder": this.removeFolder(d.kind, d.id); break;
+    case "remove-file": this.removeFile(d.kind, d.folderId, d.fileId); break;
+    case "remove-user": this.removeUser(d.username); break;
+    case "remove-contact": this.removeContact(d.id); break;
+  }
+};
+
+Dashboard.prototype.handleSubmit = function (e) {
+  var form = e.target.closest("form[data-form]");
+  if (!form) return;
+  e.preventDefault();
+  var kind = form.dataset.form;
+  switch (kind) {
+    case "auth": this.onSubmitAuth(); break;
+    case "add-product": this.onAddProduct(); break;
+    case "add-user": this.onAddUser(); break;
+    case "add-contact": this.onAddContact(); break;
+    case "add-folder":
+      this.addFolder(form.dataset.kind);
+      break;
+  }
+};
+
+Dashboard.prototype.handleFieldChange = function (e) {
+  var el = e.target.closest("[data-bind]");
+  if (!el || el.type === "file") return;
+  var key = el.dataset.bind;
+  this.state[key] = el.value;
+  if (el.dataset.clear) this.state[el.dataset.clear] = "";
+  this.render();
+};
+
+Dashboard.prototype.handleChange = function (e) {
+  if (e.target.type === "file" && e.target.dataset.action === "upload-file") {
+    var kind = e.target.dataset.kind;
+    var file = e.target.files && e.target.files[0];
+    if (file) this.uploadFile(kind, file);
+    e.target.value = "";
+    return;
+  }
+  this.handleFieldChange(e);
+};
+
+/* ---- auth ---- */
+
+Dashboard.prototype.onToggleMode = function () {
+  this.setState(function (s) {
+    return { authMode: s.authMode === "login" ? "register" : "login", authError: "", password: "", confirmPassword: "" };
+  });
+};
+
+Dashboard.prototype.onSubmitAuth = function () {
+  var s = this.state;
+  var u = s.username.trim();
+  if (s.authMode === "login") {
+    if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
+    var match = s.users.find(function (usr) { return usr.username === u && usr.password === s.password; });
+    if (!match) { this.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }); return; }
+    this.setState({ loggedIn: true, authError: "" });
+    return;
+  }
+  if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
+  if (s.password !== s.confirmPassword) { this.setState({ authError: "รหัสผ่านไม่ตรงกัน" }); return; }
+  if (s.users.some(function (usr) { return usr.username === u; })) { this.setState({ authError: "ชื่อผู้ใช้นี้มีอยู่แล้ว" }); return; }
+  this.setState(function (s2) {
+    var users = s2.users.concat([{ username: u, password: s2.password, role: "viewer" }]);
+    saveJSON(STORAGE.users, users);
+    return { users: users, loggedIn: true, authError: "" };
+  });
+};
+
+Dashboard.prototype.onLogout = function () {
+  this.setState({ loggedIn: false, password: "", confirmPassword: "", authMode: "login" });
+};
+
+/* ---- products ---- */
+
+Dashboard.prototype.getMergedProducts = function () {
+  var overrides = this.state.overrides;
+  return RAW_PRODUCTS.concat(this.state.customProducts).map(function (p) {
+    var ov = overrides[p.id];
+    if (!ov) return p;
+    return Object.assign({}, p, {
+      name: ov.name != null ? ov.name : p.name,
+      unit: ov.unit != null ? ov.unit : p.unit,
+      price: ov.price != null ? ov.price : p.price,
+      vat: ov.vat != null ? ov.vat : p.vat,
+    });
+  });
+};
+
+Dashboard.prototype.computeProducts = function () {
+  var s = this.state;
+  var q = s.search.trim().toLowerCase();
+  var withOverrides = this.getMergedProducts();
+
+  var list = withOverrides.filter(function (p) {
+    var matchesCat = s.category === "all" || p.cat === s.category;
+    var matchesQ = !q || p.name.toLowerCase().indexOf(q) !== -1 || p.sku.toLowerCase().indexOf(q) !== -1;
+    return matchesCat && matchesQ;
+  });
+
+  if (s.sortBy === "name") list = list.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "th"); });
+  if (s.sortBy === "price_asc") list = list.slice().sort(function (a, b) { return a.price - b.price; });
+  if (s.sortBy === "price_desc") list = list.slice().sort(function (a, b) { return b.price - a.price; });
+
+  return list.map(function (p) {
+    var im = img(p.cat);
+    return {
+      id: p.id, name: p.name, sku: p.sku, categoryLabel: CAT_LABEL[p.cat], unit: p.unit,
+      priceDisplay: fmt(p.price),
+      oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
+      hasDiscount: !!p.oldPrice,
+      vatLabel: p.vat === "novat" ? "NO VAT" : "VAT",
+      vatBadgeBg: p.vat === "novat" ? "oklch(0.93 0.03 85)" : "oklch(0.92 0.05 155)",
+      vatBadgeColor: p.vat === "novat" ? "oklch(0.45 0.1 80)" : "oklch(0.4 0.09 155)",
+      imgBg: im.bg, imgStripe: im.stripe,
+      isEditing: s.editingId === p.id,
+    };
+  });
+};
+
+Dashboard.prototype.startEdit = function (id) {
+  var p = this.getMergedProducts().find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({ editingId: p.id, editName: p.name, editPrice: String(p.price), editUnit: p.unit, editVat: p.vat || "vat" });
+};
+
+Dashboard.prototype.saveEdit = function (id) {
+  var s = this.state;
+  var price = parseFloat(s.editPrice);
+  var name = s.editName.trim();
+  var unit = s.editUnit.trim();
+  var editVat = s.editVat;
+  this.setState(function (s2) {
+    var isCustom = s2.customProducts.some(function (cp) { return cp.id === id; });
+    if (isCustom) {
+      var customProducts = s2.customProducts.map(function (cp) {
+        if (cp.id !== id) return cp;
+        return Object.assign({}, cp, {
+          name: name || cp.name, unit: unit || cp.unit,
+          price: isNaN(price) ? cp.price : price, vat: editVat,
+        });
+      });
+      saveJSON(STORAGE.customProducts, customProducts);
+      return { customProducts: customProducts, editingId: null };
+    }
+    var prev = s2.overrides[id] || {};
+    var overrides = Object.assign({}, s2.overrides);
+    overrides[id] = {
+      name: name || prev.name, unit: unit || prev.unit,
+      price: isNaN(price) ? prev.price : price, vat: editVat,
+    };
+    saveJSON(STORAGE.overrides, overrides);
+    return { overrides: overrides, editingId: null };
+  });
+};
+
+Dashboard.prototype.onToggleAddForm = function () {
+  this.setState(function (s) { return { showAddForm: !s.showAddForm, newProdError: "" }; });
+};
+
+Dashboard.prototype.onAddProduct = function () {
+  var s = this.state;
+  var name = s.newProdName.trim();
+  var unit = s.newProdUnit.trim();
+  var price = parseFloat(s.newProdPrice);
+  if (!name || !unit || isNaN(price) || price < 0) {
+    this.setState({ newProdError: "กรุณากรอกข้อมูลให้ครบและถูกต้อง" });
+    return;
+  }
+  var id = "custom-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+  var sku = "CUS-" + String(Date.now()).slice(-5);
+  var product = { id: id, cat: s.newProdCat, name: name, sku: sku, price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat };
+  this.setState(function (s2) {
+    var customProducts = s2.customProducts.concat([product]);
+    saveJSON(STORAGE.customProducts, customProducts);
+    return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdError: "" };
+  });
+};
+
+/* ---- folders (concrete / tis, shared logic) ---- */
+
+Dashboard.prototype._folderKeys = function (kind) {
+  return kind === "concrete"
+    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", storageKey: STORAGE.concreteFolders, idPrefix: "cf" }
+    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", storageKey: STORAGE.tisFolders, idPrefix: "tis" };
+};
+
+Dashboard.prototype.addFolder = function (kind) {
+  var k = this._folderKeys(kind);
+  var name = (this.state[k.nameKey] || "").trim();
+  if (!name) return;
+  var id = k.idPrefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+  var self = this;
+  this.setState(function (s) {
+    var folders = s[k.stateKey].concat([{ id: id, name: name, files: [] }]);
+    saveJSON(k.storageKey, folders);
+    var patch = {};
+    patch[k.stateKey] = folders;
+    patch[k.nameKey] = "";
+    return patch;
+  });
+};
+
+Dashboard.prototype.removeFolder = function (kind, id) {
+  var k = this._folderKeys(kind);
+  this.setState(function (s) {
+    var folders = s[k.stateKey].filter(function (f) { return f.id !== id; });
+    saveJSON(k.storageKey, folders);
+    var patch = {};
+    patch[k.stateKey] = folders;
+    if (s[k.activeKey] === id) patch[k.activeKey] = null;
+    return patch;
+  });
+};
+
+Dashboard.prototype.openFolder = function (kind, id) {
+  var k = this._folderKeys(kind);
+  var patch = {};
+  patch[k.activeKey] = id;
+  this.setState(patch);
+};
+
+Dashboard.prototype.closeFolder = function (kind) {
+  var k = this._folderKeys(kind);
+  var patch = {};
+  patch[k.activeKey] = null;
+  this.setState(patch);
+};
+
+Dashboard.prototype.uploadFile = function (kind, file) {
+  var k = this._folderKeys(kind);
+  var activeId = this.state[k.activeKey];
+  if (!activeId) return;
+  var sizeKb = file.size / 1024;
+  var sizeLabel = sizeKb > 1024 ? (sizeKb / 1024).toFixed(1) + " MB" : sizeKb.toFixed(0) + " KB";
+  var fileId = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  var self = this;
+  var reader = new FileReader();
+  reader.onload = function () {
+    var url = reader.result;
+    self.setState(function (s) {
+      var folders = s[k.stateKey].map(function (f) {
+        if (f.id !== activeId) return f;
+        return Object.assign({}, f, { files: f.files.concat([{ id: fileId, name: file.name, sizeLabel: sizeLabel, url: url }]) });
+      });
+      saveJSON(k.storageKey, folders);
+      var patch = {};
+      patch[k.stateKey] = folders;
+      return patch;
+    });
+  };
+  reader.readAsDataURL(file);
+};
+
+Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
+  var k = this._folderKeys(kind);
+  this.setState(function (s) {
+    var folders = s[k.stateKey].map(function (f) {
+      if (f.id !== folderId) return f;
+      return Object.assign({}, f, { files: f.files.filter(function (x) { return x.id !== fileId; }) });
+    });
+    saveJSON(k.storageKey, folders);
+    var patch = {};
+    patch[k.stateKey] = folders;
+    return patch;
+  });
+};
+
+/* ---- users ---- */
+
+Dashboard.prototype.onAddUser = function () {
+  var s = this.state;
+  var u = s.newUserName.trim();
+  var p = s.newUserPassword.trim();
+  var role = s.newUserRole;
+  if (!u || !p) { this.setState({ userError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
+  if (s.users.some(function (usr) { return usr.username === u; })) { this.setState({ userError: "ชื่อผู้ใช้นี้มีอยู่แล้ว" }); return; }
+  this.setState(function (s2) {
+    var users = s2.users.concat([{ username: u, password: p, role: role }]);
+    saveJSON(STORAGE.users, users);
+    return { users: users, newUserName: "", newUserPassword: "", newUserRole: "viewer", userError: "" };
+  });
+};
+
+Dashboard.prototype.removeUser = function (username) {
+  this.setState(function (s) {
+    var users = s.users.filter(function (u) { return u.username !== username; });
+    saveJSON(STORAGE.users, users);
+    return { users: users };
+  });
+};
+
+/* ---- contacts ---- */
+
+Dashboard.prototype.onAddContact = function () {
+  var s = this.state;
+  if (!s.newContactName.trim() || !s.newContactPhone.trim()) return;
+  var id = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  this.setState(function (s2) {
+    var contacts = s2.contacts.concat([{
+      id: id, name: s2.newContactName.trim(), department: s2.newContactDept.trim(),
+      phone: s2.newContactPhone.trim(), address: s2.newContactAddress.trim(),
+    }]);
+    saveJSON(STORAGE.contacts, contacts);
+    return { contacts: contacts, newContactName: "", newContactDept: "", newContactPhone: "", newContactAddress: "" };
+  });
+};
+
+Dashboard.prototype.removeContact = function (id) {
+  this.setState(function (s) {
+    var contacts = s.contacts.filter(function (c) { return c.id !== id; });
+    saveJSON(STORAGE.contacts, contacts);
+    return { contacts: contacts };
+  });
+};
+
+/* ---------- render ---------- */
+
+Dashboard.prototype.render = function () {
+  var active = document.activeElement;
+  var focusId = active && active.id ? active.id : null;
+  var selStart = active && "selectionStart" in active ? active.selectionStart : null;
+  var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
+
+  this.root.innerHTML = this.state.loggedIn ? this.renderDashboard() : this.renderLogin();
+
+  if (focusId) {
+    var el = document.getElementById(focusId);
+    if (el) {
+      el.focus();
+      if (selStart != null && "setSelectionRange" in el) {
+        try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
+      }
+    }
+  }
+};
+
+Dashboard.prototype.renderLogin = function () {
+  var s = this.state;
+  var isRegister = s.authMode === "register";
+  var subtitle = isRegister ? "สร้างบัญชีผู้ใช้ใหม่" : "เข้าสู่ระบบแดชบอร์ดรายการราคาสินค้า";
+  var submitLabel = isRegister ? "สร้างบัญชี" : "เข้าสู่ระบบ";
+  var toggleQ = isRegister ? "มีบัญชีอยู่แล้ว?" : "ยังไม่มีบัญชี?";
+  var toggleA = isRegister ? "เข้าสู่ระบบ" : "สร้างผู้ใช้ใหม่";
+
+  return (
+    '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
+    '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:oklch(0.26 0.13 275); padding:20px;">' +
+    '<form data-form="auth" style="background:#fff; width:100%; max-width:380px; border-radius:16px; padding:36px 32px; display:flex; flex-direction:column; gap:18px; box-shadow:0 20px 50px rgba(0,0,0,.3);">' +
+      '<div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:6px;">' +
+        '<div style="width:52px; height:52px; border-radius:12px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:22px; color:#fff;">ธน</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:19px;">ธนานันท์ฮาร์ดแวร์</div>' +
+        '<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + esc(subtitle) + '</div>' +
+      '</div>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">ชื่อผู้ใช้' +
+        '<input id="field-username" type="text" data-bind="username" data-clear="authError" value="' + esc(s.username) + '" placeholder="username" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">รหัสผ่าน' +
+        '<input id="field-password" type="password" data-bind="password" data-clear="authError" value="' + esc(s.password) + '" placeholder="password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
+      '</label>' +
+      (isRegister ?
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">ยืนยันรหัสผ่าน' +
+          '<input id="field-confirmPassword" type="password" data-bind="confirmPassword" data-clear="authError" value="' + esc(s.confirmPassword) + '" placeholder="confirm password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
+        '</label>' : '') +
+      (s.authError ?
+        '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.authError) + '</div>' : '') +
+      '<button type="submit" style="margin-top:6px; padding:12px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">' + esc(submitLabel) + '</button>' +
+      '<div style="text-align:center; font-size:13px; color:oklch(0.5 0.01 60);">' + esc(toggleQ) + ' <a href="#" data-action="toggle-auth-mode" style="font-weight:600;">' + esc(toggleA) + '</a></div>' +
+    '</form>' +
+    '</div></div>'
+  );
+};
+
+Dashboard.prototype.renderDashboard = function () {
+  var s = this.state;
+  var page = s.page;
+  var navItem = function (label, icon, pageKey, active) {
+    var bg = active ? "oklch(0.62 0.17 45)" : "transparent";
+    var color = active ? "#fff" : "oklch(0.85 0.006 70)";
+    var weight = active ? 700 : 500;
+    return '<button data-action="nav" data-page="' + pageKey + '" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:' + bg + '; color:' + color + '; font-weight:' + weight + ';"><span>' + icon + '</span> ' + label + '</button>';
+  };
+
+  var sidebar =
+    '<div style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
+      '<div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">' +
+        '<div style="width:36px; height:36px; border-radius:9px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:16px; color:#fff; flex:none;">ธน</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>' +
+      '</div>' +
+      navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
+      navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
+      navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
+      navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
+      navItem("ติดต่อเรา", "☎️", "contact", page === "contact") +
+    '</div>';
+
+  var topbar =
+    '<div style="background:oklch(0.26 0.13 275); color:oklch(0.98 0.004 70); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">' +
+      '<div style="display:flex; align-items:center; gap:14px;">' +
+        '<div style="width:44px; height:44px; border-radius:10px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:20px; color:#fff; flex:none;">ธน</div>' +
+        '<div><div style="font-family:Kanit; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div><div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div></div>' +
+      '</div>' +
+      '<div style="display:flex; align-items:center; gap:16px;">' +
+        '<span style="font-size:13px; opacity:.85;">👤 ' + esc(s.username) + '</span>' +
+        '<button data-action="logout" style="padding:7px 14px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:12.5px; font-family:inherit; cursor:pointer;">ออกจากระบบ</button>' +
+      '</div>' +
+    '</div>';
+
+  var pageContent;
+  if (page === "price") pageContent = this.renderPricePage();
+  else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
+  else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
+  else if (page === "users") pageContent = this.renderUsersPage();
+  else pageContent = this.renderContactPage();
+
+  return (
+    '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
+    '<div style="display:flex; min-height:100vh;">' + sidebar +
+    '<div style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
+    '</div></div>'
+  );
+};
+
+Dashboard.prototype.isAdmin = function () {
+  var s = this.state;
+  var currentUser = s.users.find(function (u) { return u.username === s.username; });
+  return !currentUser || currentUser.role === "admin";
+};
+
+Dashboard.prototype.renderPricePage = function () {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+  var products = this.computeProducts();
+  var withOverrides = this.getMergedProducts();
+  var discountCount = withOverrides.filter(function (p) { return p.oldPrice; }).length;
+  var novatCount = withOverrides.filter(function (p) { return p.vat === "novat"; }).length;
+
+  var statCards = [
+    { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "oklch(0.4 0.02 60)" },
+    { label: "หมวดหมู่สินค้า", value: CATEGORIES.length - 1, color: "oklch(0.4 0.02 60)" },
+    { label: "รายการลดราคา", value: discountCount, color: "oklch(0.38 0.15 275)" },
+    { label: "สินค้า NO VAT", value: novatCount, color: "oklch(0.5 0.15 30)" },
+  ];
+
+  var statCardsHtml = statCards.map(function (stat) {
+    return '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:6px;">' +
+      '<div style="font-size:12.5px; color:oklch(0.5 0.01 60); font-weight:500;">' + esc(stat.label) + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:28px; color:' + stat.color + ';">' + stat.value + '</div></div>';
+  }).join("");
+
+  var categoryOptionsHtml = CATEGORIES.map(function (opt) {
+    return '<option value="' + opt.value + '"' + (opt.value === s.category ? " selected" : "") + '>' + esc(opt.label) + '</option>';
+  }).join("");
+
+  var sortOptions = [
+    ["name", "เรียง: ชื่อ (ก-ฮ)"], ["price_asc", "เรียง: ราคาต่ำ-สูง"], ["price_desc", "เรียง: ราคาสูง-ต่ำ"],
+  ];
+  var sortOptionsHtml = sortOptions.map(function (o) {
+    return '<option value="' + o[0] + '"' + (o[0] === s.sortBy ? " selected" : "") + '>' + o[1] + '</option>';
+  }).join("");
+
+  var activeBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
+  var inactiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
+  var gridActive = s.view === "grid";
+
+  var controls =
+    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:22px; display:flex; flex-wrap:wrap; gap:14px; align-items:center;">' +
+      '<div style="position:relative; flex:1 1 240px; min-width:200px;">' +
+        '<input id="field-search" type="text" data-bind="search" value="' + esc(s.search) + '" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." style="width:100%; padding:11px 14px 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+        '<span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>' +
+      '</div>' +
+      '<select id="field-category" data-bind="category" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">' + categoryOptionsHtml + '</select>' +
+      '<select id="field-sortBy" data-bind="sortBy" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">' + sortOptionsHtml + '</select>' +
+      '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px;">' +
+        '<button data-action="set-view" data-view="grid" style="' + (gridActive ? activeBtn : inactiveBtn) + '">▦ กริด</button>' +
+        '<button data-action="set-view" data-view="list" style="' + (!gridActive ? activeBtn : inactiveBtn) + '">☰ รายการ</button>' +
+      '</div>' +
+      (isAdmin ? '<button data-action="toggle-add-form" style="margin-left:auto; padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
+    '</div>';
+
+  var addForm = "";
+  if (s.showAddForm) {
+    var catOptsNoAll = CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (opt) {
+      return '<option value="' + opt.value + '"' + (opt.value === s.newProdCat ? " selected" : "") + '>' + esc(opt.label) + '</option>';
+    }).join("");
+    addForm =
+      '<form data-form="add-product" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px 22px; margin-bottom:22px; display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px; align-items:end;">' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ชื่อสินค้า' +
+          '<input id="field-newProdName" type="text" required data-bind="newProdName" data-clear="newProdError" value="' + esc(s.newProdName) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หมวดหมู่' +
+          '<select id="field-newProdCat" data-bind="newProdCat" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' + catOptsNoAll + '</select>' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา (บาท)' +
+          '<input id="field-newProdPrice" type="number" min="0" step="0.01" required data-bind="newProdPrice" data-clear="newProdError" value="' + esc(s.newProdPrice) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หน่วยนับ' +
+          '<input id="field-newProdUnit" type="text" required placeholder="เช่น ถุง, แผ่น, ชิ้น" data-bind="newProdUnit" data-clear="newProdError" value="' + esc(s.newProdUnit) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ภาษี' +
+          '<select id="field-newProdVat" data-bind="newProdVat" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' +
+            '<option value="vat"' + (s.newProdVat === "vat" ? " selected" : "") + '>VAT</option>' +
+            '<option value="novat"' + (s.newProdVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
+          '</select>' +
+        '</label>' +
+        '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px;">' +
+          '<button type="submit" style="padding:11px 20px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มสินค้า</button>' +
+          (s.newProdError ? '<span style="font-size:12.5px; color:oklch(0.5 0.15 30);">' + esc(s.newProdError) + '</span>' : '') +
+        '</div>' +
+      '</form>';
+  }
+
+  var resultCount = '<div style="font-size:13.5px; color:oklch(0.5 0.01 60); margin-bottom:14px;">พบ <strong style="color:oklch(0.3 0.01 60);">' + products.length + '</strong> รายการ</div>';
+
+  var body;
+  if (products.length === 0) {
+    body = '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
+  } else if (gridActive) {
+    body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(function (p) {
+      return '<div class="product-card" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;">' +
+        '<div style="position:relative; height:130px; background:' + p.imgBg + ';">' +
+          '<svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;"><defs><pattern id="stripe-' + p.id + '" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="' + p.imgBg + '"></rect><rect width="7" height="14" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="230" height="130" fill="url(#stripe-' + p.id + ')"></rect></svg>' +
+          '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + '</span>' +
+          (p.hasDiscount ? '<span style="position:absolute; top:8px; right:8px; background:oklch(0.6 0.19 30); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">ลดราคา</span>' : '') +
+        '</div>' +
+        '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
+          '<div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">' + esc(p.name) + '</div>' +
+          '<div style="font-size:11.5px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div>' +
+          '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
+            '<span style="font-family:Kanit; font-weight:700; font-size:19px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' +
+            (p.hasDiscount ? '<span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') +
+            '<span style="font-size:11.5px; color:oklch(0.55 0.01 60);">/' + esc(p.unit) + '</span>' +
+          '</div>' +
+          '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
+            '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
+            (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' : '') +
+          '</div>' +
+        '</div></div>';
+    }).join("") + '</div>';
+  } else {
+    var rows = products.map(function (p) {
+      var editRow = p.isEditing ?
+        '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
+          '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="flex:1 1 220px; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา" style="width:80px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
+            '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
+            '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
+          '</select>' +
+          '<button data-action="save-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+        '</div>' :
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
+          (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
+        '</div>';
+      return '<div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div style="width:44px; height:44px; border-radius:8px; background:' + p.imgBg + '; flex:none; position:relative; overflow:hidden;"><svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg></div>' +
+          '<div><div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div><div style="font-size:11px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div></div>' +
+        '</div>' +
+        '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.95 0.006 70); color:oklch(0.4 0.01 60);">' + esc(p.categoryLabel) + '</span></div>' +
+        '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>' +
+        '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + esc(p.unit) + '</div>' +
+        editRow +
+      '</div>';
+    }).join("");
+    body = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
+      '<div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; padding:12px 20px; background:oklch(0.96 0.006 70); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div>ราคา</div><div>หน่วย</div><div>ภาษี</div></div>' +
+      rows + '</div>';
+  }
+
+  return '<div style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
+    '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
+    controls + addForm + resultCount + body +
+  '</div>';
+};
+
+Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+  var k = this._folderKeys(kind);
+  var folders = s[k.stateKey];
+  var activeId = s[k.activeKey];
+  var active = folders.find(function (f) { return f.id === activeId; });
+
+  if (!active) {
+    var foldersHtml = folders.map(function (f) {
+      return '<div class="folder-card" data-action="open-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px; cursor:pointer; display:flex; flex-direction:column; gap:8px;">' +
+        '<div style="font-size:30px;">📁</div>' +
+        '<div style="font-weight:700; font-size:14.5px;">' + esc(f.name) + '</div>' +
+        '<div style="font-size:12px; color:oklch(0.55 0.01 60);">' + f.files.length + ' ไฟล์</div>' +
+        (isAdmin ? '<button data-action="remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="position:absolute; top:12px; right:12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
+      '</div>';
+    }).join("");
+
+    var addFolderForm = isAdmin ?
+      '<form data-form="add-folder" data-kind="' + kind + '" style="display:flex; gap:10px; margin-bottom:20px; max-width:420px;">' +
+        '<input id="field-new' + (kind === "concrete" ? "Concrete" : "Tis") + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; padding:11px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none;" />' +
+        '<button type="submit" style="padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
+      '</form>' : '';
+
+    return '<div style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+      '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
+      addFolderForm +
+      '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px;">' + foldersHtml + '</div>' +
+    '</div>';
+  }
+
+  var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
+  var uploadBox = isAdmin ?
+    '<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">' +
+      '<input type="file" accept="application/pdf" ' + uploadAction + ' style="display:none;" />' +
+      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
+    '</label>' : '';
+
+  var filesBody;
+  if (active.files.length === 0) {
+    filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์ในโฟลเดอร์นี้</div>';
+  } else {
+    filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + active.files.map(function (f) {
+      return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+        '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
+        '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
+        '<a href="' + f.url + '" download="' + esc(f.name) + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">เปิดไฟล์</a>' +
+        (isAdmin ? '<button data-action="remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+      '</div>';
+    }).join("") + '</div>';
+  }
+
+  return '<div style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+    '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
+      '<button data-action="close-folder" data-kind="' + kind + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
+      '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
+    '</div>' + uploadBox + filesBody +
+  '</div>';
+};
+
+Dashboard.prototype.renderUsersPage = function () {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+
+  var userRows = s.users.map(function (u) {
+    var roleLabel = u.role === "admin" ? "ผู้ดูแลระบบ" : "ดูอย่างเดียว";
+    var roleBg = u.role === "admin" ? "oklch(0.92 0.05 275)" : "oklch(0.95 0.006 70)";
+    var roleColor = u.role === "admin" ? "oklch(0.38 0.15 275)" : "oklch(0.5 0.01 60)";
+    return '<div style="display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+      '<div style="width:34px; height:34px; border-radius:50%; background:oklch(0.92 0.02 45); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:oklch(0.38 0.15 275); flex:none;">' + esc(u.username.charAt(0).toUpperCase()) + '</div>' +
+      '<div style="font-weight:600; font-size:14px; flex:1;">' + esc(u.username) + '</div>' +
+      '<span style="font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:' + roleBg + '; color:' + roleColor + ';">' + roleLabel + '</span>' +
+      (isAdmin ? '<button data-action="remove-user" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+    '</div>';
+  }).join("");
+
+  var adminSection = isAdmin ?
+    '<form data-form="add-user" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60); flex:1 1 160px;">ชื่อผู้ใช้ใหม่' +
+        '<input id="field-newUserName" type="text" data-bind="newUserName" data-clear="userError" value="' + esc(s.newUserName) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60); flex:1 1 160px;">รหัสผ่าน' +
+        '<input id="field-newUserPassword" type="text" data-bind="newUserPassword" data-clear="userError" value="' + esc(s.newUserPassword) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">สิทธิ์' +
+        '<select id="field-newUserRole" data-bind="newUserRole" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' +
+          '<option value="viewer"' + (s.newUserRole === "viewer" ? " selected" : "") + '>ดูอย่างเดียว</option>' +
+          '<option value="admin"' + (s.newUserRole === "admin" ? " selected" : "") + '>ผู้ดูแลระบบ</option>' +
+        '</select>' +
+      '</label>' +
+      '<button type="submit" style="padding:11px 18px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มผู้ใช้</button>' +
+    '</form>' +
+    (s.userError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">' + esc(s.userError) + '</div>' : '')
+    : '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ต้องเป็นผู้ดูแลระบบเพื่อจัดการผู้ใช้</div>';
+
+  return '<div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+    '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
+    adminSection +
+    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + userRows + '</div>' +
+  '</div>';
+};
+
+Dashboard.prototype.renderContactPage = function () {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+
+  var addForm = isAdmin ?
+    '<form data-form="add-contact" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ชื่อ' +
+          '<input id="field-newContactName" type="text" data-bind="newContactName" value="' + esc(s.newContactName) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">แผนก' +
+          '<input id="field-newContactDept" type="text" data-bind="newContactDept" value="' + esc(s.newContactDept) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">เบอร์โทร' +
+          '<input id="field-newContactPhone" type="text" data-bind="newContactPhone" value="' + esc(s.newContactPhone) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ที่อยู่' +
+          '<input id="field-newContactAddress" type="text" data-bind="newContactAddress" value="' + esc(s.newContactAddress) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+      '</div>' +
+      '<button type="submit" style="padding:11px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มรายชื่อติดต่อ</button>' +
+    '</form>' : '';
+
+  var body;
+  if (s.contacts.length === 0) {
+    body = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีรายชื่อติดต่อ</div>';
+  } else {
+    body = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + s.contacts.map(function (c) {
+      return '<div style="display:flex; align-items:flex-start; gap:14px; padding:16px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+        '<div style="flex:1;"><div style="font-weight:700; font-size:14.5px;">' + esc(c.name) + ' <span style="font-weight:500; color:oklch(0.55 0.01 60); font-size:12.5px;">· ' + esc(c.department) + '</span></div>' +
+        '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:4px;">📞 ' + esc(c.phone) + '</div>' +
+        '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:2px;">📍 ' + esc(c.address) + '</div></div>' +
+        (isAdmin ? '<button data-action="remove-contact" data-id="' + c.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+      '</div>';
+    }).join("") + '</div>';
+  }
+
+  return '<div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+    '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
+    '<div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
+    addForm + body +
+  '</div>';
+};
+
+/* ---------- bootstrap ---------- */
+
+new Dashboard(document.getElementById("app"));
+</script>
+</body>
+</html>

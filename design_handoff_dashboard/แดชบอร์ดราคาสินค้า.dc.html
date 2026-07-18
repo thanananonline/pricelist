@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#3a2a1f">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#3a2a1f"/>
+    <rect x="60" y="60" width="80" height="80" rx="14" fill="#e07a3f"/>
+    <text x="100" y="112" font-family="sans-serif" font-size="34" font-weight="700" fill="#fff" text-anchor="middle">ธน</text>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
+  a { color: #2E2E86; }
+  a:hover { color: #23236A; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:'Noto Sans Thai', 'Kanit', sans-serif; color:oklch(0.24 0.01 60);">
+
+  <!-- Login screen -->
+  <sc-if value="{{ isLoginScreen }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:oklch(0.26 0.13 275); padding:20px;">
+      <form onSubmit="{{ onSubmitAuth }}" style="background:#fff; width:100%; max-width:380px; border-radius:16px; padding:36px 32px; display:flex; flex-direction:column; gap:18px; box-shadow:0 20px 50px rgba(0,0,0,.3);">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:6px;">
+          <div style="width:52px; height:52px; border-radius:12px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:22px; color:#fff;">ธน</div>
+          <div style="font-family:Kanit; font-weight:700; font-size:19px;">ธนานันท์ฮาร์ดแวร์</div>
+          <div style="font-size:12.5px; color:oklch(0.5 0.01 60);">{{ authSubtitle }}</div>
+        </div>
+
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">
+          ชื่อผู้ใช้
+          <input type="text" value="{{ username }}" onChange="{{ onUsernameChange }}" placeholder="username" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />
+        </label>
+
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">
+          รหัสผ่าน
+          <input type="password" value="{{ password }}" onChange="{{ onPasswordChange }}" placeholder="password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />
+        </label>
+
+        <sc-if value="{{ isRegisterMode }}" hint-placeholder-val="{{ false }}">
+          <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">
+            ยืนยันรหัสผ่าน
+            <input type="password" value="{{ confirmPassword }}" onChange="{{ onConfirmPasswordChange }}" placeholder="confirm password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />
+          </label>
+        </sc-if>
+
+        <sc-if value="{{ hasAuthError }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">{{ authErrorMessage }}</div>
+        </sc-if>
+
+        <button type="submit" style="margin-top:6px; padding:12px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">{{ authSubmitLabel }}</button>
+
+        <div style="text-align:center; font-size:13px; color:oklch(0.5 0.01 60);">
+          {{ authToggleQuestion }}
+          <a href="#" onClick="{{ onToggleMode }}" style="font-weight:600;">{{ authToggleAction }}</a>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex; min-height:100vh;">
+
+  <!-- Sidebar -->
+  <div style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">
+      <div style="width:36px; height:36px; border-radius:9px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:16px; color:#fff; flex:none;">ธน</div>
+      <div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>
+    </div>
+    <button onClick="{{ goToPricePage }}" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:{{ priceNavBg }}; color:{{ priceNavColor }}; font-weight:{{ priceNavWeight }};">
+      <span>📋</span> รายการราคาสินค้า
+    </button>
+    <button onClick="{{ goToConcretePage }}" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:{{ concreteNavBg }}; color:{{ concreteNavColor }}; font-weight:{{ concreteNavWeight }};">
+      <span>📐</span> แบบผลิตภัณฑ์คอนกรีต
+    </button>
+    <button onClick="{{ goToUsersPage }}" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:{{ usersNavBg }}; color:{{ usersNavColor }}; font-weight:{{ usersNavWeight }};">
+      <span>👥</span> จัดการผู้ใช้
+    </button>
+    <button onClick="{{ goToContactPage }}" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:{{ contactNavBg }}; color:{{ contactNavColor }}; font-weight:{{ contactNavWeight }};">
+      <span>☎️</span> ติดต่อเรา
+    </button>
+    <a href="./หน้าร้าน.dc.html" style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px; font-family:inherit; font-size:13.5px; color:oklch(0.85 0.006 70); text-decoration:none; margin-top:auto;">
+      <span>🏬</span> ดูหน้าร้าน
+    </a>
+  </div>
+
+  <div style="flex:1; min-width:0;">
+
+  <!-- Top bar -->
+  <div style="background:oklch(0.26 0.13 275); color:oklch(0.98 0.004 70); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div style="width:44px; height:44px; border-radius:10px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:20px; color:#fff; flex:none;">ธน</div>
+      <div>
+        <div style="font-family:Kanit; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div>
+        <div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span style="font-size:12.5px; opacity:.6;">อัปเดตล่าสุด: 15 ก.ค. 2569</span>
+      <span style="font-size:13px; opacity:.85;">👤 {{ username }}</span>
+      <button onClick="{{ onLogout }}" style="padding:7px 14px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:12.5px; font-family:inherit; cursor:pointer;">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ isPricePage }}" hint-placeholder-val="{{ true }}">
+  <div style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">
+
+    <!-- Stat cards -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">
+      <sc-for list="{{ statCards }}" as="stat" hint-placeholder-count="4">
+        <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:6px;">
+          <div style="font-size:12.5px; color:oklch(0.5 0.01 60); font-weight:500;">{{ stat.label }}</div>
+          <div style="font-family:Kanit; font-weight:700; font-size:28px; color:{{ stat.color }};">{{ stat.value }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Controls -->
+    <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:22px; display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+      <div style="position:relative; flex:1 1 240px; min-width:200px;">
+        <input
+          type="text"
+          placeholder="ค้นหาชื่อสินค้า หรือ SKU..."
+          value="{{ search }}"
+          onChange="{{ onSearchChange }}"
+          style="width:100%; padding:11px 14px 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);"
+        />
+        <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>
+      </div>
+
+      <select value="{{ category }}" onChange="{{ onCategoryChange }}" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">
+        <sc-for list="{{ categoryOptions }}" as="opt" hint-placeholder-count="3">
+          <option value="{{ opt.value }}">{{ opt.label }}</option>
+        </sc-for>
+      </select>
+
+      <select value="{{ sortBy }}" onChange="{{ onSortChange }}" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">
+        <option value="name">เรียง: ชื่อ (ก-ฮ)</option>
+        <option value="price_asc">เรียง: ราคาต่ำ-สูง</option>
+        <option value="price_desc">เรียง: ราคาสูง-ต่ำ</option>
+        <option value="stock_asc">เรียง: สต็อกน้อยสุดก่อน</option>
+      </select>
+
+      <div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px;">
+        <button onClick="{{ setViewGrid }}" style="{{ gridBtnStyle }}">▦ กริด</button>
+        <button onClick="{{ setViewList }}" style="{{ listBtnStyle }}">☰ รายการ</button>
+      </div>
+
+      <button onClick="{{ onToggleAddForm }}" style="margin-left:auto; padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">{{ addFormBtnLabel }}</button>
+    </div>
+
+    <!-- Add product form -->
+    <sc-if value="{{ showAddForm }}" hint-placeholder-val="{{ false }}">
+      <form onSubmit="{{ onAddProduct }}" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px 22px; margin-bottom:22px; display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px; align-items:end;">
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          ชื่อสินค้า
+          <input type="text" required value="{{ newProdName }}" onChange="{{ onNewProdNameChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          หมวดหมู่
+          <select value="{{ newProdCat }}" onChange="{{ onNewProdCatChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">
+            <sc-for list="{{ categoryOptionsNoAll }}" as="opt" hint-placeholder-count="9">
+              <option value="{{ opt.value }}">{{ opt.label }}</option>
+            </sc-for>
+          </select>
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          ราคา (บาท)
+          <input type="number" min="0" step="0.01" required value="{{ newProdPrice }}" onChange="{{ onNewProdPriceChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          หน่วยนับ
+          <input type="text" required placeholder="เช่น ถุง, แผ่น, ชิ้น" value="{{ newProdUnit }}" onChange="{{ onNewProdUnitChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          สต็อก
+          <input type="number" min="0" step="1" required value="{{ newProdStock }}" onChange="{{ onNewProdStockChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px;">
+          <button type="submit" style="padding:11px 20px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มสินค้า</button>
+          <sc-if value="{{ newProdError }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:12.5px; color:oklch(0.5 0.15 30);">{{ newProdError }}</span>
+          </sc-if>
+        </div>
+      </form>
+    </sc-if>
+
+    <!-- Result count -->
+    <div style="font-size:13.5px; color:oklch(0.5 0.01 60); margin-bottom:14px;">
+      พบ <strong style="color:oklch(0.3 0.01 60);">{{ resultCount }}</strong> รายการ
+    </div>
+
+    <!-- Grid view -->
+    <sc-if value="{{ isGridView }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+          <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;" style-hover="box-shadow:0 6px 18px rgba(0,0,0,.08); transform:translateY(-1px);">
+            <div style="position:relative; height:130px; background:{{ p.imgBg }};">
+              <svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;">
+                <defs>
+                  <pattern id="stripe-{{ p.id }}" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                    <rect width="14" height="14" fill="{{ p.imgBg }}"></rect>
+                    <rect width="7" height="14" fill="{{ p.imgStripe }}"></rect>
+                  </pattern>
+                </defs>
+                <rect width="230" height="130" fill="url(#stripe-{{ p.id }})"></rect>
+              </svg>
+              <span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">{{ p.categoryLabel }}</span>
+              <sc-if value="{{ p.hasDiscount }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute; top:8px; right:8px; background:oklch(0.6 0.19 30); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">ลดราคา</span>
+              </sc-if>
+            </div>
+            <div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">
+              <div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">{{ p.name }}</div>
+              <div style="font-size:11.5px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: {{ p.sku }}</div>
+              <div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">
+                <span style="font-family:Kanit; font-weight:700; font-size:19px; color:oklch(0.38 0.15 275);">฿{{ p.priceDisplay }}</span>
+                <sc-if value="{{ p.hasDiscount }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿{{ p.oldPriceDisplay }}</span>
+                </sc-if>
+                <span style="font-size:11.5px; color:oklch(0.55 0.01 60);">/{{ p.unit }}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">
+                <span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:{{ p.stockBadgeBg }}; color:{{ p.stockBadgeColor }}; font-weight:600;">{{ p.stockLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- List view -->
+    <sc-if value="{{ isListView }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; padding:12px 20px; background:oklch(0.96 0.006 70); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;">
+          <div>สินค้า</div>
+          <div>หมวดหมู่</div>
+          <div>ราคา</div>
+          <div>หน่วย</div>
+          <div>สต็อก</div>
+        </div>
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+          <div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:44px; height:44px; border-radius:8px; background:{{ p.imgBg }}; flex:none; position:relative; overflow:hidden;">
+                <svg width="44" height="44" viewBox="0 0 44 44">
+                  <defs>
+                    <pattern id="stripe-list-{{ p.id }}" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                      <rect width="10" height="10" fill="{{ p.imgBg }}"></rect>
+                      <rect width="5" height="10" fill="{{ p.imgStripe }}"></rect>
+                    </pattern>
+                  </defs>
+                  <rect width="44" height="44" fill="url(#stripe-list-{{ p.id }})"></rect>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight:600; font-size:14px;">{{ p.name }}</div>
+                <div style="font-size:11px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: {{ p.sku }}</div>
+              </div>
+            </div>
+            <div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.95 0.006 70); color:oklch(0.4 0.01 60);">{{ p.categoryLabel }}</span></div>
+            <div style="display:flex; align-items:baseline; gap:6px;">
+              <span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:oklch(0.38 0.15 275);">฿{{ p.priceDisplay }}</span>
+              <sc-if value="{{ p.hasDiscount }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿{{ p.oldPriceDisplay }}</span>
+              </sc-if>
+            </div>
+            <div style="font-size:13px; color:oklch(0.5 0.01 60);">{{ p.unit }}</div>
+            <sc-if value="{{ p.isEditing }}" hint-placeholder-val="{{ false }}">
+              <div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">
+                <input type="text" value="{{ p.editName }}" onChange="{{ p.onEditNameChange }}" placeholder="ชื่อสินค้า" style="flex:1 1 220px; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />
+                <input type="number" value="{{ p.editPrice }}" onChange="{{ p.onEditPriceChange }}" placeholder="ราคา" style="width:80px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />
+                <input type="text" value="{{ p.editUnit }}" onChange="{{ p.onEditUnitChange }}" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />
+                <input type="number" value="{{ p.editStock }}" onChange="{{ p.onEditStockChange }}" placeholder="สต็อก" style="width:65px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />
+                <button onClick="{{ p.onSaveEdit }}" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ p.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:{{ p.stockBadgeBg }}; color:{{ p.stockBadgeColor }}; font-weight:600;">{{ p.stockLabel }}</span>
+                <button onClick="{{ p.onStartEdit }}" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">
+        <div style="font-size:32px; margin-bottom:8px;">🔎</div>
+        <div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div>
+      </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isConcretePage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">
+    <div style="margin-bottom:20px;">
+      <div style="font-family:Kanit; font-weight:700; font-size:22px;">แบบผลิตภัณฑ์คอนกรีต</div>
+      <div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">อัปโหลดไฟล์ PDF แบบผลิตภัณฑ์ เช่น แบบท่อ บ่อพัก แผ่นพื้น เสาเข็ม</div>
+    </div>
+
+    <label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">
+      <input type="file" accept="application/pdf" onChange="{{ onUploadPdf }}" style="display:none;" />
+      <div style="font-size:28px;">📄</div>
+      <div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF</div>
+      <div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>
+    </label>
+
+    <sc-if value="{{ hasConcreteFiles }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">
+        <sc-for list="{{ concreteFiles }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">
+            <div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ f.name }}</div>
+              <div style="font-size:11.5px; color:oklch(0.55 0.01 60);">{{ f.sizeLabel }}</div>
+            </div>
+            <a href="{{ f.url }}" download="{{ f.name }}" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">เปิดไฟล์</a>
+            <button onClick="{{ f.onRemove }}" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isConcreteEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์แบบผลิตภัณฑ์ที่อัปโหลด</div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isUsersPage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">
+    <div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>
+
+    <form onSubmit="{{ onAddUser }}" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">
+      <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60); flex:1 1 160px;">
+        ชื่อผู้ใช้ใหม่
+        <input type="text" value="{{ newUserName }}" onChange="{{ onNewUserNameChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60); flex:1 1 160px;">
+        รหัสผ่าน
+        <input type="text" value="{{ newUserPassword }}" onChange="{{ onNewUserPasswordChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+      </label>
+      <button type="submit" style="padding:11px 18px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มผู้ใช้</button>
+    </form>
+
+    <sc-if value="{{ hasUserError }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">{{ userErrorMessage }}</div>
+    </sc-if>
+
+    <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">
+      <sc-for list="{{ userRows }}" as="u" hint-placeholder-count="2">
+        <div style="display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">
+          <div style="width:34px; height:34px; border-radius:50%; background:oklch(0.92 0.02 45); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:oklch(0.38 0.15 275); flex:none;">{{ u.initial }}</div>
+          <div style="font-weight:600; font-size:14px; flex:1;">{{ u.username }}</div>
+          <button onClick="{{ u.onRemove }}" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isContactPage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">
+    <div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>
+    <div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>
+
+    <form onSubmit="{{ onAddContact }}" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          ชื่อ
+          <input type="text" value="{{ newContactName }}" onChange="{{ onNewContactNameChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          แผนก
+          <input type="text" value="{{ newContactDept }}" onChange="{{ onNewContactDeptChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          เบอร์โทร
+          <input type="text" value="{{ newContactPhone }}" onChange="{{ onNewContactPhoneChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">
+          ที่อยู่
+          <input type="text" value="{{ newContactAddress }}" onChange="{{ onNewContactAddressChange }}" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />
+        </label>
+      </div>
+      <button type="submit" style="padding:11px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มรายชื่อติดต่อ</button>
+    </form>
+
+    <sc-if value="{{ hasContacts }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">
+        <sc-for list="{{ contactRows }}" as="c" hint-placeholder-count="2">
+          <div style="display:flex; align-items:flex-start; gap:14px; padding:16px 20px; border-top:1px solid oklch(0.93 0.006 70);">
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14.5px;">{{ c.name }} <span style="font-weight:500; color:oklch(0.55 0.01 60); font-size:12.5px;">· {{ c.department }}</span></div>
+              <div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:4px;">📞 {{ c.phone }}</div>
+              <div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:2px;">📍 {{ c.address }}</div>
+            </div>
+            <button onClick="{{ c.onRemove }}" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isContactsEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีรายชื่อติดต่อ</div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CATEGORIES = [
+  { value: "all", label: "ทุกหมวดหมู่" },
+  { value: "cement", label: "ปูนซีเมนต์" },
+  { value: "block", label: "อิฐมวลเบา" },
+  { value: "roof", label: "กระเบื้องหลังคา" },
+  { value: "steel", label: "เหล็ก" },
+  { value: "tile", label: "กระเบื้องปูพื้น/ผนัง" },
+  { value: "sanitary", label: "สุขภัณฑ์" },
+  { value: "door", label: "ประตู-ไม้" },
+  { value: "paint", label: "สี" },
+  { value: "concrete", label: "คอนกรีตสำเร็จรูป" },
+  { value: "pipe", label: "ท่อและบ่อพัก" },
+];
+
+const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]));
+
+// oklch hue variation per category, same L/C, for image placeholder tint
+const CAT_HUE = {
+  cement: 60, block: 200, roof: 20, steel: 250, tile: 160,
+  sanitary: 230, door: 40, paint: 300, concrete: 90, pipe: 210,
+};
+
+function img(cat) {
+  const h = CAT_HUE[cat] ?? 60;
+  return {
+    bg: `oklch(0.93 0.02 ${h})`,
+    stripe: `oklch(0.88 0.035 ${h})`,
+  };
+}
+
+const RAW_PRODUCTS = [
+  // ปูนซีเมนต์
+  { id: "c1", cat: "cement", name: "ปูนซีเมนต์ปอร์ตแลนด์ ตราอินทรี ถุง 50 กก.", sku: "CEM-001", price: 145, oldPrice: null, unit: "ถุง", stock: 320 },
+  { id: "c2", cat: "cement", name: "ปูนซีเมนต์ผสม ตราเสือ ถุง 50 กก.", sku: "CEM-002", price: 128, oldPrice: 138, unit: "ถุง", stock: 210 },
+  { id: "c3", cat: "cement", name: "ปูนก่อสำเร็จรูป ตราจระเข้ ถุง 50 กก.", sku: "CEM-003", price: 132, oldPrice: null, unit: "ถุง", stock: 8 },
+  // อิฐมวลเบา
+  { id: "b1", cat: "block", name: "อิฐมวลเบา Q-CON หนา 7.5 ซม.", sku: "BLK-001", price: 22, oldPrice: null, unit: "แผ่น", stock: 1400 },
+  { id: "b2", cat: "block", name: "อิฐมวลเบา ตราเพชร หนา 10 ซม.", sku: "BLK-002", price: 28, oldPrice: 32, unit: "แผ่น", stock: 620 },
+  { id: "b3", cat: "block", name: "อิฐมวลเบา Superblock หนา 12.5 ซม.", sku: "BLK-003", price: 34, oldPrice: null, unit: "แผ่น", stock: 45 },
+  // กระเบื้องหลังคา
+  { id: "r1", cat: "roof", name: "กระเบื้องหลังคาคอนกรีต ตราเพชร รุ่นลอนคู่", sku: "ROF-001", price: 42, oldPrice: null, unit: "แผ่น", stock: 980 },
+  { id: "r2", cat: "roof", name: "กระเบื้องหลังคาไฟเบอร์ซีเมนต์ SCG", sku: "ROF-002", price: 55, oldPrice: 62, unit: "แผ่น", stock: 340 },
+  { id: "r3", cat: "roof", name: "แผ่นหลังคาเมทัลชีท เคลือบสี", sku: "ROF-003", price: 189, oldPrice: null, unit: "แผ่น", stock: 6 },
+  // เหล็ก
+  { id: "s1", cat: "steel", name: "เหล็กเส้นกลม RB9 มม. ยาว 10 ม.", sku: "STL-001", price: 98, oldPrice: null, unit: "เส้น", stock: 560 },
+  { id: "s2", cat: "steel", name: "เหล็กข้ออ้อย DB12 มม. ยาว 10 ม.", sku: "STL-002", price: 175, oldPrice: 190, unit: "เส้น", stock: 240 },
+  { id: "s3", cat: "steel", name: "เหล็กกล่องสี่เหลี่ยม 2x2 นิ้ว หนา 1.2 มม.", sku: "STL-003", price: 265, oldPrice: null, unit: "เส้น", stock: 12 },
+  // กระเบื้องปูพื้น/ผนัง
+  { id: "t1", cat: "tile", name: "กระเบื้องปูพื้น 60x60 ซม. ผิวด้าน", sku: "TIL-001", price: 289, oldPrice: null, unit: "ตร.ม.", stock: 480 },
+  { id: "t2", cat: "tile", name: "กระเบื้องปูผนังห้องน้ำ 30x60 ซม.", sku: "TIL-002", price: 219, oldPrice: 249, unit: "ตร.ม.", stock: 310 },
+  { id: "t3", cat: "tile", name: "กระเบื้องยางลายไม้ SPC หนา 4 มม.", sku: "TIL-003", price: 399, oldPrice: null, unit: "ตร.ม.", stock: 55 },
+  // สุขภัณฑ์
+  { id: "n1", cat: "sanitary", name: "โถสุขภัณฑ์ชักโครกแบบราวห้อย COTTO", sku: "SAN-001", price: 3450, oldPrice: null, unit: "ชุด", stock: 24 },
+  { id: "n2", cat: "sanitary", name: "อ่างล้างหน้าแขวนผนัง American Standard", sku: "SAN-002", price: 1290, oldPrice: 1450, unit: "ชุด", stock: 38 },
+  { id: "n3", cat: "sanitary", name: "ก๊อกน้ำอ่างล้างหน้า สแตนเลส", sku: "SAN-003", price: 590, oldPrice: null, unit: "ชิ้น", stock: 4 },
+  // ประตู-ไม้
+  { id: "d1", cat: "door", name: "ประตู UPVC บานเรียบ สีขาว 80x200 ซม.", sku: "DOR-001", price: 1850, oldPrice: null, unit: "บาน", stock: 42 },
+  { id: "d2", cat: "door", name: "ประตูไม้เอ็นจิเนียร์ บานทึบ 90x200 ซม.", sku: "DOR-002", price: 2650, oldPrice: 2950, unit: "บาน", stock: 18 },
+  { id: "d3", cat: "door", name: "วงกบประตู PVC สีน้ำตาล", sku: "DOR-003", price: 780, oldPrice: null, unit: "ชุด", stock: 60 },
+  // สี
+  { id: "p1", cat: "paint", name: "สีน้ำอะครีลิกภายนอก TOA SuperShield", sku: "PNT-001", price: 1690, oldPrice: null, unit: "แกลลอน", stock: 96 },
+  { id: "p2", cat: "paint", name: "สีน้ำพลาสติกภายใน Dulux", sku: "PNT-002", price: 990, oldPrice: 1090, unit: "แกลลอน", stock: 150 },
+  { id: "p3", cat: "paint", name: "สีรองพื้นปูนใหม่ กันด่าง", sku: "PNT-003", price: 650, oldPrice: null, unit: "แกลลอน", stock: 9 },
+  // คอนกรีตสำเร็จรูป
+  { id: "k1", cat: "concrete", name: "แผ่นพื้นคอนกรีตสำเร็จรูป ท้องเรียบ", sku: "CON-001", price: 245, oldPrice: null, unit: "แผ่น", stock: 220 },
+  { id: "k2", cat: "concrete", name: "ท่อคอนกรีตเสริมเหล็ก เส้นผ่านศูนย์กลาง 40 ซม.", sku: "CON-002", price: 620, oldPrice: 680, unit: "ท่อ", stock: 75 },
+  { id: "k3", cat: "concrete", name: "เสาเข็มคอนกรีตอัดแรง หน้าตัด I26", sku: "CON-003", price: 890, oldPrice: null, unit: "ต้น", stock: 5 },
+  // ท่อและบ่อพัก
+  { id: "pp1", cat: "pipe", name: "ท่อ PVC สีฟ้า ชั้น 8.5 ขนาด 4 นิ้ว ยาว 4 ม.", sku: "PIP-001", price: 285, oldPrice: null, unit: "ท่อน", stock: 640 },
+  { id: "pp2", cat: "pipe", name: "ท่อ HDPE สำหรับประปา ขนาด 2 นิ้ว", sku: "PIP-002", price: 195, oldPrice: 215, unit: "เมตร", stock: 410 },
+  { id: "pp3", cat: "pipe", name: "ท่อระบายน้ำคอนกรีตเสริมเหล็ก ขนาด 60 ซม.", sku: "PIP-003", price: 890, oldPrice: null, unit: "ท่อน", stock: 32 },
+  { id: "pp4", cat: "pipe", name: "บ่อพัก คสล. สำเร็จรูป ขนาด 40x40 ซม.", sku: "PIP-004", price: 450, oldPrice: 490, unit: "บ่อ", stock: 58 },
+  { id: "pp5", cat: "pipe", name: "บ่อพักพลาสติก PP ฝาเหล็กหล่อ ขนาด 30 ซม.", sku: "PIP-005", price: 620, oldPrice: null, unit: "ชุด", stock: 7 },
+  { id: "pp6", cat: "pipe", name: "ฝาบ่อพักคอนกรีต พร้อมขอบเหล็ก ขนาด 40 ซม.", sku: "PIP-006", price: 320, oldPrice: null, unit: "ฝา", stock: 90 },
+];
+
+function fmt(n) {
+  return n.toLocaleString("th-TH");
+}
+
+function stockInfo(stock) {
+  if (stock <= 10) return { label: `เหลือน้อย · ${stock}`, bg: "oklch(0.9 0.05 30)", color: "oklch(0.42 0.14 30)" };
+  if (stock <= 50) return { label: `สต็อก · ${stock}`, bg: "oklch(0.92 0.04 85)", color: "oklch(0.42 0.09 80)" };
+  return { label: `สต็อก · ${stock}`, bg: "oklch(0.92 0.04 155)", color: "oklch(0.4 0.09 155)" };
+}
+
+const OVERRIDES_KEY = "thananan_price_overrides";
+const CUSTOM_PRODUCTS_KEY = "thananan_custom_products";
+const CONCRETE_FILES_KEY = "thananan_concrete_files";
+
+function loadCustomProducts() {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_PRODUCTS_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+const CONTACT_INFO_KEY = "thananan_contact_info";
+
+const DEFAULT_CONTACTS = [
+  { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
+];
+
+function loadConcreteFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(CONCRETE_FILES_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function loadContacts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CONTACT_INFO_KEY) || "null");
+    return Array.isArray(stored) ? stored : DEFAULT_CONTACTS;
+  } catch (e) {
+    return DEFAULT_CONTACTS;
+  }
+}
+
+class Component extends DCLogic {
+  state = {
+    loggedIn: false,
+    authMode: "login", // "login" | "register"
+    authError: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    users: [{ username: "admin", password: "1234" }],
+    page: "price", // "price" | "concrete" | "users"
+    concreteFiles: [],
+    search: "",
+    category: "all",
+    sortBy: "name",
+    view: "grid",
+    overrides: {}, // id -> { name, price, unit, stock }
+    editingId: null,
+    editName: "",
+    editPrice: "",
+    editUnit: "",
+    editStock: "",
+    customProducts: [],
+    showAddForm: false,
+    newProdName: "",
+    newProdCat: "cement",
+    newProdPrice: "",
+    newProdUnit: "",
+    newProdStock: "",
+    newProdError: "",
+    newUserName: "",
+    newUserPassword: "",
+    userError: "",
+    contacts: DEFAULT_CONTACTS,
+    newContactName: "",
+    newContactDept: "",
+    newContactPhone: "",
+    newContactAddress: "",
+  };
+
+  componentDidMount() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || "{}");
+      this.setState({ overrides: stored });
+    } catch (e) {}
+    this.setState({ concreteFiles: loadConcreteFiles(), contacts: loadContacts(), customProducts: loadCustomProducts() });
+  }
+
+  goToPricePage = () => this.setState({ page: "price" });
+  goToConcretePage = () => this.setState({ page: "concrete" });
+  goToUsersPage = () => this.setState({ page: "users" });
+  goToContactPage = () => this.setState({ page: "contact" });
+
+  onNewContactNameChange = (e) => this.setState({ newContactName: e.target.value });
+  onNewContactDeptChange = (e) => this.setState({ newContactDept: e.target.value });
+  onNewContactPhoneChange = (e) => this.setState({ newContactPhone: e.target.value });
+  onNewContactAddressChange = (e) => this.setState({ newContactAddress: e.target.value });
+
+  onAddContact = (e) => {
+    e.preventDefault();
+    const { newContactName, newContactDept, newContactPhone, newContactAddress } = this.state;
+    if (!newContactName.trim() || !newContactPhone.trim()) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.setState((s) => {
+      const contacts = [...s.contacts, { id, name: newContactName.trim(), department: newContactDept.trim(), phone: newContactPhone.trim(), address: newContactAddress.trim() }];
+      try { localStorage.setItem(CONTACT_INFO_KEY, JSON.stringify(contacts)); } catch (err) {}
+      return { contacts, newContactName: "", newContactDept: "", newContactPhone: "", newContactAddress: "" };
+    });
+  };
+
+  removeContact = (id) => {
+    this.setState((s) => {
+      const contacts = s.contacts.filter((c) => c.id !== id);
+      try { localStorage.setItem(CONTACT_INFO_KEY, JSON.stringify(contacts)); } catch (err) {}
+      return { contacts };
+    });
+  };
+
+  startEdit = (p) => this.setState({ editingId: p.id, editName: p.name, editPrice: String(p.price), editUnit: p.unit, editStock: String(p.stock) });
+  onEditNameChange = (e) => this.setState({ editName: e.target.value });
+  onEditPriceChange = (e) => this.setState({ editPrice: e.target.value });
+  onEditUnitChange = (e) => this.setState({ editUnit: e.target.value });
+  onEditStockChange = (e) => this.setState({ editStock: e.target.value });
+  saveEdit = (id) => {
+    const { editName, editPrice, editUnit, editStock } = this.state;
+    const price = parseFloat(editPrice);
+    const stock = parseInt(editStock, 10);
+    const name = editName.trim();
+    const unit = editUnit.trim();
+    this.setState((s) => {
+      const isCustom = s.customProducts.some((cp) => cp.id === id);
+      if (isCustom) {
+        const customProducts = s.customProducts.map((cp) =>
+          cp.id === id
+            ? { ...cp, name: name || cp.name, unit: unit || cp.unit, price: isNaN(price) ? cp.price : price, stock: isNaN(stock) ? cp.stock : stock }
+            : cp
+        );
+        try { localStorage.setItem(CUSTOM_PRODUCTS_KEY, JSON.stringify(customProducts)); } catch (e) {}
+        return { customProducts, editingId: null };
+      }
+      const prev = s.overrides[id] || {};
+      const overrides = {
+        ...s.overrides,
+        [id]: {
+          name: name || prev.name,
+          unit: unit || prev.unit,
+          price: isNaN(price) ? prev.price : price,
+          stock: isNaN(stock) ? prev.stock : stock,
+        },
+      };
+      try { localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides)); } catch (e) {}
+      return { overrides, editingId: null };
+    });
+  };
+
+  onToggleAddForm = () => this.setState((s) => ({ showAddForm: !s.showAddForm, newProdError: "" }));
+  onNewProdNameChange = (e) => this.setState({ newProdName: e.target.value, newProdError: "" });
+  onNewProdCatChange = (e) => this.setState({ newProdCat: e.target.value });
+  onNewProdPriceChange = (e) => this.setState({ newProdPrice: e.target.value, newProdError: "" });
+  onNewProdUnitChange = (e) => this.setState({ newProdUnit: e.target.value, newProdError: "" });
+  onNewProdStockChange = (e) => this.setState({ newProdStock: e.target.value, newProdError: "" });
+
+  onAddProduct = (e) => {
+    e.preventDefault();
+    const { newProdName, newProdCat, newProdPrice, newProdUnit, newProdStock } = this.state;
+    const name = newProdName.trim();
+    const unit = newProdUnit.trim();
+    const price = parseFloat(newProdPrice);
+    const stock = parseInt(newProdStock, 10);
+    if (!name || !unit || isNaN(price) || price < 0 || isNaN(stock) || stock < 0) {
+      this.setState({ newProdError: "กรุณากรอกข้อมูลให้ครบและถูกต้อง" });
+      return;
+    }
+    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const sku = `CUS-${String(Date.now()).slice(-5)}`;
+    const product = { id, cat: newProdCat, name, sku, price, oldPrice: null, unit, stock };
+    this.setState((s) => {
+      const customProducts = [...s.customProducts, product];
+      try { localStorage.setItem(CUSTOM_PRODUCTS_KEY, JSON.stringify(customProducts)); } catch (err) {}
+      return {
+        customProducts,
+        showAddForm: false,
+        newProdName: "",
+        newProdPrice: "",
+        newProdUnit: "",
+        newProdStock: "",
+        newProdError: "",
+      };
+    });
+  };
+
+  onNewUserNameChange = (e) => this.setState({ newUserName: e.target.value, userError: "" });
+  onNewUserPasswordChange = (e) => this.setState({ newUserPassword: e.target.value, userError: "" });
+  onAddUser = (e) => {
+    e.preventDefault();
+    const u = this.state.newUserName.trim();
+    const p = this.state.newUserPassword.trim();
+    if (!u || !p) {
+      this.setState({ userError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" });
+      return;
+    }
+    if (this.state.users.some((usr) => usr.username === u)) {
+      this.setState({ userError: "ชื่อผู้ใช้นี้มีอยู่แล้ว" });
+      return;
+    }
+    this.setState((s) => ({
+      users: [...s.users, { username: u, password: p }],
+      newUserName: "",
+      newUserPassword: "",
+      userError: "",
+    }));
+  };
+  removeUser = (username) => {
+    this.setState((s) => ({ users: s.users.filter((u) => u.username !== username) }));
+  };
+
+  onUploadPdf = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const sizeKb = file.size / 1024;
+    const sizeLabel = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb.toFixed(0)} KB`;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      this.setState((s) => {
+        const concreteFiles = [...s.concreteFiles, { id, name: file.name, sizeLabel, url: dataUrl }];
+        try { localStorage.setItem(CONCRETE_FILES_KEY, JSON.stringify(concreteFiles)); } catch (err) {}
+        return { concreteFiles };
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  removeConcreteFile = (id) => {
+    this.setState((s) => {
+      const concreteFiles = s.concreteFiles.filter((f) => f.id !== id);
+      try { localStorage.setItem(CONCRETE_FILES_KEY, JSON.stringify(concreteFiles)); } catch (err) {}
+      return { concreteFiles };
+    });
+  };
+
+  onUsernameChange = (e) => this.setState({ username: e.target.value, authError: "" });
+  onPasswordChange = (e) => this.setState({ password: e.target.value, authError: "" });
+  onConfirmPasswordChange = (e) => this.setState({ confirmPassword: e.target.value, authError: "" });
+
+  onToggleMode = (e) => {
+    e.preventDefault();
+    this.setState((s) => ({
+      authMode: s.authMode === "login" ? "register" : "login",
+      authError: "",
+      password: "",
+      confirmPassword: "",
+    }));
+  };
+
+  onSubmitAuth = (e) => {
+    e.preventDefault();
+    const { authMode, username, password, confirmPassword, users } = this.state;
+    const u = username.trim();
+
+    if (authMode === "login") {
+      if (!u || !password.trim()) {
+        this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" });
+        return;
+      }
+      const match = users.find((usr) => usr.username === u && usr.password === password);
+      if (!match) {
+        this.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+        return;
+      }
+      this.setState({ loggedIn: true, authError: "" });
+      return;
+    }
+
+    // register
+    if (!u || !password.trim()) {
+      this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      this.setState({ authError: "รหัสผ่านไม่ตรงกัน" });
+      return;
+    }
+    if (users.some((usr) => usr.username === u)) {
+      this.setState({ authError: "ชื่อผู้ใช้นี้มีอยู่แล้ว" });
+      return;
+    }
+    this.setState((s) => ({
+      users: [...s.users, { username: u, password }],
+      loggedIn: true,
+      authError: "",
+    }));
+  };
+
+  onLogout = () => this.setState({ loggedIn: false, password: "", confirmPassword: "", authMode: "login" });
+
+  onSearchChange = (e) => this.setState({ search: e.target.value });
+  onCategoryChange = (e) => this.setState({ category: e.target.value });
+  onSortChange = (e) => this.setState({ sortBy: e.target.value });
+  setViewGrid = () => this.setState({ view: "grid" });
+  setViewList = () => this.setState({ view: "list" });
+
+  renderVals() {
+    const { search, category, sortBy, view, loggedIn, authMode, authError, username, password, confirmPassword, page, concreteFiles, overrides, editingId, editName, editPrice, editUnit, editStock, users, newUserName, newUserPassword, userError, contacts, newContactName, newContactDept, newContactPhone, newContactAddress, customProducts, showAddForm, newProdName, newProdCat, newProdPrice, newProdUnit, newProdStock, newProdError } = this.state;
+    const isPricePage = page === "price";
+    const isConcretePage = page === "concrete";
+    const isUsersPage = page === "users";
+    const isContactPage = page === "contact";
+    const q = search.trim().toLowerCase();
+
+    const withOverrides = [...RAW_PRODUCTS, ...customProducts].map((p) => {
+      const ov = overrides[p.id];
+      return ov ? { ...p, name: ov.name ?? p.name, unit: ov.unit ?? p.unit, price: ov.price ?? p.price, stock: ov.stock ?? p.stock } : p;
+    });
+
+    let list = withOverrides.filter((p) => {
+      const matchesCat = category === "all" || p.cat === category;
+      const matchesQ = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+      return matchesCat && matchesQ;
+    });
+
+    if (sortBy === "name") list = [...list].sort((a, b) => a.name.localeCompare(b.name, "th"));
+    if (sortBy === "price_asc") list = [...list].sort((a, b) => a.price - b.price);
+    if (sortBy === "price_desc") list = [...list].sort((a, b) => b.price - a.price);
+    if (sortBy === "stock_asc") list = [...list].sort((a, b) => a.stock - b.stock);
+
+    const products = list.map((p) => {
+      const im = img(p.cat);
+      const si = stockInfo(p.stock);
+      return {
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        categoryLabel: CAT_LABEL[p.cat],
+        unit: p.unit,
+        priceDisplay: fmt(p.price),
+        oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
+        hasDiscount: !!p.oldPrice,
+        stockLabel: si.label,
+        stockBadgeBg: si.bg,
+        stockBadgeColor: si.color,
+        imgBg: im.bg,
+        imgStripe: im.stripe,
+        isEditing: editingId === p.id,
+        isNotEditing: editingId !== p.id,
+        editName,
+        editPrice,
+        editUnit,
+        editStock,
+        onEditNameChange: this.onEditNameChange,
+        onEditPriceChange: this.onEditPriceChange,
+        onEditUnitChange: this.onEditUnitChange,
+        onEditStockChange: this.onEditStockChange,
+        onStartEdit: () => this.startEdit(p),
+        onSaveEdit: () => this.saveEdit(p.id),
+      };
+    });
+
+    const discountCount = withOverrides.filter((p) => p.oldPrice).length;
+    const lowStockCount = withOverrides.filter((p) => p.stock <= 10).length;
+
+    const statCards = [
+      { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "oklch(0.4 0.02 60)" },
+      { label: "หมวดหมู่สินค้า", value: CATEGORIES.length - 1, color: "oklch(0.4 0.02 60)" },
+      { label: "รายการลดราคา", value: discountCount, color: "oklch(0.38 0.15 275)" },
+      { label: "สินค้าใกล้หมดสต็อก", value: lowStockCount, color: "oklch(0.5 0.15 30)" },
+    ];
+
+    const gridActive = view === "grid";
+    const activeBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
+    const inactiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
+
+    const isRegisterMode = authMode === "register";
+
+    return {
+      isLoginScreen: !loggedIn,
+      isDashboard: loggedIn,
+      isRegisterMode,
+      hasAuthError: !!authError,
+      authErrorMessage: authError,
+      authSubtitle: isRegisterMode ? "สร้างบัญชีผู้ใช้ใหม่" : "เข้าสู่ระบบแดชบอร์ดรายการราคาสินค้า",
+      authSubmitLabel: isRegisterMode ? "สร้างบัญชี" : "เข้าสู่ระบบ",
+      authToggleQuestion: isRegisterMode ? "มีบัญชีอยู่แล้ว?" : "ยังไม่มีบัญชี?",
+      authToggleAction: isRegisterMode ? "เข้าสู่ระบบ" : "สร้างผู้ใช้ใหม่",
+      onToggleMode: this.onToggleMode,
+      username,
+      password,
+      confirmPassword,
+      onUsernameChange: this.onUsernameChange,
+      onPasswordChange: this.onPasswordChange,
+      onConfirmPasswordChange: this.onConfirmPasswordChange,
+      onSubmitAuth: this.onSubmitAuth,
+      onLogout: this.onLogout,
+      isPricePage,
+      isConcretePage,
+      goToPricePage: this.goToPricePage,
+      goToConcretePage: this.goToConcretePage,
+      priceNavBg: isPricePage ? "oklch(0.62 0.17 45)" : "transparent",
+      priceNavColor: isPricePage ? "#fff" : "oklch(0.85 0.006 70)",
+      priceNavWeight: isPricePage ? 700 : 500,
+      concreteNavBg: isConcretePage ? "oklch(0.62 0.17 45)" : "transparent",
+      concreteNavColor: isConcretePage ? "#fff" : "oklch(0.85 0.006 70)",
+      concreteNavWeight: isConcretePage ? 700 : 500,
+      isUsersPage,
+      goToUsersPage: this.goToUsersPage,
+      usersNavBg: isUsersPage ? "oklch(0.62 0.17 45)" : "transparent",
+      usersNavColor: isUsersPage ? "#fff" : "oklch(0.85 0.006 70)",
+      usersNavWeight: isUsersPage ? 700 : 500,
+      isContactPage,
+      goToContactPage: this.goToContactPage,
+      contactNavBg: isContactPage ? "oklch(0.62 0.17 45)" : "transparent",
+      contactNavColor: isContactPage ? "#fff" : "oklch(0.85 0.006 70)",
+      contactNavWeight: isContactPage ? 700 : 500,
+      newContactName,
+      newContactDept,
+      newContactPhone,
+      newContactAddress,
+      onNewContactNameChange: this.onNewContactNameChange,
+      onNewContactDeptChange: this.onNewContactDeptChange,
+      onNewContactPhoneChange: this.onNewContactPhoneChange,
+      onNewContactAddressChange: this.onNewContactAddressChange,
+      onAddContact: this.onAddContact,
+      hasContacts: contacts.length > 0,
+      isContactsEmpty: contacts.length === 0,
+      contactRows: contacts.map((c) => ({ ...c, onRemove: () => this.removeContact(c.id) })),
+      newUserName,
+      newUserPassword,
+      onNewUserNameChange: this.onNewUserNameChange,
+      onNewUserPasswordChange: this.onNewUserPasswordChange,
+      onAddUser: this.onAddUser,
+      hasUserError: !!userError,
+      userErrorMessage: userError,
+      userRows: users.map((u) => ({
+        username: u.username,
+        initial: u.username.charAt(0).toUpperCase(),
+        onRemove: () => this.removeUser(u.username),
+      })),
+      onUploadPdf: this.onUploadPdf,
+      hasConcreteFiles: concreteFiles.length > 0,
+      isConcreteEmpty: concreteFiles.length === 0,
+      concreteFiles: concreteFiles.map((f) => ({
+        ...f,
+        onRemove: () => this.removeConcreteFile(f.id),
+      })),
+      search,
+      category,
+      sortBy,
+      categoryOptions: CATEGORIES,
+      categoryOptionsNoAll: CATEGORIES.filter((c) => c.value !== "all"),
+      showAddForm,
+      addFormBtnLabel: showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า",
+      newProdName,
+      newProdCat,
+      newProdPrice,
+      newProdUnit,
+      newProdStock,
+      newProdError,
+      onToggleAddForm: this.onToggleAddForm,
+      onAddProduct: this.onAddProduct,
+      onNewProdNameChange: this.onNewProdNameChange,
+      onNewProdCatChange: this.onNewProdCatChange,
+      onNewProdPriceChange: this.onNewProdPriceChange,
+      onNewProdUnitChange: this.onNewProdUnitChange,
+      onNewProdStockChange: this.onNewProdStockChange,
+      onSearchChange: this.onSearchChange,
+      onCategoryChange: this.onCategoryChange,
+      onSortChange: this.onSortChange,
+      setViewGrid: this.setViewGrid,
+      setViewList: this.setViewList,
+      gridBtnStyle: gridActive ? activeBtn : inactiveBtn,
+      listBtnStyle: !gridActive ? activeBtn : inactiveBtn,
+      isGridView: gridActive,
+      isListView: !gridActive,
+      isEmpty: products.length === 0,
+      resultCount: products.length,
+      products,
+      statCards,
+    };
+  }
+}
+</script>
+</body>
+</html>

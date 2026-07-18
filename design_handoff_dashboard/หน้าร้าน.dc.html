@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#3a2a1f">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#3a2a1f"/>
+    <rect x="60" y="60" width="80" height="80" rx="14" fill="#e07a3f"/>
+    <text x="100" y="112" font-family="sans-serif" font-size="34" font-weight="700" fill="#fff" text-anchor="middle">ธน</text>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
+  a { color: #2E2E86; }
+  a:hover { color: #23236A; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:'Noto Sans Thai', 'Kanit', sans-serif; color:oklch(0.24 0.01 60);">
+
+  <!-- Top nav -->
+  <div style="background:oklch(0.26 0.13 275); color:#fff; padding:0 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; position:sticky; top:0; z-index:10;">
+    <div style="display:flex; align-items:center; gap:12px; padding:14px 0;">
+      <div style="width:38px; height:38px; border-radius:9px; background:oklch(0.32 0.14 275); display:flex; align-items:center; justify-content:center; font-family:Kanit; font-weight:800; font-size:17px; color:#fff; flex:none;">ธน</div>
+      <div style="font-family:Kanit; font-weight:700; font-size:17px;">ธนานันท์ฮาร์ดแวร์</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+      <button onClick="{{ goHome }}" style="padding:10px 14px; border:none; background:transparent; color:{{ navHomeColor }}; font-weight:{{ navHomeWeight }}; font-family:inherit; font-size:14px; cursor:pointer; border-bottom:2px solid {{ navHomeBorder }};">หน้าแรก</button>
+      <button onClick="{{ goProducts }}" style="padding:10px 14px; border:none; background:transparent; color:{{ navProductsColor }}; font-weight:{{ navProductsWeight }}; font-family:inherit; font-size:14px; cursor:pointer; border-bottom:2px solid {{ navProductsBorder }};">สินค้า</button>
+      <button onClick="{{ goConcrete }}" style="padding:10px 14px; border:none; background:transparent; color:{{ navConcreteColor }}; font-weight:{{ navConcreteWeight }}; font-family:inherit; font-size:14px; cursor:pointer; border-bottom:2px solid {{ navConcreteBorder }};">แบบผลิตภัณฑ์คอนกรีต</button>
+      <button onClick="{{ goContact }}" style="padding:10px 14px; border:none; background:transparent; color:{{ navContactColor }}; font-weight:{{ navContactWeight }}; font-family:inherit; font-size:14px; cursor:pointer; border-bottom:2px solid {{ navContactBorder }};">ติดต่อเรา</button>
+      <span style="margin-left:6px; padding:7px 14px; border-radius:9px; background:rgba(255,255,255,.1); font-size:12px; font-weight:600; color:rgba(255,255,255,.75);">👤 สำหรับพนักงานภายใน</span>
+    </div>
+  </div>
+
+  <!-- Home page -->
+  <sc-if value="{{ isHomePage }}" hint-placeholder-val="{{ true }}">
+    <div style="background:oklch(0.2 0.12 275); color:#fff; padding:64px 32px; text-align:center;">
+      <div style="font-family:Kanit; font-weight:800; font-size:34px; margin-bottom:12px;">เช็คราคาสินค้า สำหรับพนักงาน</div>
+      <div style="font-size:15px; opacity:.75; max-width:520px; margin:0 auto 24px;">ราคาอัปเดตแบบเรียลไทม์จากหลังบ้าน ใช้สำหรับตรวจสอบราคาก่อนเสนอลูกค้า</div>
+      <button onClick="{{ goProducts }}" style="padding:13px 28px; border:none; border-radius:10px; background:oklch(0.32 0.14 275); color:#fff; font-weight:700; font-size:15px; font-family:inherit; cursor:pointer;">ดูราคาสินค้า</button>
+    </div>
+
+    <div style="max-width:1200px; margin:0 auto; padding:44px 32px 56px;">
+      <div style="font-family:Kanit; font-weight:700; font-size:21px; margin-bottom:20px;">เลือกซื้อตามหมวดหมู่</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:14px;">
+        <sc-for list="{{ homeCategories }}" as="c" hint-placeholder-count="9">
+          <button onClick="{{ c.onClick }}" style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 14px; border:1px solid oklch(0.9 0.008 60); border-radius:14px; background:#fff; cursor:pointer; font-family:inherit;">
+            <div style="width:52px; height:52px; border-radius:12px; background:{{ c.bg }};"></div>
+            <div style="font-size:13.5px; font-weight:600; text-align:center;">{{ c.label }}</div>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Products page -->
+  <sc-if value="{{ isProductsPage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:1200px; margin:0 auto;">
+
+    <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:22px; display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+      <div style="position:relative; flex:1 1 240px; min-width:200px;">
+        <input
+          type="text"
+          placeholder="ค้นหาชื่อสินค้า..."
+          value="{{ search }}"
+          onChange="{{ onSearchChange }}"
+          style="width:100%; padding:11px 14px 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);"
+        />
+        <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>
+      </div>
+
+      <select value="{{ category }}" onChange="{{ onCategoryChange }}" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">
+        <sc-for list="{{ categoryOptions }}" as="opt" hint-placeholder-count="3">
+          <option value="{{ opt.value }}">{{ opt.label }}</option>
+        </sc-for>
+      </select>
+
+      <select value="{{ sortBy }}" onChange="{{ onSortChange }}" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">
+        <option value="name">เรียง: ชื่อ (ก-ฮ)</option>
+        <option value="price_asc">เรียง: ราคาต่ำ-สูง</option>
+        <option value="price_desc">เรียง: ราคาสูง-ต่ำ</option>
+      </select>
+    </div>
+
+    <div style="font-size:13.5px; color:oklch(0.5 0.01 60); margin-bottom:14px;">
+      พบ <strong style="color:oklch(0.3 0.01 60);">{{ resultCount }}</strong> รายการ
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">
+      <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+        <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:relative; height:130px; background:{{ p.imgBg }};">
+            <svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;">
+              <defs>
+                <pattern id="stripe-{{ p.id }}" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                  <rect width="14" height="14" fill="{{ p.imgBg }}"></rect>
+                  <rect width="7" height="14" fill="{{ p.imgStripe }}"></rect>
+                </pattern>
+              </defs>
+              <rect width="230" height="130" fill="url(#stripe-{{ p.id }})"></rect>
+            </svg>
+            <span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">{{ p.categoryLabel }}</span>
+            <sc-if value="{{ p.hasDiscount }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute; top:8px; right:8px; background:oklch(0.6 0.19 30); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">ลดราคา</span>
+            </sc-if>
+          </div>
+          <div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">
+            <div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">{{ p.name }}</div>
+            <div style="display:flex; align-items:baseline; gap:7px;">
+              <span style="font-family:Kanit; font-weight:700; font-size:19px; color:oklch(0.38 0.15 275);">฿{{ p.priceDisplay }}</span>
+              <sc-if value="{{ p.hasDiscount }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿{{ p.oldPriceDisplay }}</span>
+              </sc-if>
+              <span style="font-size:11.5px; color:oklch(0.55 0.01 60);">/{{ p.unit }}</span>
+            </div>
+            <div style="margin-top:auto; padding-top:6px; font-size:11.5px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: {{ p.sku }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">
+        <div style="font-size:32px; margin-bottom:8px;">🔎</div>
+        <div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข</div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- Concrete drawings page -->
+  <sc-if value="{{ isConcretePage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:900px; margin:0 auto;">
+    <div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">แบบผลิตภัณฑ์คอนกรีต</div>
+    <div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">ไฟล์ที่อัปเดตโดยหลังบ้าน อัปเดตอัตโนมัติเมื่อมีไฟล์ใหม่</div>
+
+    <sc-if value="{{ hasConcreteFiles }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">
+        <sc-for list="{{ concreteFiles }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">
+            <div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ f.name }}</div>
+              <div style="font-size:11.5px; color:oklch(0.55 0.01 60);">{{ f.sizeLabel }}</div>
+            </div>
+            <a href="{{ f.url }}" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">เปิดไฟล์</a>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isConcreteEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์แบบผลิตภัณฑ์ที่หลังบ้านอัปโหลด</div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- Contact page -->
+  <sc-if value="{{ isContactPage }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px 32px 56px; max-width:900px; margin:0 auto;">
+    <div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">ติดต่อเรา</div>
+    <sc-if value="{{ hasContacts }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:16px;">
+        <sc-for list="{{ contactRows }}" as="c" hint-placeholder-count="2">
+          <div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px;">
+            <div style="font-weight:700; font-size:15px;">{{ c.name }}</div>
+            <div style="font-size:12.5px; color:oklch(0.55 0.01 60); margin-bottom:10px;">{{ c.department }}</div>
+            <div style="font-size:13.5px; margin-bottom:4px;">📞 {{ c.phone }}</div>
+            <div style="font-size:13.5px; color:oklch(0.45 0.01 60);">📍 {{ c.address }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isContactsEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีข้อมูลติดต่อ</div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <div style="text-align:center; padding:20px; font-size:12px; color:oklch(0.55 0.01 60); border-top:1px solid oklch(0.9 0.008 60);">
+    © 2569 ธนานันท์ฮาร์ดแวร์ · ราคาสำหรับใช้ภายในองค์กรเท่านั้น · <a href="./แดชบอร์ดราคาสินค้า.dc.html" style="color:oklch(0.5 0.01 60);">ระบบจัดการ</a>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CATEGORIES = [
+  { value: "all", label: "ทุกหมวดหมู่" },
+  { value: "cement", label: "ปูนซีเมนต์" },
+  { value: "block", label: "อิฐมวลเบา" },
+  { value: "roof", label: "กระเบื้องหลังคา" },
+  { value: "steel", label: "เหล็ก" },
+  { value: "tile", label: "กระเบื้องปูพื้น/ผนัง" },
+  { value: "sanitary", label: "สุขภัณฑ์" },
+  { value: "door", label: "ประตู-ไม้" },
+  { value: "paint", label: "สี" },
+  { value: "concrete", label: "คอนกรีตสำเร็จรูป" },
+  { value: "pipe", label: "ท่อและบ่อพัก" },
+];
+
+const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]));
+
+const CAT_HUE = {
+  cement: 60, block: 200, roof: 20, steel: 250, tile: 160,
+  sanitary: 230, door: 40, paint: 300, concrete: 90, pipe: 210,
+};
+
+function img(cat) {
+  const h = CAT_HUE[cat] ?? 60;
+  return {
+    bg: `oklch(0.93 0.02 ${h})`,
+    stripe: `oklch(0.88 0.035 ${h})`,
+  };
+}
+
+const RAW_PRODUCTS = [
+  { id: "c1", cat: "cement", name: "ปูนซีเมนต์ปอร์ตแลนด์ ตราอินทรี ถุง 50 กก.", sku: "CEM-001", price: 145, oldPrice: null, unit: "ถุง", stock: 320 },
+  { id: "c2", cat: "cement", name: "ปูนซีเมนต์ผสม ตราเสือ ถุง 50 กก.", sku: "CEM-002", price: 128, oldPrice: 138, unit: "ถุง", stock: 210 },
+  { id: "c3", cat: "cement", name: "ปูนก่อสำเร็จรูป ตราจระเข้ ถุง 50 กก.", sku: "CEM-003", price: 132, oldPrice: null, unit: "ถุง", stock: 8 },
+  { id: "b1", cat: "block", name: "อิฐมวลเบา Q-CON หนา 7.5 ซม.", sku: "BLK-001", price: 22, oldPrice: null, unit: "แผ่น", stock: 1400 },
+  { id: "b2", cat: "block", name: "อิฐมวลเบา ตราเพชร หนา 10 ซม.", sku: "BLK-002", price: 28, oldPrice: 32, unit: "แผ่น", stock: 620 },
+  { id: "b3", cat: "block", name: "อิฐมวลเบา Superblock หนา 12.5 ซม.", sku: "BLK-003", price: 34, oldPrice: null, unit: "แผ่น", stock: 45 },
+  { id: "r1", cat: "roof", name: "กระเบื้องหลังคาคอนกรีต ตราเพชร รุ่นลอนคู่", sku: "ROF-001", price: 42, oldPrice: null, unit: "แผ่น", stock: 980 },
+  { id: "r2", cat: "roof", name: "กระเบื้องหลังคาไฟเบอร์ซีเมนต์ SCG", sku: "ROF-002", price: 55, oldPrice: 62, unit: "แผ่น", stock: 340 },
+  { id: "r3", cat: "roof", name: "แผ่นหลังคาเมทัลชีท เคลือบสี", sku: "ROF-003", price: 189, oldPrice: null, unit: "แผ่น", stock: 6 },
+  { id: "s1", cat: "steel", name: "เหล็กเส้นกลม RB9 มม. ยาว 10 ม.", sku: "STL-001", price: 98, oldPrice: null, unit: "เส้น", stock: 560 },
+  { id: "s2", cat: "steel", name: "เหล็กข้ออ้อย DB12 มม. ยาว 10 ม.", sku: "STL-002", price: 175, oldPrice: 190, unit: "เส้น", stock: 240 },
+  { id: "s3", cat: "steel", name: "เหล็กกล่องสี่เหลี่ยม 2x2 นิ้ว หนา 1.2 มม.", sku: "STL-003", price: 265, oldPrice: null, unit: "เส้น", stock: 12 },
+  { id: "t1", cat: "tile", name: "กระเบื้องปูพื้น 60x60 ซม. ผิวด้าน", sku: "TIL-001", price: 289, oldPrice: null, unit: "ตร.ม.", stock: 480 },
+  { id: "t2", cat: "tile", name: "กระเบื้องปูผนังห้องน้ำ 30x60 ซม.", sku: "TIL-002", price: 219, oldPrice: 249, unit: "ตร.ม.", stock: 310 },
+  { id: "t3", cat: "tile", name: "กระเบื้องยางลายไม้ SPC หนา 4 มม.", sku: "TIL-003", price: 399, oldPrice: null, unit: "ตร.ม.", stock: 55 },
+  { id: "n1", cat: "sanitary", name: "โถสุขภัณฑ์ชักโครกแบบราวห้อย COTTO", sku: "SAN-001", price: 3450, oldPrice: null, unit: "ชุด", stock: 24 },
+  { id: "n2", cat: "sanitary", name: "อ่างล้างหน้าแขวนผนัง American Standard", sku: "SAN-002", price: 1290, oldPrice: 1450, unit: "ชุด", stock: 38 },
+  { id: "n3", cat: "sanitary", name: "ก๊อกน้ำอ่างล้างหน้า สแตนเลส", sku: "SAN-003", price: 590, oldPrice: null, unit: "ชิ้น", stock: 4 },
+  { id: "d1", cat: "door", name: "ประตู UPVC บานเรียบ สีขาว 80x200 ซม.", sku: "DOR-001", price: 1850, oldPrice: null, unit: "บาน", stock: 42 },
+  { id: "d2", cat: "door", name: "ประตูไม้เอ็นจิเนียร์ บานทึบ 90x200 ซม.", sku: "DOR-002", price: 2650, oldPrice: 2950, unit: "บาน", stock: 18 },
+  { id: "d3", cat: "door", name: "วงกบประตู PVC สีน้ำตาล", sku: "DOR-003", price: 780, oldPrice: null, unit: "ชุด", stock: 60 },
+  { id: "p1", cat: "paint", name: "สีน้ำอะครีลิกภายนอก TOA SuperShield", sku: "PNT-001", price: 1690, oldPrice: null, unit: "แกลลอน", stock: 96 },
+  { id: "p2", cat: "paint", name: "สีน้ำพลาสติกภายใน Dulux", sku: "PNT-002", price: 990, oldPrice: 1090, unit: "แกลลอน", stock: 150 },
+  { id: "p3", cat: "paint", name: "สีรองพื้นปูนใหม่ กันด่าง", sku: "PNT-003", price: 650, oldPrice: null, unit: "แกลลอน", stock: 9 },
+  { id: "k1", cat: "concrete", name: "แผ่นพื้นคอนกรีตสำเร็จรูป ท้องเรียบ", sku: "CON-001", price: 245, oldPrice: null, unit: "แผ่น", stock: 220 },
+  { id: "k2", cat: "concrete", name: "ท่อคอนกรีตเสริมเหล็ก เส้นผ่านศูนย์กลาง 40 ซม.", sku: "CON-002", price: 620, oldPrice: 680, unit: "ท่อ", stock: 75 },
+  { id: "k3", cat: "concrete", name: "เสาเข็มคอนกรีตอัดแรง หน้าตัด I26", sku: "CON-003", price: 890, oldPrice: null, unit: "ต้น", stock: 5 },
+  { id: "pp1", cat: "pipe", name: "ท่อ PVC สีฟ้า ชั้น 8.5 ขนาด 4 นิ้ว ยาว 4 ม.", sku: "PIP-001", price: 285, oldPrice: null, unit: "ท่อน", stock: 640 },
+  { id: "pp2", cat: "pipe", name: "ท่อ HDPE สำหรับประปา ขนาด 2 นิ้ว", sku: "PIP-002", price: 195, oldPrice: 215, unit: "เมตร", stock: 410 },
+  { id: "pp3", cat: "pipe", name: "ท่อระบายน้ำคอนกรีตเสริมเหล็ก ขนาด 60 ซม.", sku: "PIP-003", price: 890, oldPrice: null, unit: "ท่อน", stock: 32 },
+  { id: "pp4", cat: "pipe", name: "บ่อพัก คสล. สำเร็จรูป ขนาด 40x40 ซม.", sku: "PIP-004", price: 450, oldPrice: 490, unit: "บ่อ", stock: 58 },
+  { id: "pp5", cat: "pipe", name: "บ่อพักพลาสติก PP ฝาเหล็กหล่อ ขนาด 30 ซม.", sku: "PIP-005", price: 620, oldPrice: null, unit: "ชุด", stock: 7 },
+  { id: "pp6", cat: "pipe", name: "ฝาบ่อพักคอนกรีต พร้อมขอบเหล็ก ขนาด 40 ซม.", sku: "PIP-006", price: 320, oldPrice: null, unit: "ฝา", stock: 90 },
+];
+
+function fmt(n) {
+  return n.toLocaleString("th-TH");
+}
+
+const HOME_CAT_VALUES = CATEGORIES.filter(c => c.value !== "all").map(c => c.value);
+const OVERRIDES_KEY = "thananan_price_overrides";
+const CUSTOM_PRODUCTS_KEY = "thananan_custom_products";
+const CONCRETE_FILES_KEY = "thananan_concrete_files";
+
+function loadCustomProducts() {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_PRODUCTS_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function loadOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(OVERRIDES_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function loadConcreteFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(CONCRETE_FILES_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+const CONTACT_INFO_KEY = "thananan_contact_info";
+const DEFAULT_CONTACTS = [
+  { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
+];
+
+function loadContacts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CONTACT_INFO_KEY) || "null");
+    return Array.isArray(stored) ? stored : DEFAULT_CONTACTS;
+  } catch (e) {
+    return DEFAULT_CONTACTS;
+  }
+}
+
+class Component extends DCLogic {
+  state = {
+    page: "home", // home | products | contact
+    search: "",
+    category: "all",
+    sortBy: "name",
+    overrides: {},
+    concreteFiles: [],
+    contacts: DEFAULT_CONTACTS,
+    customProducts: [],
+  };
+
+  componentDidMount() {
+    this.setState({ overrides: loadOverrides(), concreteFiles: loadConcreteFiles(), contacts: loadContacts(), customProducts: loadCustomProducts() });
+    this._onStorage = (e) => {
+      if (e.key === OVERRIDES_KEY) this.setState({ overrides: loadOverrides() });
+      if (e.key === CONCRETE_FILES_KEY) this.setState({ concreteFiles: loadConcreteFiles() });
+      if (e.key === CONTACT_INFO_KEY) this.setState({ contacts: loadContacts() });
+      if (e.key === CUSTOM_PRODUCTS_KEY) this.setState({ customProducts: loadCustomProducts() });
+    };
+    window.addEventListener("storage", this._onStorage);
+    this._pollId = setInterval(() => {
+      this.setState({ overrides: loadOverrides(), concreteFiles: loadConcreteFiles(), contacts: loadContacts(), customProducts: loadCustomProducts() });
+    }, 2000);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("storage", this._onStorage);
+    clearInterval(this._pollId);
+  }
+
+  goHome = () => this.setState({ page: "home" });
+  goProducts = () => this.setState({ page: "products" });
+  goConcrete = () => this.setState({ page: "concrete" });
+  goContact = () => this.setState({ page: "contact" });
+
+  goCategory = (cat) => this.setState({ page: "products", category: cat });
+
+  onSearchChange = (e) => this.setState({ search: e.target.value });
+  onCategoryChange = (e) => this.setState({ category: e.target.value });
+  onSortChange = (e) => this.setState({ sortBy: e.target.value });
+
+  renderVals() {
+    const { page, search, category, sortBy, overrides, concreteFiles, contacts, customProducts } = this.state;
+    const q = search.trim().toLowerCase();
+
+    const withOverrides = [...RAW_PRODUCTS, ...customProducts].map((p) => {
+      const ov = overrides[p.id];
+      return ov ? { ...p, name: ov.name ?? p.name, unit: ov.unit ?? p.unit, price: ov.price ?? p.price, stock: ov.stock ?? p.stock } : p;
+    });
+
+    let list = withOverrides.filter((p) => {
+      const matchesCat = category === "all" || p.cat === category;
+      const matchesQ = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+      return matchesCat && matchesQ;
+    });
+
+    if (sortBy === "name") list = [...list].sort((a, b) => a.name.localeCompare(b.name, "th"));
+    if (sortBy === "price_asc") list = [...list].sort((a, b) => a.price - b.price);
+    if (sortBy === "price_desc") list = [...list].sort((a, b) => b.price - a.price);
+
+    const products = list.map((p) => {
+      const im = img(p.cat);
+      return {
+        id: p.id,
+        name: p.name,
+        unit: p.unit,
+        priceDisplay: fmt(p.price),
+        oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
+        hasDiscount: !!p.oldPrice,
+        categoryLabel: CAT_LABEL[p.cat],
+        imgBg: im.bg,
+        imgStripe: im.stripe,
+      };
+    });
+
+    const homeCategories = HOME_CAT_VALUES.map((val) => {
+      const im = img(val);
+      return { value: val, label: CAT_LABEL[val], bg: im.bg, onClick: () => this.goCategory(val) };
+    });
+
+    return {
+      isHomePage: page === "home",
+      isProductsPage: page === "products",
+      isConcretePage: page === "concrete",
+      isContactPage: page === "contact",
+      goHome: this.goHome,
+      goProducts: this.goProducts,
+      goConcrete: this.goConcrete,
+      goContact: this.goContact,
+      navHomeColor: page === "home" ? "#fff" : "rgba(255,255,255,.7)",
+      navHomeWeight: page === "home" ? 700 : 500,
+      navHomeBorder: page === "home" ? "oklch(0.32 0.14 275)" : "transparent",
+      navProductsColor: page === "products" ? "#fff" : "rgba(255,255,255,.7)",
+      navProductsWeight: page === "products" ? 700 : 500,
+      navProductsBorder: page === "products" ? "oklch(0.32 0.14 275)" : "transparent",
+      navConcreteColor: page === "concrete" ? "#fff" : "rgba(255,255,255,.7)",
+      navConcreteWeight: page === "concrete" ? 700 : 500,
+      navConcreteBorder: page === "concrete" ? "oklch(0.32 0.14 275)" : "transparent",
+      navContactColor: page === "contact" ? "#fff" : "rgba(255,255,255,.7)",
+      navContactWeight: page === "contact" ? 700 : 500,
+      navContactBorder: page === "contact" ? "oklch(0.32 0.14 275)" : "transparent",
+      hasConcreteFiles: concreteFiles.length > 0,
+      isConcreteEmpty: concreteFiles.length === 0,
+      concreteFiles,
+      hasContacts: contacts.length > 0,
+      isContactsEmpty: contacts.length === 0,
+      contactRows: contacts,
+      homeCategories,
+      search,
+      category,
+      sortBy,
+      categoryOptions: CATEGORIES,
+      onSearchChange: this.onSearchChange,
+      onCategoryChange: this.onCategoryChange,
+      onSortChange: this.onSortChange,
+      isEmpty: products.length === 0,
+      resultCount: products.length,
+      products,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
