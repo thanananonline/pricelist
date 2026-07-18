@@ -114,6 +114,32 @@ function saveJSON(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
 }
 
+function resizeImageFile(file, maxDim, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var image = new Image();
+    image.onload = function () {
+      var w = image.width, h = image.height;
+      var scale = Math.min(1, maxDim / Math.max(w, h));
+      var cw = Math.max(1, Math.round(w * scale));
+      var ch = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = cw;
+      canvas.height = ch;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0, cw, ch);
+      try {
+        callback(canvas.toDataURL("image/jpeg", quality));
+      } catch (e) {
+        callback(reader.result);
+      }
+    };
+    image.onerror = function () { callback(reader.result); };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 /* ---------- component ---------- */
 
 function Dashboard(root) {
@@ -143,6 +169,7 @@ function Dashboard(root) {
     editPrice: "",
     editUnit: "",
     editVat: "vat",
+    editImage: "",
     customProducts: [],
     showAddForm: false,
     newProdName: "",
@@ -150,6 +177,7 @@ function Dashboard(root) {
     newProdPrice: "",
     newProdUnit: "",
     newProdVat: "vat",
+    newProdImage: "",
     newProdError: "",
     newUserName: "",
     newUserPassword: "",
@@ -206,6 +234,8 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
+    case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
+    case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
     case "close-folder": this.closeFolder(d.kind); break;
     case "remove-folder": this.removeFolder(d.kind, d.id); break;
@@ -245,6 +275,18 @@ Dashboard.prototype.handleChange = function (e) {
     var kind = e.target.dataset.kind;
     var file = e.target.files && e.target.files[0];
     if (file) this.uploadFile(kind, file);
+    e.target.value = "";
+    return;
+  }
+  if (e.target.type === "file" && e.target.dataset.action === "upload-new-prod-image") {
+    var file2 = e.target.files && e.target.files[0];
+    if (file2) this.uploadProductImage(file2, "newProdImage");
+    e.target.value = "";
+    return;
+  }
+  if (e.target.type === "file" && e.target.dataset.action === "upload-edit-image") {
+    var file3 = e.target.files && e.target.files[0];
+    if (file3) this.uploadProductImage(file3, "editImage");
     e.target.value = "";
     return;
   }
@@ -295,6 +337,7 @@ Dashboard.prototype.getMergedProducts = function () {
       unit: ov.unit != null ? ov.unit : p.unit,
       price: ov.price != null ? ov.price : p.price,
       vat: ov.vat != null ? ov.vat : p.vat,
+      image: ov.image !== undefined ? ov.image : p.image,
     });
   });
 };
@@ -325,6 +368,7 @@ Dashboard.prototype.computeProducts = function () {
       vatBadgeBg: p.vat === "novat" ? "oklch(0.93 0.03 85)" : "oklch(0.92 0.05 155)",
       vatBadgeColor: p.vat === "novat" ? "oklch(0.45 0.1 80)" : "oklch(0.4 0.09 155)",
       imgBg: im.bg, imgStripe: im.stripe,
+      image: p.image || "",
       isEditing: s.editingId === p.id,
     };
   });
@@ -333,7 +377,7 @@ Dashboard.prototype.computeProducts = function () {
 Dashboard.prototype.startEdit = function (id) {
   var p = this.getMergedProducts().find(function (x) { return x.id === id; });
   if (!p) return;
-  this.setState({ editingId: p.id, editName: p.name, editPrice: String(p.price), editUnit: p.unit, editVat: p.vat || "vat" });
+  this.setState({ editingId: p.id, editName: p.name, editPrice: String(p.price), editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "" });
 };
 
 Dashboard.prototype.saveEdit = function (id) {
@@ -342,6 +386,7 @@ Dashboard.prototype.saveEdit = function (id) {
   var name = s.editName.trim();
   var unit = s.editUnit.trim();
   var editVat = s.editVat;
+  var editImage = s.editImage;
   this.setState(function (s2) {
     var isCustom = s2.customProducts.some(function (cp) { return cp.id === id; });
     if (isCustom) {
@@ -349,7 +394,7 @@ Dashboard.prototype.saveEdit = function (id) {
         if (cp.id !== id) return cp;
         return Object.assign({}, cp, {
           name: name || cp.name, unit: unit || cp.unit,
-          price: isNaN(price) ? cp.price : price, vat: editVat,
+          price: isNaN(price) ? cp.price : price, vat: editVat, image: editImage,
         });
       });
       saveJSON(STORAGE.customProducts, customProducts);
@@ -359,10 +404,19 @@ Dashboard.prototype.saveEdit = function (id) {
     var overrides = Object.assign({}, s2.overrides);
     overrides[id] = {
       name: name || prev.name, unit: unit || prev.unit,
-      price: isNaN(price) ? prev.price : price, vat: editVat,
+      price: isNaN(price) ? prev.price : price, vat: editVat, image: editImage,
     };
     saveJSON(STORAGE.overrides, overrides);
     return { overrides: overrides, editingId: null };
+  });
+};
+
+Dashboard.prototype.uploadProductImage = function (file, stateKey) {
+  var self = this;
+  resizeImageFile(file, 720, 0.85, function (dataUrl) {
+    var patch = {};
+    patch[stateKey] = dataUrl;
+    self.setState(patch);
   });
 };
 
@@ -381,11 +435,11 @@ Dashboard.prototype.onAddProduct = function () {
   }
   var id = "custom-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
   var sku = "CUS-" + String(Date.now()).slice(-5);
-  var product = { id: id, cat: s.newProdCat, name: name, sku: sku, price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat };
+  var product = { id: id, cat: s.newProdCat, name: name, sku: sku, price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
   this.setState(function (s2) {
     var customProducts = s2.customProducts.concat([product]);
     saveJSON(STORAGE.customProducts, customProducts);
-    return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdError: "" };
+    return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "" };
   });
 };
 
@@ -715,6 +769,14 @@ Dashboard.prototype.renderPricePage = function () {
             '<option value="novat"' + (s.newProdVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
           '</select>' +
         '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">รูปภาพสินค้า (ถ้ามี)' +
+          '<input type="file" accept="image/*" data-action="upload-new-prod-image" style="padding:6px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:12.5px; font-family:inherit; background:#fff;" />' +
+        '</label>' +
+        (s.newProdImage ?
+          '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:10px;">' +
+            '<img src="' + s.newProdImage + '" alt="" style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid oklch(0.87 0.008 60);" />' +
+            '<button type="button" data-action="clear-new-prod-image" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:6px 10px; font-size:12px; cursor:pointer; font-family:inherit;">✕ ลบรูป</button>' +
+          '</div>' : '') +
         '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px;">' +
           '<button type="submit" style="padding:11px 20px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มสินค้า</button>' +
           (s.newProdError ? '<span style="font-size:12.5px; color:oklch(0.5 0.15 30);">' + esc(s.newProdError) + '</span>' : '') +
@@ -729,9 +791,11 @@ Dashboard.prototype.renderPricePage = function () {
     body = '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
   } else if (gridActive) {
     body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(function (p) {
+      var mediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
+      var mediaSvg = p.image ? "" : '<svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;"><defs><pattern id="stripe-' + p.id + '" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="' + p.imgBg + '"></rect><rect width="7" height="14" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="230" height="130" fill="url(#stripe-' + p.id + ')"></rect></svg>';
       return '<div class="product-card" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;">' +
-        '<div style="position:relative; height:130px; background:' + p.imgBg + ';">' +
-          '<svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;"><defs><pattern id="stripe-' + p.id + '" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="' + p.imgBg + '"></rect><rect width="7" height="14" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="230" height="130" fill="url(#stripe-' + p.id + ')"></rect></svg>' +
+        '<div style="position:relative; height:130px; ' + mediaStyle + '">' +
+          mediaSvg +
           '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + '</span>' +
           (p.hasDiscount ? '<span style="position:absolute; top:8px; right:8px; background:oklch(0.6 0.19 30); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">ลดราคา</span>' : '') +
         '</div>' +
@@ -760,15 +824,22 @@ Dashboard.prototype.renderPricePage = function () {
             '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
             '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
           '</select>' +
+          '<div style="display:flex; align-items:center; gap:6px;">' +
+            (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
+            '<label style="font-size:11.5px; padding:6px 9px; border-radius:7px; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
+            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="border:none; background:transparent; color:oklch(0.5 0.15 30); font-size:11.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
+          '</div>' +
           '<button data-action="save-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
         '</div>' :
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
           (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
         '</div>';
+      var listMediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
+      var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
       return '<div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
-          '<div style="width:44px; height:44px; border-radius:8px; background:' + p.imgBg + '; flex:none; position:relative; overflow:hidden;"><svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg></div>' +
+          '<div style="width:44px; height:44px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;">' + listMediaSvg + '</div>' +
           '<div><div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div><div style="font-size:11px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div></div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.95 0.006 70); color:oklch(0.4 0.01 60);">' + esc(p.categoryLabel) + '</span></div>' +
