@@ -18,6 +18,32 @@
   button, input, select { font-family: inherit; }
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
+
+  /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
+  @media (max-width: 1024px) {
+    .page-content { padding: 22px 20px 44px !important; }
+    .topbar { padding: 16px 20px !important; }
+  }
+
+  /* phones: collapse sidebar into a horizontal scrollable tab bar */
+  @media (max-width: 700px) {
+    .app-shell { flex-direction: column !important; }
+    .sidebar {
+      width: 100% !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      padding: 10px !important;
+      gap: 6px !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sidebar-brand { display: none !important; }
+    .nav-btn { flex: none !important; white-space: nowrap !important; font-size: 12px !important; padding: 9px 11px !important; }
+    .topbar { padding: 14px !important; gap: 10px !important; }
+    .page-content { padding: 16px 12px 36px !important; }
+    .list-table { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .list-grid-row { min-width: 620px !important; }
+  }
 </style>
 </head>
 <body>
@@ -647,12 +673,12 @@ Dashboard.prototype.renderDashboard = function () {
     var bg = active ? "oklch(0.62 0.17 45)" : "transparent";
     var color = active ? "#fff" : "oklch(0.85 0.006 70)";
     var weight = active ? 700 : 500;
-    return '<button data-action="nav" data-page="' + pageKey + '" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:' + bg + '; color:' + color + '; font-weight:' + weight + ';"><span>' + icon + '</span> ' + label + '</button>';
+    return '<button class="nav-btn" data-action="nav" data-page="' + pageKey + '" style="display:flex; align-items:center; gap:10px; text-align:left; padding:11px 12px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; background:' + bg + '; color:' + color + '; font-weight:' + weight + ';"><span>' + icon + '</span> ' + label + '</button>';
   };
 
   var sidebar =
-    '<div style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
-      '<div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">' +
+    '<div class="sidebar" style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
+      '<div class="sidebar-brand" style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">' +
         '<div style="width:36px; height:36px; border-radius:9px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
         '<div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>' +
       '</div>' +
@@ -664,7 +690,7 @@ Dashboard.prototype.renderDashboard = function () {
     '</div>';
 
   var topbar =
-    '<div style="background:oklch(0.26 0.13 275); color:oklch(0.98 0.004 70); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">' +
+    '<div class="topbar" style="background:oklch(0.26 0.13 275); color:oklch(0.98 0.004 70); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">' +
       '<div style="display:flex; align-items:center; gap:14px;">' +
         '<div style="width:44px; height:44px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
         '<div><div style="font-family:Kanit; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div><div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div></div>' +
@@ -684,8 +710,8 @@ Dashboard.prototype.renderDashboard = function () {
 
   return (
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
-    '<div style="display:flex; min-height:100vh;">' + sidebar +
-    '<div style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
+    '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
+    '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
     '</div></div>'
   );
 };
@@ -840,7 +866,7 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>';
       var listMediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
-      return '<div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+      return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           '<div style="width:44px; height:44px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;">' + listMediaSvg + '</div>' +
           '<div><div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div><div style="font-size:11px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div></div>' +
@@ -851,12 +877,12 @@ Dashboard.prototype.renderPricePage = function () {
         editRow +
       '</div>';
     }).join("");
-    body = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
-      '<div style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; padding:12px 20px; background:oklch(0.96 0.006 70); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div>ราคา</div><div>หน่วย</div><div>ภาษี</div></div>' +
+    body = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
+      '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; padding:12px 20px; background:oklch(0.96 0.006 70); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div>ราคา</div><div>หน่วย</div><div>ภาษี</div></div>' +
       rows + '</div>';
   }
 
-  return '<div style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     controls + addForm + resultCount + body +
   '</div>';
@@ -886,7 +912,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<button type="submit" style="padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
       '</form>' : '';
 
-    return '<div style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+    return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
       '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
       addFolderForm +
       '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px;">' + foldersHtml + '</div>' +
@@ -914,7 +940,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     }).join("") + '</div>';
   }
 
-  return '<div style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
@@ -957,7 +983,7 @@ Dashboard.prototype.renderUsersPage = function () {
     (s.userError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">' + esc(s.userError) + '</div>' : '')
     : '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ต้องเป็นผู้ดูแลระบบเพื่อจัดการผู้ใช้</div>';
 
-  return '<div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
     adminSection +
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + userRows + '</div>' +
@@ -1001,7 +1027,7 @@ Dashboard.prototype.renderContactPage = function () {
     }).join("") + '</div>';
   }
 
-  return '<div style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
     '<div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
     addForm + body +
