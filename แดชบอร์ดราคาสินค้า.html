@@ -156,6 +156,8 @@ function resizeImageFile(file, maxDim, quality, callback) {
       canvas.width = cw;
       canvas.height = ch;
       var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, cw, ch);
       ctx.drawImage(image, 0, 0, cw, ch);
       try {
         callback(canvas.toDataURL("image/jpeg", quality));
