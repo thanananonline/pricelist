@@ -215,6 +215,7 @@ Dashboard.prototype.componentDidMount = function () {
 };
 
 Dashboard.prototype.setState = function (patch) {
+  clearTimeout(this._renderTimer);
   Object.assign(this.state, typeof patch === "function" ? patch(this.state) : patch);
   this.render();
 };
@@ -267,7 +268,9 @@ Dashboard.prototype.handleFieldChange = function (e) {
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
-  this.render();
+  var self = this;
+  clearTimeout(this._renderTimer);
+  this._renderTimer = setTimeout(function () { self.render(); }, 150);
 };
 
 Dashboard.prototype.handleChange = function (e) {
