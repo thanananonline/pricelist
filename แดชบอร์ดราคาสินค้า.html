@@ -1136,7 +1136,7 @@ Dashboard.prototype.renderCalcPage = function () {
   var truckPlan = this.computeTruckPlan(totalWeight);
 
   var inputCellStyle = "padding:9px 11px; border-radius:8px; border:1px solid oklch(0.8 0.05 85); background:oklch(0.96 0.05 95); font-size:13.5px; font-family:inherit; width:100%;";
-  var rowInputStyle = "padding:6px 8px; border-radius:7px; border:1px solid oklch(0.85 0.01 60); font-size:12.5px; font-family:inherit; width:100%;";
+  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
 
   var topInputs =
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px;">' +
@@ -1156,14 +1156,14 @@ Dashboard.prototype.renderCalcPage = function () {
 
   var WIRE_OPTIONS = ["4 เส้น", "5 เส้น", "6 เส้น", "7 เส้น", "8 เส้น"];
   var headerCells = ["ลำดับ", "สินค้า (ลวด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "สถานะ", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
-  var colWidths = "50px 130px 90px 90px 80px 125px 110px 120px 90px 100px 110px 90px 110px 110px";
+  var colWidths = "32px 88px 66px 64px 52px 92px 82px 88px 60px 72px 80px 62px 78px 76px";
 
-  var headerRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:10px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+  var headerRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     var wireOptionsHtml = '<option value=""' + (r.label ? "" : " selected") + '>- เลือก -</option>' +
       WIRE_OPTIONS.map(function (w) { return '<option value="' + w + '"' + (r.label === w ? " selected" : "") + '>' + w + '</option>'; }).join("");
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
@@ -1174,27 +1174,27 @@ Dashboard.prototype.renderCalcPage = function () {
       var statusBg = r.needsApproval ? "oklch(0.94 0.03 30)" : "oklch(0.92 0.05 155)";
       var statusColor = r.needsApproval ? "oklch(0.5 0.15 30)" : "oklch(0.4 0.09 155)";
       var statusLabel = r.needsApproval ? "ต้องขออนุมัติ" : "ขายส่ง";
-      cells.push('<div><span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:' + statusBg + '; color:' + statusColor + ';">' + statusLabel + '</span></div>');
+      cells.push('<div><span style="font-size:9.5px; font-weight:700; padding:2.5px 5px; border-radius:5px; background:' + statusBg + '; color:' + statusColor + '; white-space:nowrap;">' + statusLabel + '</span></div>');
     } else {
       cells.push('<div></div>');
     }
     cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
-      cells.push('<div style="font-size:12.5px;">' + fmtN(r.discountedPrice, 2) + '</div>');
-      cells.push('<div style="font-size:12.5px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
-      cells.push('<div style="font-size:12.5px; font-weight:600;">' + fmtN(r.pricePerSheet, 2) + '</div>');
-      cells.push('<div style="font-size:12.5px;">' + fmtN(r.weightPerSheet, 2) + '</div>');
-      cells.push('<div style="font-size:12.5px;">' + fmtN(r.totalSqm, 2) + '</div>');
-      cells.push('<div style="font-size:12.5px;">' + fmt(Math.round(r.totalWeight)) + '</div>');
-      cells.push('<div style="font-size:12.5px; font-weight:700; color:oklch(0.38 0.15 275);">' + fmtN(r.totalPrice, 2) + '</div>');
+      cells.push('<div style="font-size:11px;">' + fmtN(r.discountedPrice, 2) + '</div>');
+      cells.push('<div style="font-size:11px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
+      cells.push('<div style="font-size:11px; font-weight:600;">' + fmtN(r.pricePerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:11px;">' + fmtN(r.weightPerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:11px;">' + fmtN(r.totalSqm, 2) + '</div>');
+      cells.push('<div style="font-size:11px;">' + fmt(Math.round(r.totalWeight)) + '</div>');
+      cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + fmtN(r.totalPrice, 2) + '</div>');
     } else {
       cells.push('<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>');
     }
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:8px 14px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
-  var totalsRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:12px 14px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:12.5px;">' +
-    '<div style="grid-column:1 / span 11; text-align:right; padding-right:10px;">รวมทั้งหมด</div>' +
+  var totalsRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+    '<div style="grid-column:1 / span 11; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
     '<div>' + fmtN(totalSqm, 2) + '</div>' +
     '<div>' + fmt(Math.round(totalWeight)) + '</div>' +
     '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalPrice, 2) + '</div>' +
@@ -1211,7 +1211,7 @@ Dashboard.prototype.renderCalcPage = function () {
   '</div>';
 
   var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
-    '<div style="min-width:1450px;">' + headerRow + dataRows + totalsRow + '</div>' +
+    '<div>' + headerRow + dataRows + totalsRow + '</div>' +
   '</div>';
 
   var truckTable = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
