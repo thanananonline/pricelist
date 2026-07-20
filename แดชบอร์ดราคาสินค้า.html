@@ -54,7 +54,7 @@
   @media (hover: none) and (pointer: coarse) {
     input, select, textarea { font-size: 16px !important; }
     .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 120px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
-    .steel-calc-row { grid-template-columns: 40px 240px 85px 65px 105px 105px 100px 105px 110px 110px 115px !important; gap: 5px !important; }
+    .steel-calc-row { grid-template-columns: 40px 290px 90px 70px 110px 110px 115px 130px !important; gap: 5px !important; }
   }
 </style>
 </head>
@@ -188,7 +188,7 @@ function makeEmptyCalcRows(n) {
 
 function makeEmptySteelRows(n) {
   var rows = [];
-  for (var i = 0; i < n; i++) rows.push({ product: "", qty: "", cost: "", sellPrice: "", sellDeliveryPrice: "" });
+  for (var i = 0; i < n; i++) rows.push({ product: "", qty: "", sellPrice: "" });
   return rows;
 }
 
@@ -1329,18 +1329,15 @@ Dashboard.prototype.computeSteelRows = function () {
     var product = STEEL_PRODUCTS_BY_ID[r.product];
     var qty = parseFloat(r.qty);
     var qtyValid = !isNaN(qty) && qty > 0;
-    var cost = parseFloat(r.cost); if (isNaN(cost)) cost = 0;
     var sellPrice = parseFloat(r.sellPrice); if (isNaN(sellPrice)) sellPrice = 0;
-    var sellDeliveryPrice = parseFloat(r.sellDeliveryPrice); if (isNaN(sellDeliveryPrice)) sellDeliveryPrice = 0;
     var row = {
-      index: i + 1, product: r.product, qty: r.qty, cost: r.cost, sellPrice: r.sellPrice, sellDeliveryPrice: r.sellDeliveryPrice,
+      index: i + 1, product: r.product, qty: r.qty, sellPrice: r.sellPrice,
       hasProduct: !!product, unit: product ? product.unit : "", weightPerUnit: product ? product.weight : null,
       hasTotals: !!product && qtyValid,
     };
     if (row.hasTotals) {
       row.totalWeight = product.weight * qty;
       row.totalSell = sellPrice * qty;
-      row.totalSellDelivery = sellDeliveryPrice * qty;
     }
     return row;
   });
@@ -1349,14 +1346,14 @@ Dashboard.prototype.computeSteelRows = function () {
 Dashboard.prototype.renderSteelCalc = function () {
   var rows = this.computeSteelRows();
 
-  var totalWeight = 0, totalSell = 0, totalSellDelivery = 0;
+  var totalWeight = 0, totalSell = 0;
   rows.forEach(function (r) {
-    if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; totalSellDelivery += r.totalSellDelivery; }
+    if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; }
   });
 
   var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
-  var headerCells = ["ลำดับ", "สินค้า", "จำนวน", "หน่วย", "น้ำหนัก/หน่วย (กก.)", "น้ำหนักรวม (กก.)", "ทุน/หน่วย (บาท)", "ราคาขาย/หน่วย (บาท)", "ขาย+ส่ง/หน่วย (บาท)", "ยอดขายรวม (บาท)", "ยอดขายรวม+ส่ง (บาท)"];
-  var colWidths = "32px 230px 70px 55px 95px 95px 90px 95px 100px 100px 105px";
+  var headerCells = ["ลำดับ", "สินค้า", "จำนวน", "หน่วย", "น้ำหนัก/หน่วย (กก.)", "น้ำหนักรวม (กก.)", "ราคาขาย/หน่วย (บาท)", "ยอดขายรวม (บาท)"];
+  var colWidths = "32px 270px 75px 60px 100px 100px 105px 120px";
 
   var productOptionsHtml = function (selected) {
     return '<option value=""' + (selected ? "" : " selected") + '>- เลือก -</option>' +
@@ -1374,27 +1371,24 @@ Dashboard.prototype.renderSteelCalc = function () {
     cells.push('<div style="font-size:11px;">' + esc(r.unit || "") + '</div>');
     cells.push('<div style="font-size:11px;">' + (r.weightPerUnit != null ? fmtN(r.weightPerUnit, 2) : "") + '</div>');
     cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="cost" data-calc-store="calcSteelRows" value="' + esc(r.cost) + '" style="' + rowInputStyle + '" />');
     cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellDeliveryPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellDeliveryPrice) + '" style="' + rowInputStyle + '" />');
     cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
-    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSellDelivery, 2) : "") + '</div>');
     return '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
   var totalsRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
-    '<div style="grid-column:1 / span 5; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
+    '<div style="grid-column:1 / span 4; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
+    '<div></div>' +
     '<div>' + fmtN(totalWeight, 2) + '</div>' +
-    '<div style="grid-column:7 / span 3;"></div>' +
+    '<div></div>' +
     '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalSell, 2) + '</div>' +
-    '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalSellDelivery, 2) + '</div>' +
   '</div>';
 
   var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
     '<div>' + headerRow + dataRows + totalsRow + '</div>' +
   '</div>';
 
-  return '<div style="margin-bottom:20px; font-size:13px; color:oklch(0.5 0.01 60); line-height:1.6;">เลือกสินค้าในคอลัมน์ "สินค้า" แล้วกรอกจำนวนตามหน่วยที่แสดง (เหล็กเส้นกรอกจำนวนเส้น) — กรอกราคาทุน/ราคาขาย/ราคาขาย+ส่ง ต่อรายการเอง ระบบคำนวณน้ำหนักรวมและยอดขายรวมให้อัตโนมัติ</div>' +
+  return '<div style="margin-bottom:20px; font-size:13px; color:oklch(0.5 0.01 60); line-height:1.6;">เลือกสินค้าในคอลัมน์ "สินค้า" แล้วกรอกจำนวนตามหน่วยที่แสดง (เหล็กเส้นกรอกจำนวนเส้น) และกรอกราคาขาย/หน่วยเอง ระบบคำนวณน้ำหนักรวมและยอดขายรวม (จำนวน × ราคาขาย/หน่วย) ให้อัตโนมัติ</div>' +
     table;
 };
 
