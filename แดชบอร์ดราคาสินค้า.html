@@ -45,6 +45,16 @@
     .list-grid-row { min-width: 620px !important; }
     .calc-summary-grid { grid-template-columns: 1fr !important; }
   }
+
+  /* touch devices (phones + iPads, any width/orientation): iOS/Android zoom
+     the page on focusing any input under 16px, which makes typing feel like
+     it's jumping around. Bump inputs to 16px and widen the calculator's
+     dense per-row columns to match so nothing clips; the table already
+     scrolls horizontally when it doesn't fit. */
+  @media (hover: none) and (pointer: coarse) {
+    input, select, textarea { font-size: 16px !important; }
+    .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 120px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
+  }
 </style>
 </head>
 <body>
@@ -1158,7 +1168,7 @@ Dashboard.prototype.renderCalcPage = function () {
   var headerCells = ["ลำดับ", "สินค้า (ลวด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "สถานะ", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
   var colWidths = "32px 88px 66px 64px 52px 92px 82px 88px 60px 72px 80px 62px 78px 76px";
 
-  var headerRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+  var headerRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
@@ -1190,10 +1200,10 @@ Dashboard.prototype.renderCalcPage = function () {
     } else {
       cells.push('<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>');
     }
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+    return '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
-  var totalsRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+  var totalsRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
     '<div style="grid-column:1 / span 11; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
     '<div>' + fmtN(totalSqm, 2) + '</div>' +
     '<div>' + fmt(Math.round(totalWeight)) + '</div>' +
