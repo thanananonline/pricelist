@@ -54,6 +54,7 @@
   @media (hover: none) and (pointer: coarse) {
     input, select, textarea { font-size: 16px !important; }
     .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 120px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
+    .steel-calc-row { grid-template-columns: 40px 240px 85px 65px 105px 105px 100px 105px 110px 110px 115px !important; gap: 5px !important; }
   }
 </style>
 </head>
@@ -154,11 +155,40 @@ var DISCOUNT_TIERS = [
 
 var CALC_PRODUCT_TYPES = [
   { value: "slab", label: "แผ่นพื้นสำเร็จรูป", icon: "▭" },
+  { value: "steel", label: "เหล็ก", icon: "▮" },
 ];
+
+var STEEL_PRODUCTS = [
+  { id: "st1", label: "เหล็กกลม 6 มม. SR24 (10 ม.)", length: 10, weight: 2.22, perBundle: 400, unit: "เส้น" },
+  { id: "st2", label: "เหล็กกลม 8 มม. SR24 (10 ม.)", length: 10, weight: 3.95, perBundle: null, unit: "เส้น" },
+  { id: "st3", label: "เหล็กกลม 9 มม. SR24 (10 ม.)", length: 10, weight: 4.99, perBundle: 200, unit: "เส้น" },
+  { id: "st4", label: "เหล็กข้ออ้อย 12 มม. SD40 (10 ม.)", length: 10, weight: 8.88, perBundle: 160, unit: "เส้น" },
+  { id: "st5", label: "เหล็กข้ออ้อย 12 มม. SD40 (12 ม.)", length: 12, weight: 10.66, perBundle: 160, unit: "เส้น" },
+  { id: "st6", label: "เหล็กกลม 15 มม. SR24 (10 ม.)", length: 10, weight: 13.87, perBundle: null, unit: "เส้น" },
+  { id: "st7", label: "เหล็กข้ออ้อย 16 มม. SD40 (10 ม.)", length: 10, weight: 15.78, perBundle: 75, unit: "เส้น" },
+  { id: "st8", label: "เหล็กข้ออ้อย 16 มม. SD40 (12 ม.)", length: 12, weight: 18.94, perBundle: 75, unit: "เส้น" },
+  { id: "st9", label: "เหล็กกลม 19 มม. SR24 (10 ม.)", length: 10, weight: 22.26, perBundle: null, unit: "เส้น" },
+  { id: "st10", label: "เหล็กข้ออ้อย 20 มม. SD40 (10 ม.)", length: 10, weight: 24.66, perBundle: 50, unit: "เส้น" },
+  { id: "st11", label: "เหล็กข้ออ้อย 20 มม. SD40 (12 ม.)", length: 12, weight: 29.59, perBundle: 50, unit: "เส้น" },
+  { id: "st12", label: "เหล็กข้ออ้อย 25 มม. SD40 (10 ม.)", length: 10, weight: 38.53, perBundle: null, unit: "เส้น" },
+  { id: "st13", label: "เหล็กข้ออ้อย 25 มม. SD40 (12 ม.)", length: 12, weight: 46.24, perBundle: null, unit: "เส้น" },
+  { id: "st14", label: "เหล็กข้ออ้อย 28 มม. SD40 (10 ม.)", length: 10, weight: 48.34, perBundle: null, unit: "เส้น" },
+  { id: "st15", label: "เหล็กข้ออ้อย 28 มม. SD40 (12 ม.)", length: 12, weight: 58.01, perBundle: null, unit: "เส้น" },
+  { id: "st16", label: "เหล็กข้ออ้อย 32 มม. SD40 (10 ม.)", length: 10, weight: 63.13, perBundle: null, unit: "เส้น" },
+  { id: "st17", label: "เหล็กข้ออ้อย 32 มม. SD40 (12 ม.)", length: 12, weight: 75.76, perBundle: null, unit: "เส้น" },
+];
+var STEEL_PRODUCTS_BY_ID = {};
+STEEL_PRODUCTS.forEach(function (p) { STEEL_PRODUCTS_BY_ID[p.id] = p; });
 
 function makeEmptyCalcRows(n) {
   var rows = [];
   for (var i = 0; i < n; i++) rows.push({ label: "", length: "", qty: "", discount: "", price: "" });
+  return rows;
+}
+
+function makeEmptySteelRows(n) {
+  var rows = [];
+  for (var i = 0; i < n; i++) rows.push({ product: "", qty: "", cost: "", sellPrice: "", sellDeliveryPrice: "" });
   return rows;
 }
 
@@ -262,6 +292,7 @@ function Dashboard(root) {
     calcVatPercent: "7",
     calcTruck10Capacity: "100",
     calcRows: makeEmptyCalcRows(10),
+    calcSteelRows: makeEmptySteelRows(15),
   };
 
   this.componentDidMount();
@@ -343,7 +374,8 @@ Dashboard.prototype.handleFieldChange = function (e) {
   if (rowEl) {
     var idx = parseInt(rowEl.dataset.calcRow, 10);
     var field = rowEl.dataset.calcField;
-    this.state.calcRows[idx][field] = rowEl.value;
+    var storeKey = rowEl.dataset.calcStore || "calcRows";
+    this.state[storeKey][idx][field] = rowEl.value;
     clearTimeout(this._renderTimer);
     this._renderTimer = setTimeout(function () { self.renderCalcOnly(); }, 150);
     return;
@@ -696,7 +728,7 @@ Dashboard.prototype.renderCalcOnly = function () {
   var active = document.activeElement;
   var focusId = active && active.id ? active.id : null;
   var focusSelector = (!focusId && active && active.dataset && active.dataset.calcRow != null)
-    ? '[data-calc-row="' + active.dataset.calcRow + '"][data-calc-field="' + active.dataset.calcField + '"]'
+    ? '[data-calc-row="' + active.dataset.calcRow + '"][data-calc-field="' + active.dataset.calcField + '"][data-calc-store="' + (active.dataset.calcStore || "calcRows") + '"]'
     : null;
   var selStart = active && "selectionStart" in active ? active.selectionStart : null;
   var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
@@ -1206,10 +1238,10 @@ Dashboard.prototype.renderSlabCalc = function () {
     cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     var wireOptionsHtml = '<option value=""' + (r.label ? "" : " selected") + '>- เลือก -</option>' +
       WIRE_OPTIONS.map(function (w) { return '<option value="' + w + '"' + (r.label === w ? " selected" : "") + '>' + w + '</option>'; }).join("");
-    cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
+    cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
       var statusBg = r.needsApproval ? "oklch(0.94 0.03 30)" : "oklch(0.92 0.05 155)";
       var statusColor = r.needsApproval ? "oklch(0.5 0.15 30)" : "oklch(0.4 0.09 155)";
@@ -1218,7 +1250,7 @@ Dashboard.prototype.renderSlabCalc = function () {
     } else {
       cells.push('<div></div>');
     }
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
       cells.push('<div style="font-size:11px;">' + fmtN(r.discountedPrice, 2) + '</div>');
       cells.push('<div style="font-size:11px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
@@ -1292,6 +1324,80 @@ Dashboard.prototype.renderSlabCalc = function () {
     recommendBox + footnote;
 };
 
+Dashboard.prototype.computeSteelRows = function () {
+  return this.state.calcSteelRows.map(function (r, i) {
+    var product = STEEL_PRODUCTS_BY_ID[r.product];
+    var qty = parseFloat(r.qty);
+    var qtyValid = !isNaN(qty) && qty > 0;
+    var cost = parseFloat(r.cost); if (isNaN(cost)) cost = 0;
+    var sellPrice = parseFloat(r.sellPrice); if (isNaN(sellPrice)) sellPrice = 0;
+    var sellDeliveryPrice = parseFloat(r.sellDeliveryPrice); if (isNaN(sellDeliveryPrice)) sellDeliveryPrice = 0;
+    var row = {
+      index: i + 1, product: r.product, qty: r.qty, cost: r.cost, sellPrice: r.sellPrice, sellDeliveryPrice: r.sellDeliveryPrice,
+      hasProduct: !!product, unit: product ? product.unit : "", weightPerUnit: product ? product.weight : null,
+      hasTotals: !!product && qtyValid,
+    };
+    if (row.hasTotals) {
+      row.totalWeight = product.weight * qty;
+      row.totalSell = sellPrice * qty;
+      row.totalSellDelivery = sellDeliveryPrice * qty;
+    }
+    return row;
+  });
+};
+
+Dashboard.prototype.renderSteelCalc = function () {
+  var rows = this.computeSteelRows();
+
+  var totalWeight = 0, totalSell = 0, totalSellDelivery = 0;
+  rows.forEach(function (r) {
+    if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; totalSellDelivery += r.totalSellDelivery; }
+  });
+
+  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
+  var headerCells = ["ลำดับ", "สินค้า", "จำนวน", "หน่วย", "น้ำหนัก/หน่วย (กก.)", "น้ำหนักรวม (กก.)", "ทุน/หน่วย (บาท)", "ราคาขาย/หน่วย (บาท)", "ขาย+ส่ง/หน่วย (บาท)", "ยอดขายรวม (บาท)", "ยอดขายรวม+ส่ง (บาท)"];
+  var colWidths = "32px 230px 70px 55px 95px 95px 90px 95px 100px 100px 105px";
+
+  var productOptionsHtml = function (selected) {
+    return '<option value=""' + (selected ? "" : " selected") + '>- เลือก -</option>' +
+      STEEL_PRODUCTS.map(function (p) { return '<option value="' + p.id + '"' + (selected === p.id ? " selected" : "") + '>' + esc(p.label) + '</option>'; }).join("");
+  };
+
+  var headerRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+
+  var dataRows = rows.map(function (r) {
+    var cells = [];
+    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcSteelRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
+    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcSteelRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<div style="font-size:11px;">' + esc(r.unit || "") + '</div>');
+    cells.push('<div style="font-size:11px;">' + (r.weightPerUnit != null ? fmtN(r.weightPerUnit, 2) : "") + '</div>');
+    cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="cost" data-calc-store="calcSteelRows" value="' + esc(r.cost) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellDeliveryPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellDeliveryPrice) + '" style="' + rowInputStyle + '" />');
+    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
+    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSellDelivery, 2) : "") + '</div>');
+    return '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+  }).join("");
+
+  var totalsRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+    '<div style="grid-column:1 / span 5; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
+    '<div>' + fmtN(totalWeight, 2) + '</div>' +
+    '<div style="grid-column:7 / span 3;"></div>' +
+    '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalSell, 2) + '</div>' +
+    '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalSellDelivery, 2) + '</div>' +
+  '</div>';
+
+  var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
+    '<div>' + headerRow + dataRows + totalsRow + '</div>' +
+  '</div>';
+
+  return '<div style="margin-bottom:20px; font-size:13px; color:oklch(0.5 0.01 60); line-height:1.6;">เลือกสินค้าในคอลัมน์ "สินค้า" แล้วกรอกจำนวนตามหน่วยที่แสดง (เหล็กเส้นกรอกจำนวนเส้น) — กรอกราคาทุน/ราคาขาย/ราคาขาย+ส่ง ต่อรายการเอง ระบบคำนวณน้ำหนักรวมและยอดขายรวมให้อัตโนมัติ</div>' +
+    table;
+};
+
 Dashboard.prototype.renderCalcPage = function () {
   var s = this.state;
 
@@ -1304,6 +1410,7 @@ Dashboard.prototype.renderCalcPage = function () {
 
   var typeConfig = CALC_PRODUCT_TYPES.filter(function (t) { return t.value === s.calcProductType; })[0];
   var body = s.calcProductType === "slab" ? this.renderSlabCalc() :
+    s.calcProductType === "steel" ? this.renderSteelCalc() :
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:48px 20px; text-align:center; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีเครื่องคำนวณสำหรับ "' + esc(typeConfig ? typeConfig.label : s.calcProductType) + '"</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
