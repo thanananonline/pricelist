@@ -43,6 +43,7 @@
     .page-content { padding: 16px 12px 36px !important; }
     .list-table { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
     .list-grid-row { min-width: 620px !important; }
+    .calc-summary-grid { grid-template-columns: 1fr !important; }
   }
 </style>
 </head>
@@ -124,6 +125,22 @@ var DEFAULT_USERS = [
 /* ---------- helpers ---------- */
 
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
+function fmtN(n, decimals) {
+  return Number(n).toLocaleString("th-TH", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+var TRUCK_TYPES = [
+  { name: "รถ 6 ล้อ", maxTon: 7 },
+  { name: "รถ 10 ล้อ", maxTon: 12 },
+  { name: "รถ 12 ล้อ", maxTon: 15 },
+  { name: "รถ 18 ล้อ", maxTon: 28 },
+];
+
+function makeEmptyCalcRows(n) {
+  var rows = [];
+  for (var i = 0; i < n; i++) rows.push({ label: "", length: "", qty: "", discount: "", price: "" });
+  return rows;
+}
 
 function esc(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
@@ -219,6 +236,11 @@ function Dashboard(root) {
     newContactDept: "",
     newContactPhone: "",
     newContactAddress: "",
+    calcPlateWidth: "0.35",
+    calcWeightPerSqm: "120",
+    calcVatPercent: "7",
+    calcTruck10Capacity: "100",
+    calcRows: makeEmptyCalcRows(10),
   };
 
   this.componentDidMount();
@@ -294,12 +316,21 @@ Dashboard.prototype.handleSubmit = function (e) {
 };
 
 Dashboard.prototype.handleFieldChange = function (e) {
+  var self = this;
+  var rowEl = e.target.closest("[data-calc-row]");
+  if (rowEl) {
+    var idx = parseInt(rowEl.dataset.calcRow, 10);
+    var field = rowEl.dataset.calcField;
+    this.state.calcRows[idx][field] = rowEl.value;
+    clearTimeout(this._renderTimer);
+    this._renderTimer = setTimeout(function () { self.render(); }, 150);
+    return;
+  }
   var el = e.target.closest("[data-bind]");
   if (!el || el.type === "file") return;
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
-  var self = this;
   clearTimeout(this._renderTimer);
   this._renderTimer = setTimeout(function () { self.render(); }, 150);
 };
@@ -690,6 +721,7 @@ Dashboard.prototype.renderDashboard = function () {
       navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
+      navItem("คำนวณราคาสินค้า", "🧮", "calc", page === "calc") +
       navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
       navItem("ติดต่อเรา", "☎️", "contact", page === "contact") +
     '</div>';
@@ -710,6 +742,7 @@ Dashboard.prototype.renderDashboard = function () {
   if (page === "price") pageContent = this.renderPricePage();
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
+  else if (page === "calc") pageContent = this.renderCalcPage();
   else if (page === "users") pageContent = this.renderUsersPage();
   else pageContent = this.renderContactPage();
 
@@ -1036,6 +1069,169 @@ Dashboard.prototype.renderContactPage = function () {
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
     '<div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
     addForm + body +
+  '</div>';
+};
+
+Dashboard.prototype.computeCalcRows = function () {
+  var s = this.state;
+  var plateWidth = parseFloat(s.calcPlateWidth) || 0;
+  var weightPerSqm = parseFloat(s.calcWeightPerSqm) || 0;
+  return s.calcRows.map(function (r, i) {
+    var length = parseFloat(r.length);
+    var qty = parseInt(r.qty, 10);
+    var discount = parseFloat(r.discount);
+    var price = parseFloat(r.price);
+    var hasData = !isNaN(length) && length > 0 && !isNaN(qty) && qty > 0 && !isNaN(price) && price > 0;
+    if (!hasData) {
+      return { index: i + 1, label: r.label, length: r.length, qty: r.qty, discount: r.discount, price: r.price, hasData: false };
+    }
+    var d = isNaN(discount) ? 0 : discount;
+    var needsApproval = d > 7;
+    var discountedPrice = Math.round(price * (1 - d / 100));
+    var sqmPerSheet = plateWidth * length;
+    var pricePerSheet = discountedPrice * sqmPerSheet;
+    var weightPerSheet = weightPerSqm * sqmPerSheet;
+    return {
+      index: i + 1, label: r.label, length: r.length, qty: r.qty, discount: r.discount, price: r.price,
+      hasData: true, needsApproval: needsApproval,
+      discountedPrice: discountedPrice, sqmPerSheet: sqmPerSheet, pricePerSheet: pricePerSheet,
+      weightPerSheet: weightPerSheet, totalSqm: sqmPerSheet * qty, totalWeight: weightPerSheet * qty, totalPrice: pricePerSheet * qty,
+    };
+  });
+};
+
+Dashboard.prototype.computeTruckPlan = function (totalWeightKg) {
+  var totalTon = totalWeightKg / 1000;
+  var rows = TRUCK_TYPES.map(function (t) {
+    var trips = totalTon > 0 ? Math.ceil(totalTon / t.maxTon) : 0;
+    return { name: t.name, maxTon: t.maxTon, trips: trips };
+  });
+  var recommended = null;
+  if (totalTon > 0) {
+    recommended = rows.filter(function (r) { return r.trips === 1; })[0] || rows[rows.length - 1];
+  }
+  return { rows: rows, recommended: recommended };
+};
+
+Dashboard.prototype.renderCalcPage = function () {
+  var s = this.state;
+  var rows = this.computeCalcRows();
+  var vatPercent = parseFloat(s.calcVatPercent) || 0;
+  var truck10Cap = parseFloat(s.calcTruck10Capacity) || 0;
+
+  var totalSqm = 0, totalWeight = 0, totalPrice = 0;
+  rows.forEach(function (r) {
+    if (r.hasData) { totalSqm += r.totalSqm; totalWeight += r.totalWeight; totalPrice += r.totalPrice; }
+  });
+
+  var vatAmount = totalPrice * vatPercent / 100;
+  var grandTotal = totalPrice + vatAmount;
+  var estTrips10Wheel = truck10Cap > 0 && totalSqm > 0 ? Math.ceil(totalSqm / truck10Cap) : 0;
+  var truckPlan = this.computeTruckPlan(totalWeight);
+
+  var inputCellStyle = "padding:9px 11px; border-radius:8px; border:1px solid oklch(0.8 0.05 85); background:oklch(0.96 0.05 95); font-size:13.5px; font-family:inherit; width:100%;";
+  var rowInputStyle = "padding:6px 8px; border-radius:7px; border:1px solid oklch(0.85 0.01 60); font-size:12.5px; font-family:inherit; width:100%;";
+
+  var topInputs =
+    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px;">' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ความกว้างแผ่น (ม.)' +
+        '<input id="field-calcPlateWidth" type="number" step="0.01" min="0" data-bind="calcPlateWidth" value="' + esc(s.calcPlateWidth) + '" style="' + inputCellStyle + '" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">น้ำหนักแผ่น (กก./ตรม.)' +
+        '<input id="field-calcWeightPerSqm" type="number" step="0.01" min="0" data-bind="calcWeightPerSqm" value="' + esc(s.calcWeightPerSqm) + '" style="' + inputCellStyle + '" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">VAT (%)' +
+        '<input id="field-calcVatPercent" type="number" step="0.01" min="0" data-bind="calcVatPercent" value="' + esc(s.calcVatPercent) + '" style="' + inputCellStyle + '" />' +
+      '</label>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ความจุรถ 10 ล้อ (ตรม./เที่ยว)' +
+        '<input id="field-calcTruck10Capacity" type="number" step="1" min="0" data-bind="calcTruck10Capacity" value="' + esc(s.calcTruck10Capacity) + '" style="' + inputCellStyle + '" />' +
+      '</label>' +
+    '</div>';
+
+  var headerCells = ["ลำดับ", "สินค้า (ขนาด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "สถานะ", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
+  var colWidths = "60px 200px 110px 110px 90px 130px 120px 130px 100px 110px 120px 100px 120px 120px";
+
+  var headerRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:10px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+
+  var dataRows = rows.map(function (r) {
+    var cells = [];
+    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<input type="text" data-calc-row="' + (r.index - 1) + '" data-calc-field="label" value="' + esc(r.label) + '" placeholder="เช่น 5 เส้น" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
+    if (r.hasData) {
+      var statusBg = r.needsApproval ? "oklch(0.94 0.03 30)" : "oklch(0.92 0.05 155)";
+      var statusColor = r.needsApproval ? "oklch(0.5 0.15 30)" : "oklch(0.4 0.09 155)";
+      var statusLabel = r.needsApproval ? "ต้องขออนุมัติ" : "ขายส่ง";
+      cells.push('<div><span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:' + statusBg + '; color:' + statusColor + ';">' + statusLabel + '</span></div>');
+    } else {
+      cells.push('<div></div>');
+    }
+    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
+    if (r.hasData) {
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.discountedPrice, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
+      cells.push('<div style="font-size:12.5px; font-weight:600;">' + fmtN(r.pricePerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.weightPerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.totalSqm, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmt(Math.round(r.totalWeight)) + '</div>');
+      cells.push('<div style="font-size:12.5px; font-weight:700; color:oklch(0.38 0.15 275);">' + fmtN(r.totalPrice, 2) + '</div>');
+    } else {
+      cells.push('<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>');
+    }
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:8px 14px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+  }).join("");
+
+  var totalsRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:12px 14px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:12.5px;">' +
+    '<div style="grid-column:1 / span 11; text-align:right; padding-right:10px;">รวมทั้งหมด</div>' +
+    '<div>' + fmtN(totalSqm, 2) + '</div>' +
+    '<div>' + fmt(Math.round(totalWeight)) + '</div>' +
+    '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalPrice, 2) + '</div>' +
+  '</div>';
+
+  var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
+    '<div style="min-width:1500px;">' + headerRow + dataRows + totalsRow + '</div>' +
+  '</div>';
+
+  var truckTable = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
+    '<div style="padding:14px 16px; font-weight:700; font-size:14px; border-bottom:1px solid oklch(0.93 0.006 70);">ข้อกำหนดน้ำหนักบรรทุก</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:10px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);"><div>ประเภทรถ</div><div>บรรทุกไม่เกิน (ตัน)</div><div>จำนวนเที่ยวที่ต้องใช้</div></div>' +
+    truckPlan.rows.map(function (t) {
+      return '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:10px 16px; border-top:1px solid oklch(0.93 0.006 70); font-size:13px;"><div>' + t.name + '</div><div style="color:oklch(0.38 0.15 275); font-weight:600;">' + t.maxTon + '</div><div>' + (t.trips > 0 ? t.trips + " เที่ยว" : "-") + '</div></div>';
+    }).join("") +
+  '</div>';
+
+  var summaryRow = function (label, value, bold) {
+    return '<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-top:1px solid oklch(0.93 0.006 70); font-size:' + (bold ? "14.5px" : "13px") + '; font-weight:' + (bold ? "700" : "500") + ';"><span style="color:oklch(0.5 0.01 60);">' + label + '</span><span>' + value + '</span></div>';
+  };
+
+  var summaryPanel = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:16px 20px;">' +
+    summaryRow("มูลค่ารวม (ไม่รวม VAT)", "฿" + fmtN(totalPrice, 2)) +
+    summaryRow("VAT " + fmtN(vatPercent, 0) + "%", "฿" + fmtN(vatAmount, 2)) +
+    summaryRow("รวมทั้งสิ้น (รวม VAT)", "฿" + fmtN(grandTotal, 2), true) +
+    summaryRow("พื้นที่รวม (ตรม.)", fmtN(totalSqm, 2)) +
+    summaryRow("น้ำหนักรวม (กก. / ตัน)", fmt(Math.round(totalWeight)) + " กก. = " + fmtN(totalWeight / 1000, 2) + " ตัน") +
+    summaryRow("ประมาณเที่ยวรถ 10 ล้อ", (estTrips10Wheel > 0 ? estTrips10Wheel + " เที่ยว" : "-") + " (เต็มรถ ~" + fmt(truck10Cap) + " ตรม./เที่ยว)") +
+  '</div>';
+
+  var recommendBox = truckPlan.recommended ?
+    '<div style="margin-top:16px; background:oklch(0.94 0.05 155); border:1px solid oklch(0.8 0.08 155); border-radius:12px; padding:16px 20px; text-align:center; font-weight:700; font-size:14.5px; color:oklch(0.35 0.09 155);">' +
+      'รถที่แนะนำสำหรับรายการนี้: ' + truckPlan.recommended.name + ' (บรรทุกไม่เกิน ' + truckPlan.recommended.maxTon + ' ตัน) — ' + truckPlan.recommended.trips + ' เที่ยว' +
+    '</div>' :
+    '<div style="margin-top:16px; background:oklch(0.96 0.006 70); border:1px solid oklch(0.9 0.008 60); border-radius:12px; padding:16px 20px; text-align:center; font-size:13.5px; color:oklch(0.55 0.01 60);">กรอกข้อมูลสินค้าด้านบนเพื่อดูคำแนะนำรถขนส่ง</div>';
+
+  var footnote = '<div style="margin-top:16px; font-size:11.5px; color:oklch(0.55 0.01 60); line-height:1.6;">' +
+    'หมายเหตุ: ส่วนลดเกิน 7% สถานะจะขึ้น "ต้องขออนุมัติ" — ต้องขออนุมัติผู้จัดการก่อนเสนอราคา<br>' +
+    'คำแนะนำรถคิดจากน้ำหนักอย่างเดียว ควรตรวจสอบพื้นที่บรรทุกประกอบด้วย (รถ 10 ล้อ ~' + fmt(truck10Cap) + ' ตรม./เที่ยว)' +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">คำนวณราคาขายต่อแผ่นและแผนรถขนส่ง สำหรับแผ่นพื้น/ผลิตภัณฑ์คอนกรีตสำเร็จรูป</div></div>' +
+    topInputs + table +
+    '<div class="calc-summary-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">' + truckTable + summaryPanel + '</div>' +
+    recommendBox + footnote +
   '</div>';
 };
 
