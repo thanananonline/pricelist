@@ -136,6 +136,12 @@ var TRUCK_TYPES = [
   { name: "รถ 18 ล้อ", maxTon: 28 },
 ];
 
+var DISCOUNT_TIERS = [
+  { label: "ขายปลีก ลด 2-4%", condition: "ปริมาณไม่เกิน 200 ตรม. / เครดิตนาน / งานโอนสิทธิ์ / ระยะทางไกล", bg: "oklch(0.94 0.05 155)", color: "oklch(0.35 0.09 155)" },
+  { label: "ขายส่ง ลด 5-7%", condition: "ปริมาณมากกว่า 200 ตรม. / เครดิตดี เงินไว / ระยะทางจากหน่วยงานไม่เกิน 30 กม.", bg: "oklch(0.95 0.04 55)", color: "oklch(0.42 0.1 45)" },
+  { label: "ต้องขออนุมัติ ลด 8-15%", condition: "ต้องเป็นโครงการรัฐบาลหรือเอกชนขนาดใหญ่ หรือมีราคาคู่แข่งมาเปรียบเทียบ", bg: "oklch(0.94 0.03 30)", color: "oklch(0.5 0.15 30)" },
+];
+
 function makeEmptyCalcRows(n) {
   var rows = [];
   for (var i = 0; i < n; i++) rows.push({ label: "", length: "", qty: "", discount: "", price: "" });
@@ -1191,6 +1197,16 @@ Dashboard.prototype.renderCalcPage = function () {
     '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalPrice, 2) + '</div>' +
   '</div>';
 
+  var discountTiersBox = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; margin-bottom:20px;">' +
+    '<div style="padding:12px 16px; font-weight:700; font-size:14px; border-bottom:1px solid oklch(0.93 0.006 70);">เงื่อนไขการให้ส่วนลด</div>' +
+    DISCOUNT_TIERS.map(function (t, i) {
+      return '<div style="display:grid; grid-template-columns:minmax(140px,200px) 1fr; ' + (i === 0 ? "" : "border-top:1px solid oklch(0.93 0.006 70);") + '">' +
+        '<div style="padding:10px 14px; background:' + t.bg + '; color:' + t.color + '; font-weight:700; font-size:12.5px; display:flex; align-items:center;">' + esc(t.label) + '</div>' +
+        '<div style="padding:10px 14px; font-size:12.5px; color:oklch(0.4 0.01 60); display:flex; align-items:center;">' + esc(t.condition) + '</div>' +
+      '</div>';
+    }).join("") +
+  '</div>';
+
   var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
     '<div style="min-width:1500px;">' + headerRow + dataRows + totalsRow + '</div>' +
   '</div>';
@@ -1229,7 +1245,7 @@ Dashboard.prototype.renderCalcPage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">คำนวณราคาขายต่อแผ่นและแผนรถขนส่ง สำหรับแผ่นพื้น/ผลิตภัณฑ์คอนกรีตสำเร็จรูป</div></div>' +
-    topInputs + table +
+    topInputs + discountTiersBox + table +
     '<div class="calc-summary-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">' + truckTable + summaryPanel + '</div>' +
     recommendBox + footnote +
   '</div>';
