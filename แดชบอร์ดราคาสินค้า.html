@@ -1156,7 +1156,7 @@ Dashboard.prototype.renderCalcPage = function () {
 
   var WIRE_OPTIONS = ["4 เส้น", "5 เส้น", "6 เส้น", "7 เส้น", "8 เส้น"];
   var headerCells = ["ลำดับ", "สินค้า (ลวด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "สถานะ", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
-  var colWidths = "60px 200px 110px 110px 90px 130px 120px 130px 100px 110px 120px 100px 120px 120px";
+  var colWidths = "50px 130px 90px 90px 80px 125px 110px 120px 90px 100px 110px 90px 110px 110px";
 
   var headerRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:10px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
@@ -1211,7 +1211,7 @@ Dashboard.prototype.renderCalcPage = function () {
   '</div>';
 
   var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
-    '<div style="min-width:1500px;">' + headerRow + dataRows + totalsRow + '</div>' +
+    '<div style="min-width:1450px;">' + headerRow + dataRows + totalsRow + '</div>' +
   '</div>';
 
   var truckTable = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
