@@ -152,6 +152,10 @@ var DISCOUNT_TIERS = [
   { label: "ต้องขออนุมัติ ลด 8-15%", condition: "ต้องเป็นโครงการรัฐบาลหรือเอกชนขนาดใหญ่ หรือมีราคาคู่แข่งมาเปรียบเทียบ", bg: "oklch(0.94 0.03 30)", color: "oklch(0.5 0.15 30)" },
 ];
 
+var CALC_PRODUCT_TYPES = [
+  { value: "slab", label: "แผ่นพื้นสำเร็จรูป", icon: "▭" },
+];
+
 function makeEmptyCalcRows(n) {
   var rows = [];
   for (var i = 0; i < n; i++) rows.push({ label: "", length: "", qty: "", discount: "", price: "" });
@@ -252,6 +256,7 @@ function Dashboard(root) {
     newContactDept: "",
     newContactPhone: "",
     newContactAddress: "",
+    calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
     calcVatPercent: "7",
@@ -301,6 +306,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "nav": this.setState({ page: d.page }); break;
     case "toggle-auth-mode": e.preventDefault(); this.onToggleMode(); break;
     case "set-view": this.setState({ view: d.view }); break;
+    case "calc-set-type": this.setState({ calcProductType: d.type }); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -339,7 +345,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
     var field = rowEl.dataset.calcField;
     this.state.calcRows[idx][field] = rowEl.value;
     clearTimeout(this._renderTimer);
-    this._renderTimer = setTimeout(function () { self.render(); }, 150);
+    this._renderTimer = setTimeout(function () { self.renderCalcOnly(); }, 150);
     return;
   }
   var el = e.target.closest("[data-bind]");
@@ -348,7 +354,8 @@ Dashboard.prototype.handleFieldChange = function (e) {
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
   clearTimeout(this._renderTimer);
-  this._renderTimer = setTimeout(function () { self.render(); }, 150);
+  var isCalcField = key.indexOf("calc") === 0;
+  this._renderTimer = setTimeout(function () { isCalcField ? self.renderCalcOnly() : self.render(); }, 150);
 };
 
 Dashboard.prototype.handleChange = function (e) {
@@ -682,6 +689,29 @@ Dashboard.prototype.render = function () {
   }
 };
 
+Dashboard.prototype.renderCalcOnly = function () {
+  var container = document.getElementById("calc-container");
+  if (!container) { this.render(); return; }
+
+  var active = document.activeElement;
+  var focusId = active && active.id ? active.id : null;
+  var focusSelector = (!focusId && active && active.dataset && active.dataset.calcRow != null)
+    ? '[data-calc-row="' + active.dataset.calcRow + '"][data-calc-field="' + active.dataset.calcField + '"]'
+    : null;
+  var selStart = active && "selectionStart" in active ? active.selectionStart : null;
+  var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
+
+  container.innerHTML = this.renderCalcPage();
+
+  var el = focusId ? document.getElementById(focusId) : (focusSelector ? container.querySelector(focusSelector) : null);
+  if (el) {
+    el.focus();
+    if (selStart != null && "setSelectionRange" in el) {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
+    }
+  }
+};
+
 Dashboard.prototype.renderLogin = function () {
   var s = this.state;
   var isRegister = s.authMode === "register";
@@ -758,7 +788,7 @@ Dashboard.prototype.renderDashboard = function () {
   if (page === "price") pageContent = this.renderPricePage();
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
-  else if (page === "calc") pageContent = this.renderCalcPage();
+  else if (page === "calc") pageContent = '<div id="calc-container">' + this.renderCalcPage() + '</div>';
   else if (page === "users") pageContent = this.renderUsersPage();
   else pageContent = this.renderContactPage();
 
@@ -1129,7 +1159,7 @@ Dashboard.prototype.computeTruckPlan = function (totalWeightKg) {
   return { rows: rows, recommended: recommended };
 };
 
-Dashboard.prototype.renderCalcPage = function () {
+Dashboard.prototype.renderSlabCalc = function () {
   var s = this.state;
   var rows = this.computeCalcRows();
   var vatPercent = parseFloat(s.calcVatPercent) || 0;
@@ -1256,11 +1286,29 @@ Dashboard.prototype.renderCalcPage = function () {
     'คำแนะนำรถคิดจากน้ำหนักอย่างเดียว ควรตรวจสอบพื้นที่บรรทุกประกอบด้วย (รถ 10 ล้อ ~' + fmt(truck10Cap) + ' ตรม./เที่ยว)' +
   '</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">คำนวณราคาขายต่อแผ่นและแผนรถขนส่ง สำหรับแผ่นพื้น/ผลิตภัณฑ์คอนกรีตสำเร็จรูป</div></div>' +
+  return '<div style="margin-bottom:20px; font-size:13px; color:oklch(0.5 0.01 60);">คำนวณราคาขายต่อแผ่นและแผนรถขนส่ง สำหรับแผ่นพื้น/ผลิตภัณฑ์คอนกรีตสำเร็จรูป</div>' +
     topInputs + discountTiersBox + table +
     '<div class="calc-summary-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">' + truckTable + summaryPanel + '</div>' +
-    recommendBox + footnote +
+    recommendBox + footnote;
+};
+
+Dashboard.prototype.renderCalcPage = function () {
+  var s = this.state;
+
+  var typeSelector = '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">' +
+    CALC_PRODUCT_TYPES.map(function (t) {
+      var active = s.calcProductType === t.value;
+      return '<button data-action="calc-set-type" data-type="' + t.value + '" style="display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px; border:1px solid ' + (active ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (active ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (active ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;"><span>' + t.icon + '</span>' + esc(t.label) + '</button>';
+    }).join("") +
+  '</div>';
+
+  var typeConfig = CALC_PRODUCT_TYPES.filter(function (t) { return t.value === s.calcProductType; })[0];
+  var body = s.calcProductType === "slab" ? this.renderSlabCalc() :
+    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:48px 20px; text-align:center; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีเครื่องคำนวณสำหรับ "' + esc(typeConfig ? typeConfig.label : s.calcProductType) + '"</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">เลือกประเภทสินค้าที่ต้องการคำนวณราคา</div></div>' +
+    typeSelector + body +
   '</div>';
 };
 
