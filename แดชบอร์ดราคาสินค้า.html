@@ -1267,16 +1267,16 @@ Dashboard.prototype.renderSlabCalc = function () {
   var topInputs =
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px;">' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ความกว้างแผ่น (ม.)' +
-        '<input id="field-calcPlateWidth" type="number" step="0.01" min="0" data-bind="calcPlateWidth" value="' + esc(s.calcPlateWidth) + '" style="' + inputCellStyle + '" />' +
+        '<input id="field-calcPlateWidth" type="text" inputmode="decimal" data-bind="calcPlateWidth" value="' + esc(s.calcPlateWidth) + '" style="' + inputCellStyle + '" />' +
       '</label>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">น้ำหนักแผ่น (กก./ตรม.)' +
-        '<input id="field-calcWeightPerSqm" type="number" step="0.01" min="0" data-bind="calcWeightPerSqm" value="' + esc(s.calcWeightPerSqm) + '" style="' + inputCellStyle + '" />' +
+        '<input id="field-calcWeightPerSqm" type="text" inputmode="decimal" data-bind="calcWeightPerSqm" value="' + esc(s.calcWeightPerSqm) + '" style="' + inputCellStyle + '" />' +
       '</label>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">VAT (%)' +
-        '<input id="field-calcVatPercent" type="number" step="0.01" min="0" data-bind="calcVatPercent" value="' + esc(s.calcVatPercent) + '" style="' + inputCellStyle + '" />' +
+        '<input id="field-calcVatPercent" type="text" inputmode="decimal" data-bind="calcVatPercent" value="' + esc(s.calcVatPercent) + '" style="' + inputCellStyle + '" />' +
       '</label>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ความจุรถ 10 ล้อ (ตรม./เที่ยว)' +
-        '<input id="field-calcTruck10Capacity" type="number" step="1" min="0" data-bind="calcTruck10Capacity" value="' + esc(s.calcTruck10Capacity) + '" style="' + inputCellStyle + '" />' +
+        '<input id="field-calcTruck10Capacity" type="text" inputmode="numeric" data-bind="calcTruck10Capacity" value="' + esc(s.calcTruck10Capacity) + '" style="' + inputCellStyle + '" />' +
       '</label>' +
     '</div>';
 
@@ -1293,9 +1293,9 @@ Dashboard.prototype.renderSlabCalc = function () {
     var wireOptionsHtml = '<option value=""' + (r.label ? "" : " selected") + '>- เลือก -</option>' +
       WIRE_OPTIONS.map(function (w) { return '<option value="' + w + '"' + (r.label === w ? " selected" : "") + '>' + w + '</option>'; }).join("");
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
       var statusBg = r.needsApproval ? "oklch(0.94 0.03 30)" : "oklch(0.92 0.05 155)";
       var statusColor = r.needsApproval ? "oklch(0.5 0.15 30)" : "oklch(0.4 0.09 155)";
@@ -1304,7 +1304,7 @@ Dashboard.prototype.renderSlabCalc = function () {
     } else {
       cells.push('<div></div>');
     }
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
       cells.push('<div style="font-size:11px;">' + fmtN(r.discountedPrice, 2) + '</div>');
       cells.push('<div style="font-size:11px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
@@ -1421,11 +1421,11 @@ Dashboard.prototype.renderSteelCalc = function () {
     var cells = [];
     cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcSteelRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
-    cells.push('<input type="number" step="1" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcSteelRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcSteelRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
     cells.push('<div style="font-size:11px;">' + esc(r.unit || "") + '</div>');
     cells.push('<div style="font-size:11px;">' + (r.weightPerUnit != null ? fmtN(r.weightPerUnit, 2) : "") + '</div>');
     cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
-    cells.push('<input type="number" step="0.01" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
     cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
     return '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
