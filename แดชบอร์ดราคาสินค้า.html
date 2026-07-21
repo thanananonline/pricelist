@@ -210,6 +210,16 @@ function saveJSON(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
 }
 
+function dataUrlToBlob(dataUrl) {
+  var parts = dataUrl.split(",");
+  var mimeMatch = parts[0].match(/:(.*?);/);
+  var mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+  var binary = atob(parts[1]);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 function resizeImageFile(file, maxDim, quality, callback) {
   var reader = new FileReader();
   reader.onload = function () {
@@ -571,6 +581,25 @@ Dashboard.prototype._folderKeys = function (kind) {
     : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", storageKey: STORAGE.tisFolders, idPrefix: "tis" };
 };
 
+Dashboard.prototype.getBlobUrl = function (file) {
+  if (!this._blobUrlCache) this._blobUrlCache = {};
+  if (!this._blobUrlCache[file.id]) {
+    try {
+      this._blobUrlCache[file.id] = URL.createObjectURL(dataUrlToBlob(file.url));
+    } catch (e) {
+      return file.url;
+    }
+  }
+  return this._blobUrlCache[file.id];
+};
+
+Dashboard.prototype.revokeBlobUrl = function (fileId) {
+  if (this._blobUrlCache && this._blobUrlCache[fileId]) {
+    URL.revokeObjectURL(this._blobUrlCache[fileId]);
+    delete this._blobUrlCache[fileId];
+  }
+};
+
 Dashboard.prototype.addFolder = function (kind) {
   var k = this._folderKeys(kind);
   var name = (this.state[k.nameKey] || "").trim();
@@ -640,6 +669,7 @@ Dashboard.prototype.uploadFile = function (kind, file) {
 
 Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
   var k = this._folderKeys(kind);
+  this.revokeBlobUrl(fileId);
   this.setState(function (s) {
     var folders = s[k.stateKey].map(function (f) {
       if (f.id !== folderId) return f;
@@ -1005,6 +1035,7 @@ Dashboard.prototype.renderPricePage = function () {
 };
 
 Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
+  var self = this;
   var s = this.state;
   var isAdmin = this.isAdmin();
   var k = this._folderKeys(kind);
@@ -1050,7 +1081,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
-        '<a href="' + f.url + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
+        '<a href="' + self.getBlobUrl(f) + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<a href="' + f.url + '" download="' + esc(f.name) + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
         (isAdmin ? '<button data-action="remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
