@@ -331,6 +331,7 @@ Dashboard.prototype.componentDidMount = function () {
 
 Dashboard.prototype.setState = function (patch) {
   clearTimeout(this._renderTimer);
+  this._renderTimerStart = null;
   Object.assign(this.state, typeof patch === "function" ? patch(this.state) : patch);
   this.render();
 };
@@ -378,16 +379,30 @@ Dashboard.prototype.handleSubmit = function (e) {
   }
 };
 
-Dashboard.prototype.handleFieldChange = function (e) {
+Dashboard.prototype._scheduleRender = function (fn) {
   var self = this;
+  var now = Date.now();
+  if (!this._renderTimerStart) this._renderTimerStart = now;
+  clearTimeout(this._renderTimer);
+  if (now - this._renderTimerStart >= 500) {
+    this._renderTimerStart = null;
+    fn.call(this);
+    return;
+  }
+  this._renderTimer = setTimeout(function () {
+    self._renderTimerStart = null;
+    fn.call(self);
+  }, 150);
+};
+
+Dashboard.prototype.handleFieldChange = function (e) {
   var rowEl = e.target.closest("[data-calc-row]");
   if (rowEl) {
     var idx = parseInt(rowEl.dataset.calcRow, 10);
     var field = rowEl.dataset.calcField;
     var storeKey = rowEl.dataset.calcStore || "calcRows";
     this.state[storeKey][idx][field] = rowEl.value;
-    clearTimeout(this._renderTimer);
-    this._renderTimer = setTimeout(function () { self.renderCalcOnly(); }, 150);
+    this._scheduleRender(this.renderCalcOnly);
     return;
   }
   var el = e.target.closest("[data-bind]");
@@ -395,9 +410,8 @@ Dashboard.prototype.handleFieldChange = function (e) {
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
-  clearTimeout(this._renderTimer);
   var isCalcField = key.indexOf("calc") === 0;
-  this._renderTimer = setTimeout(function () { isCalcField ? self.renderCalcOnly() : self.render(); }, 150);
+  this._scheduleRender(isCalcField ? this.renderCalcOnly : this.render);
 };
 
 Dashboard.prototype.handleChange = function (e) {
@@ -762,6 +776,9 @@ Dashboard.prototype.renderCalcOnly = function () {
     : null;
   var selStart = active && "selectionStart" in active ? active.selectionStart : null;
   var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
+  var oldScrollBox = container.querySelector(".list-table");
+  var tableScrollLeft = oldScrollBox ? oldScrollBox.scrollLeft : null;
+  var pageScrollX = window.scrollX, pageScrollY = window.scrollY;
 
   container.innerHTML = this.renderCalcPage();
 
@@ -772,6 +789,11 @@ Dashboard.prototype.renderCalcOnly = function () {
       try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
     }
   }
+  if (tableScrollLeft != null) {
+    var newScrollBox = container.querySelector(".list-table");
+    if (newScrollBox) newScrollBox.scrollLeft = tableScrollLeft;
+  }
+  window.scrollTo(pageScrollX, pageScrollY);
 };
 
 Dashboard.prototype.renderLogin = function () {
