@@ -53,6 +53,28 @@ async function insertProduct(env, item) {
   return p;
 }
 
+async function upsertProductByName(env, item) {
+  const sanitized = sanitizeProduct(item);
+  const existing = await env.DB.prepare("SELECT * FROM products WHERE name = ?").bind(sanitized.name).first();
+  if (existing) {
+    const merged = Object.assign({}, existing, {
+      cat: sanitized.cat || existing.cat,
+      price: sanitized.price,
+      price2: sanitized.price2,
+      price3: sanitized.price3,
+      unit: sanitized.unit || existing.unit,
+      stock: sanitized.stock,
+      vat: sanitized.vat,
+    });
+    await env.DB.prepare(
+      "UPDATE products SET cat=?, price=?, price2=?, price3=?, unit=?, stock=?, vat=? WHERE id=?"
+    ).bind(merged.cat, merged.price, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, existing.id).run();
+    return { product: merged, action: "updated" };
+  }
+  const product = await insertProduct(env, item);
+  return { product: product, action: "created" };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -82,10 +104,13 @@ export default {
       try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
       if (!Array.isArray(body)) return json({ error: "expected an array" }, 400);
       const created = [];
+      const updated = [];
       for (const item of body) {
-        created.push(await insertProduct(env, item));
+        const result = await upsertProductByName(env, item);
+        if (result.action === "created") created.push(result.product);
+        else updated.push(result.product);
       }
-      return json(created, 201);
+      return json({ created: created, updated: updated }, 201);
     }
 
     const idMatch = path.match(/^\/products\/([^/]+)$/);

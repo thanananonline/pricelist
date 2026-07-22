@@ -737,10 +737,16 @@ Dashboard.prototype.importExcelFile = function (file) {
 
       if (newProducts.length) {
         apiRequest("/products/bulk", { method: "POST", auth: true, body: newProducts })
-          .then(function (created) {
+          .then(function (result) {
             self.setState(function (s2) {
-              var products = s2.products.concat(created);
-              var msg = "นำเข้าสำเร็จ " + created.length + " รายการ" + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
+              var updatedIds = result.updated.map(function (p) { return p.id; });
+              var products = s2.products
+                .filter(function (p) { return updatedIds.indexOf(p.id) === -1; })
+                .concat(result.updated, result.created);
+              var parts = [];
+              if (result.created.length) parts.push("เพิ่มใหม่ " + result.created.length + " รายการ");
+              if (result.updated.length) parts.push("แก้ไข " + result.updated.length + " รายการ (ชื่อซ้ำ)");
+              var msg = "นำเข้าสำเร็จ: " + parts.join(", ") + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
               return { products: products, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
             });
           })
