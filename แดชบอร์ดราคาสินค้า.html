@@ -88,7 +88,7 @@ var CATEGORIES = [
 var CAT_LABEL = Object.fromEntries(CATEGORIES.map(function (c) { return [c.value, c.label]; }));
 var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label, c.value]; }));
 
-var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ราคา", "หน่วย", "ราคาเดิม", "ราคาช่อง 2", "ราคาช่อง 3", "ภาษี", "SKU", "สต็อก"];
+var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
 var ADMIN_KEY = "b6f506b60d1297f2cc5a04aaac21ce5df09cc88c866f743d";
@@ -678,7 +678,7 @@ Dashboard.prototype.removeProduct = function (id) {
 };
 
 Dashboard.prototype.downloadImportTemplate = function () {
-  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "ถุง", "", "", "", "VAT", "", 0];
+  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "", "", "ถุง", "VAT", 0];
   var ws1 = XLSX.utils.aoa_to_sheet([IMPORT_HEADERS, example]);
   var catRows = [["หมวดหมู่ที่ใช้ได้ (คัดลอกไปใส่ในคอลัมน์ \"หมวดหมู่\")"]].concat(
     CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label]; })
@@ -706,7 +706,7 @@ Dashboard.prototype.importExcelFile = function (file) {
         var rowNum = i + 2;
         var name = String(row["ชื่อสินค้า"] || "").trim();
         var catRaw = String(row["หมวดหมู่"] || "").trim();
-        var priceRaw = row["ราคา"];
+        var priceRaw = row["ช่อง 1"];
         var unit = String(row["หน่วย"] || "").trim();
         if (!name && !catRaw && !unit && (priceRaw === "" || priceRaw == null)) return;
 
@@ -719,23 +719,19 @@ Dashboard.prototype.importExcelFile = function (file) {
         if (!unit) errs.push("ไม่มีหน่วยนับ");
         if (errs.length) { errors.push("แถว " + rowNum + ": " + errs.join(", ")); return; }
 
-        var oldPriceRaw = row["ราคาเดิม"];
-        var oldPrice = (oldPriceRaw !== "" && oldPriceRaw != null) ? parseFloat(oldPriceRaw) : null;
-        if (oldPrice != null && isNaN(oldPrice)) oldPrice = null;
-        var price2Raw = row["ราคาช่อง 2"];
+        var price2Raw = row["ช่อง 2"];
         var price2 = (price2Raw !== "" && price2Raw != null) ? parseFloat(price2Raw) : null;
         if (price2 != null && isNaN(price2)) price2 = null;
-        var price3Raw = row["ราคาช่อง 3"];
+        var price3Raw = row["ช่อง 3"];
         var price3 = (price3Raw !== "" && price3Raw != null) ? parseFloat(price3Raw) : null;
         if (price3 != null && isNaN(price3)) price3 = null;
         var vatRaw = String(row["ภาษี"] || "").trim().toLowerCase();
         var vat = (vatRaw === "novat" || vatRaw === "no vat") ? "novat" : "vat";
-        var skuRaw = String(row["SKU"] || "").trim();
         var stock = parseInt(row["สต็อก"], 10); if (isNaN(stock) || stock < 0) stock = 0;
 
         newProducts.push({
-          cat: cat, name: name, sku: skuRaw,
-          price: price, oldPrice: oldPrice, price2: price2, price3: price3, unit: unit, stock: stock, vat: vat, image: "",
+          cat: cat, name: name, sku: "",
+          price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: stock, vat: vat, image: "",
         });
       });
 
