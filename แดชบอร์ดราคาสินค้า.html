@@ -72,6 +72,7 @@
 var STORAGE = {
   overrides: "thananan_price_overrides",
   customProducts: "thananan_custom_products",
+  deletedProductIds: "thananan_deleted_product_ids",
   concreteFolders: "thananan_concrete_folders",
   tisFolders: "thananan_tis_folders",
   contacts: "thananan_contact_info",
@@ -296,6 +297,7 @@ function Dashboard(root) {
     editVat: "vat",
     editImage: "",
     customProducts: [],
+    deletedProductIds: [],
     showAddForm: false,
     newProdName: "",
     newProdCat: "cement",
@@ -340,6 +342,7 @@ function Dashboard(root) {
 Dashboard.prototype.componentDidMount = function () {
   this.state.overrides = loadJSON(STORAGE.overrides, {});
   this.state.customProducts = loadJSON(STORAGE.customProducts, []);
+  this.state.deletedProductIds = loadJSON(STORAGE.deletedProductIds, []);
   var cf = loadJSON(STORAGE.concreteFolders, DEFAULT_CONCRETE_FOLDERS);
   this.state.concreteFolders = Array.isArray(cf) ? cf : DEFAULT_CONCRETE_FOLDERS;
   var tf = loadJSON(STORAGE.tisFolders, DEFAULT_TIS_FOLDERS);
@@ -376,6 +379,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
+    case "delete-product": this.removeProduct(d.id); break;
     case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
@@ -505,7 +509,10 @@ Dashboard.prototype.onLogout = function () {
 
 Dashboard.prototype.getMergedProducts = function () {
   var overrides = this.state.overrides;
-  return RAW_PRODUCTS.concat(this.state.customProducts).map(function (p) {
+  var deletedIds = this.state.deletedProductIds;
+  return RAW_PRODUCTS.concat(this.state.customProducts).filter(function (p) {
+    return deletedIds.indexOf(p.id) === -1;
+  }).map(function (p) {
     var ov = overrides[p.id];
     if (!ov) return p;
     return Object.assign({}, p, {
@@ -616,6 +623,30 @@ Dashboard.prototype.onAddProduct = function () {
     var customProducts = s2.customProducts.concat([product]);
     saveJSON(STORAGE.customProducts, customProducts);
     return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "" };
+  });
+};
+
+Dashboard.prototype.removeProduct = function (id) {
+  this.setState(function (s2) {
+    var patch = {};
+    var isCustom = s2.customProducts.some(function (cp) { return cp.id === id; });
+    if (isCustom) {
+      var customProducts = s2.customProducts.filter(function (cp) { return cp.id !== id; });
+      saveJSON(STORAGE.customProducts, customProducts);
+      patch.customProducts = customProducts;
+    } else {
+      var deletedProductIds = s2.deletedProductIds.concat([id]);
+      saveJSON(STORAGE.deletedProductIds, deletedProductIds);
+      patch.deletedProductIds = deletedProductIds;
+    }
+    if (s2.overrides[id]) {
+      var overrides = Object.assign({}, s2.overrides);
+      delete overrides[id];
+      saveJSON(STORAGE.overrides, overrides);
+      patch.overrides = overrides;
+    }
+    if (s2.editingId === id) patch.editingId = null;
+    return patch;
   });
 };
 
@@ -1126,7 +1157,10 @@ Dashboard.prototype.renderPricePage = function () {
           '</div>' +
           '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
-            (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' : '') +
+            (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
+              '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' +
+              '<button data-action="delete-product" data-id="' + p.id + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
+            '</div>' : '') +
           '</div>' +
         '</div></div>';
     }).join("") + '</div>';
@@ -1151,6 +1185,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
           (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
+          (isAdmin ? '<button data-action="delete-product" data-id="' + p.id + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
         '</div>';
       var listMediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
