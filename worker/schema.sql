@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  cat TEXT NOT NULL,
+  name TEXT NOT NULL,
+  sku TEXT NOT NULL,
+  price REAL NOT NULL,
+  oldPrice REAL,
+  unit TEXT NOT NULL,
+  stock INTEGER NOT NULL DEFAULT 0,
+  vat TEXT NOT NULL DEFAULT 'vat',
+  image TEXT NOT NULL DEFAULT ''
+);

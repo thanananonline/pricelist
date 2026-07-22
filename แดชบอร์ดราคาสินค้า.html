@@ -70,9 +70,6 @@
 /* ---------- data ---------- */
 
 var STORAGE = {
-  overrides: "thananan_price_overrides",
-  customProducts: "thananan_custom_products",
-  deletedProductIds: "thananan_deleted_product_ids",
   concreteFolders: "thananan_concrete_folders",
   tisFolders: "thananan_tis_folders",
   contacts: "thananan_contact_info",
@@ -93,6 +90,27 @@ var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { ret
 
 var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ราคา", "หน่วย", "ราคาเดิม", "ภาษี", "SKU", "สต็อก"];
 
+var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
+var ADMIN_KEY = "b6f506b60d1297f2cc5a04aaac21ce5df09cc88c866f743d";
+
+function apiRequest(path, opts) {
+  opts = opts || {};
+  var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+  if (opts.auth) headers["x-admin-key"] = ADMIN_KEY;
+  return fetch(API_BASE + path, {
+    method: opts.method || "GET",
+    headers: headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  }).then(function (res) {
+    if (!res.ok) {
+      return res.json().catch(function () { return {}; }).then(function (errBody) {
+        throw new Error(errBody.error || ("HTTP " + res.status));
+      });
+    }
+    return res.json();
+  });
+}
+
 var CAT_HUE = {
   cement: 60, steel: 250,
   concrete_pipe: 210, concrete_manhole: 90, concrete_pile: 25, concrete_slab: 130,
@@ -101,9 +119,6 @@ function img(cat) {
   var h = CAT_HUE[cat] != null ? CAT_HUE[cat] : 60;
   return { bg: "oklch(0.93 0.02 " + h + ")", stripe: "oklch(0.88 0.035 " + h + ")" };
 }
-
-var RAW_PRODUCTS_BASE = [];
-var RAW_PRODUCTS = RAW_PRODUCTS_BASE.map(function (p) { return Object.assign({}, p, { vat: "vat" }); });
 
 var DEFAULT_CONCRETE_FOLDERS = [
   { id: "cf-pipe", name: "ท่อ", files: [] },
@@ -289,15 +304,15 @@ function Dashboard(root) {
     calcSidebarCollapsed: false,
     sortBy: "name",
     view: "grid",
-    overrides: {},
+    products: [],
+    productsLoading: true,
+    productsError: "",
     editingId: null,
     editName: "",
     editPrice: "",
     editUnit: "",
     editVat: "vat",
     editImage: "",
-    customProducts: [],
-    deletedProductIds: [],
     showAddForm: false,
     newProdName: "",
     newProdCat: "cement",
@@ -340,9 +355,6 @@ function Dashboard(root) {
 }
 
 Dashboard.prototype.componentDidMount = function () {
-  this.state.overrides = loadJSON(STORAGE.overrides, {});
-  this.state.customProducts = loadJSON(STORAGE.customProducts, []);
-  this.state.deletedProductIds = loadJSON(STORAGE.deletedProductIds, []);
   var cf = loadJSON(STORAGE.concreteFolders, DEFAULT_CONCRETE_FOLDERS);
   this.state.concreteFolders = Array.isArray(cf) ? cf : DEFAULT_CONCRETE_FOLDERS;
   var tf = loadJSON(STORAGE.tisFolders, DEFAULT_TIS_FOLDERS);
@@ -351,6 +363,17 @@ Dashboard.prototype.componentDidMount = function () {
   this.state.contacts = Array.isArray(ct) ? ct : DEFAULT_CONTACTS;
   var us = loadJSON(STORAGE.users, DEFAULT_USERS);
   this.state.users = (Array.isArray(us) && us.length) ? us : DEFAULT_USERS;
+  this.loadProducts();
+};
+
+Dashboard.prototype.loadProducts = function () {
+  var self = this;
+  self.state.productsLoading = true;
+  apiRequest("/products").then(function (products) {
+    self.setState({ products: products, productsLoading: false, productsError: "" });
+  }).catch(function () {
+    self.setState({ productsLoading: false, productsError: "โหลดข้อมูลสินค้าไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
 };
 
 Dashboard.prototype.setState = function (patch) {
@@ -380,6 +403,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
     case "delete-product": this.removeProduct(d.id); break;
+    case "reload-products": this.loadProducts(); break;
     case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
@@ -508,21 +532,7 @@ Dashboard.prototype.onLogout = function () {
 /* ---- products ---- */
 
 Dashboard.prototype.getMergedProducts = function () {
-  var overrides = this.state.overrides;
-  var deletedIds = this.state.deletedProductIds;
-  return RAW_PRODUCTS.concat(this.state.customProducts).filter(function (p) {
-    return deletedIds.indexOf(p.id) === -1;
-  }).map(function (p) {
-    var ov = overrides[p.id];
-    if (!ov) return p;
-    return Object.assign({}, p, {
-      name: ov.name != null ? ov.name : p.name,
-      unit: ov.unit != null ? ov.unit : p.unit,
-      price: ov.price != null ? ov.price : p.price,
-      vat: ov.vat != null ? ov.vat : p.vat,
-      image: ov.image !== undefined ? ov.image : p.image,
-    });
-  });
+  return this.state.products;
 };
 
 Dashboard.prototype.computeProducts = function () {
@@ -568,30 +578,21 @@ Dashboard.prototype.saveEdit = function (id) {
   var price = parseFloat(s.editPrice);
   var name = s.editName.trim();
   var unit = s.editUnit.trim();
-  var editVat = s.editVat;
-  var editImage = s.editImage;
-  this.setState(function (s2) {
-    var isCustom = s2.customProducts.some(function (cp) { return cp.id === id; });
-    if (isCustom) {
-      var customProducts = s2.customProducts.map(function (cp) {
-        if (cp.id !== id) return cp;
-        return Object.assign({}, cp, {
-          name: name || cp.name, unit: unit || cp.unit,
-          price: isNaN(price) ? cp.price : price, vat: editVat, image: editImage,
-        });
+  var body = { vat: s.editVat, image: s.editImage };
+  if (name) body.name = name;
+  if (unit) body.unit = unit;
+  if (!isNaN(price)) body.price = price;
+  var self = this;
+  apiRequest("/products/" + encodeURIComponent(id), { method: "PUT", auth: true, body: body })
+    .then(function (updated) {
+      self.setState(function (s2) {
+        var products = s2.products.map(function (p) { return p.id === id ? updated : p; });
+        return { products: products, editingId: null };
       });
-      saveJSON(STORAGE.customProducts, customProducts);
-      return { customProducts: customProducts, editingId: null };
-    }
-    var prev = s2.overrides[id] || {};
-    var overrides = Object.assign({}, s2.overrides);
-    overrides[id] = {
-      name: name || prev.name, unit: unit || prev.unit,
-      price: isNaN(price) ? prev.price : price, vat: editVat, image: editImage,
-    };
-    saveJSON(STORAGE.overrides, overrides);
-    return { overrides: overrides, editingId: null };
-  });
+    })
+    .catch(function (err) {
+      self.setState({ importMsg: "บันทึกไม่สำเร็จ: " + err.message, importMsgType: "error" });
+    });
 };
 
 Dashboard.prototype.uploadProductImage = function (file, stateKey) {
@@ -616,38 +617,35 @@ Dashboard.prototype.onAddProduct = function () {
     this.setState({ newProdError: "กรุณากรอกข้อมูลให้ครบและถูกต้อง" });
     return;
   }
-  var id = "custom-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
-  var sku = "CUS-" + String(Date.now()).slice(-5);
-  var product = { id: id, cat: s.newProdCat, name: name, sku: sku, price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
-  this.setState(function (s2) {
-    var customProducts = s2.customProducts.concat([product]);
-    saveJSON(STORAGE.customProducts, customProducts);
-    return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "" };
-  });
+  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
+  var self = this;
+  apiRequest("/products", { method: "POST", auth: true, body: body })
+    .then(function (created) {
+      self.setState(function (s2) {
+        return {
+          products: s2.products.concat([created]), showAddForm: false,
+          newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "",
+        };
+      });
+    })
+    .catch(function (err) {
+      self.setState({ newProdError: "เพิ่มสินค้าไม่สำเร็จ: " + err.message });
+    });
 };
 
 Dashboard.prototype.removeProduct = function (id) {
-  this.setState(function (s2) {
-    var patch = {};
-    var isCustom = s2.customProducts.some(function (cp) { return cp.id === id; });
-    if (isCustom) {
-      var customProducts = s2.customProducts.filter(function (cp) { return cp.id !== id; });
-      saveJSON(STORAGE.customProducts, customProducts);
-      patch.customProducts = customProducts;
-    } else {
-      var deletedProductIds = s2.deletedProductIds.concat([id]);
-      saveJSON(STORAGE.deletedProductIds, deletedProductIds);
-      patch.deletedProductIds = deletedProductIds;
-    }
-    if (s2.overrides[id]) {
-      var overrides = Object.assign({}, s2.overrides);
-      delete overrides[id];
-      saveJSON(STORAGE.overrides, overrides);
-      patch.overrides = overrides;
-    }
-    if (s2.editingId === id) patch.editingId = null;
-    return patch;
-  });
+  var self = this;
+  apiRequest("/products/" + encodeURIComponent(id), { method: "DELETE", auth: true })
+    .then(function () {
+      self.setState(function (s2) {
+        var patch = { products: s2.products.filter(function (p) { return p.id !== id; }) };
+        if (s2.editingId === id) patch.editingId = null;
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      self.setState({ importMsg: "ลบสินค้าไม่สำเร็จ: " + err.message, importMsgType: "error" });
+    });
 };
 
 Dashboard.prototype.downloadImportTemplate = function () {
@@ -701,19 +699,23 @@ Dashboard.prototype.importExcelFile = function (file) {
         var stock = parseInt(row["สต็อก"], 10); if (isNaN(stock) || stock < 0) stock = 0;
 
         newProducts.push({
-          id: "custom-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),
-          cat: cat, name: name, sku: skuRaw || ("CUS-" + String(Date.now()).slice(-5) + "-" + i),
+          cat: cat, name: name, sku: skuRaw,
           price: price, oldPrice: oldPrice, unit: unit, stock: stock, vat: vat, image: "",
         });
       });
 
       if (newProducts.length) {
-        self.setState(function (s2) {
-          var customProducts = s2.customProducts.concat(newProducts);
-          saveJSON(STORAGE.customProducts, customProducts);
-          var msg = "นำเข้าสำเร็จ " + newProducts.length + " รายการ" + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
-          return { customProducts: customProducts, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
-        });
+        apiRequest("/products/bulk", { method: "POST", auth: true, body: newProducts })
+          .then(function (created) {
+            self.setState(function (s2) {
+              var products = s2.products.concat(created);
+              var msg = "นำเข้าสำเร็จ " + created.length + " รายการ" + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
+              return { products: products, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
+            });
+          })
+          .catch(function (err) {
+            self.setState({ importMsg: "นำเข้าไม่สำเร็จ: " + err.message, importMsgType: "error", importErrors: errors });
+          });
       } else {
         self.setState({ importMsg: "ไม่พบข้อมูลสินค้าที่ถูกต้องในไฟล์", importMsgType: "error", importErrors: errors });
       }
@@ -1032,6 +1034,13 @@ Dashboard.prototype.isAdmin = function () {
 Dashboard.prototype.renderPricePage = function () {
   var s = this.state;
   var isAdmin = this.isAdmin();
+
+  if (s.productsLoading) {
+    return '<div class="page-content" style="padding:60px 32px; max-width:1360px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+      '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลสินค้า...</div>' +
+    '</div>';
+  }
+
   var products = this.computeProducts();
   var withOverrides = this.getMergedProducts();
   var discountCount = withOverrides.filter(function (p) { return p.oldPrice; }).length;
@@ -1076,6 +1085,14 @@ Dashboard.prototype.renderPricePage = function () {
       (isAdmin ? '<button type="button" data-action="download-import-template" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
       (isAdmin ? '<button data-action="toggle-add-form" style="padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
     '</div>';
+
+  var productsErrorBanner = "";
+  if (s.productsError) {
+    productsErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+      '<div style="font-size:13.5px; font-weight:600;">' + esc(s.productsError) + '</div>' +
+      '<button data-action="reload-products" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+    '</div>';
+  }
 
   var importBanner = "";
   if (s.importMsg) {
@@ -1207,7 +1224,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
-    importBanner + controls + addForm + resultCount + body +
+    productsErrorBanner + importBanner + controls + addForm + resultCount + body +
   '</div>';
 };
 
