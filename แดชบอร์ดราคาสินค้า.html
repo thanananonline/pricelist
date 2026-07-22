@@ -101,23 +101,7 @@ function img(cat) {
   return { bg: "oklch(0.93 0.02 " + h + ")", stripe: "oklch(0.88 0.035 " + h + ")" };
 }
 
-var RAW_PRODUCTS_BASE = [
-  { id: "c1", cat: "cement", name: "ปูนซีเมนต์ปอร์ตแลนด์ ตราอินทรี ถุง 50 กก.", sku: "CEM-001", price: 145, oldPrice: null, unit: "ถุง", stock: 320 },
-  { id: "c2", cat: "cement", name: "ปูนซีเมนต์ผสม ตราเสือ ถุง 50 กก.", sku: "CEM-002", price: 128, oldPrice: 138, unit: "ถุง", stock: 210 },
-  { id: "c3", cat: "cement", name: "ปูนก่อสำเร็จรูป ตราจระเข้ ถุง 50 กก.", sku: "CEM-003", price: 132, oldPrice: null, unit: "ถุง", stock: 8, image: "uploads/จระเข้เขียว.png" },
-  { id: "s1", cat: "steel", name: "เหล็กเส้นกลม RB9 มม. ยาว 10 ม.", sku: "STL-001", price: 98, oldPrice: null, unit: "เส้น", stock: 560 },
-  { id: "s2", cat: "steel", name: "เหล็กข้ออ้อย DB12 มม. ยาว 10 ม.", sku: "STL-002", price: 175, oldPrice: 190, unit: "เส้น", stock: 240 },
-  { id: "s3", cat: "steel", name: "เหล็กกล่องสี่เหลี่ยม 2x2 นิ้ว หนา 1.2 มม.", sku: "STL-003", price: 265, oldPrice: null, unit: "เส้น", stock: 12 },
-  { id: "k1", cat: "concrete_slab", name: "แผ่นพื้นคอนกรีตสำเร็จรูป ท้องเรียบ", sku: "CON-001", price: 245, oldPrice: null, unit: "แผ่น", stock: 220 },
-  { id: "k2", cat: "concrete_pipe", name: "ท่อคอนกรีตเสริมเหล็ก เส้นผ่านศูนย์กลาง 40 ซม.", sku: "CON-002", price: 620, oldPrice: 680, unit: "ท่อ", stock: 75 },
-  { id: "pp1", cat: "concrete_pipe", name: "ท่อ PVC สีฟ้า ชั้น 8.5 ขนาด 4 นิ้ว ยาว 4 ม.", sku: "PIP-001", price: 285, oldPrice: null, unit: "ท่อน", stock: 640 },
-  { id: "pp2", cat: "concrete_pipe", name: "ท่อ HDPE สำหรับประปา ขนาด 2 นิ้ว", sku: "PIP-002", price: 195, oldPrice: 215, unit: "เมตร", stock: 410 },
-  { id: "pp3", cat: "concrete_pipe", name: "ท่อระบายน้ำคอนกรีตเสริมเหล็ก ขนาด 60 ซม.", sku: "PIP-003", price: 890, oldPrice: null, unit: "ท่อน", stock: 32 },
-  { id: "pp4", cat: "concrete_manhole", name: "บ่อพัก คสล. สำเร็จรูป ขนาด 40x40 ซม.", sku: "PIP-004", price: 450, oldPrice: 490, unit: "บ่อ", stock: 58 },
-  { id: "pp5", cat: "concrete_manhole", name: "บ่อพักพลาสติก PP ฝาเหล็กหล่อ ขนาด 30 ซม.", sku: "PIP-005", price: 620, oldPrice: null, unit: "ชุด", stock: 7 },
-  { id: "pp6", cat: "concrete_manhole", name: "ฝาบ่อพักคอนกรีต พร้อมขอบเหล็ก ขนาด 40 ซม.", sku: "PIP-006", price: 320, oldPrice: null, unit: "ฝา", stock: 90 },
-  { id: "k3", cat: "concrete_pile", name: "เสาเข็มคอนกรีตอัดแรง หน้าตัด I26", sku: "CON-003", price: 890, oldPrice: null, unit: "ต้น", stock: 5 },
-];
+var RAW_PRODUCTS_BASE = [];
 var RAW_PRODUCTS = RAW_PRODUCTS_BASE.map(function (p) { return Object.assign({}, p, { vat: "vat" }); });
 
 var DEFAULT_CONCRETE_FOLDERS = [
