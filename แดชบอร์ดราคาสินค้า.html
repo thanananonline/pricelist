@@ -315,6 +315,8 @@ function Dashboard(root) {
     products: [],
     productsLoading: true,
     productsError: "",
+    deleteConfirmId: null,
+    deleteConfirmName: "",
     editingId: null,
     editName: "",
     editPrice: "",
@@ -414,7 +416,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
-    case "delete-product": this.removeProduct(d.id); break;
+    case "request-delete-product": this.setState({ deleteConfirmId: d.id, deleteConfirmName: d.name || "" }); break;
+    case "cancel-delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); break;
+    case "delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); this.removeProduct(d.id); break;
     case "reload-products": this.loadProducts(); break;
     case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
     case "clear-edit-image": this.setState({ editImage: "" }); break;
@@ -1002,6 +1006,24 @@ Dashboard.prototype.renderLogin = function () {
   );
 };
 
+Dashboard.prototype.renderDeleteConfirmModal = function () {
+  var s = this.state;
+  if (!s.deleteConfirmId) return "";
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">ยืนยันการลบสินค้า</div>' +
+      '</div>' +
+      '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">ต้องการลบ "<strong>' + esc(s.deleteConfirmName) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</div>' +
+      '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+        '<button data-action="cancel-delete-product" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button data-action="delete-product" data-id="' + s.deleteConfirmId + '" style="padding:9px 16px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">ลบสินค้า</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderDashboard = function () {
   var s = this.state;
   var page = s.page;
@@ -1052,7 +1074,8 @@ Dashboard.prototype.renderDashboard = function () {
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div></div>'
+    '</div>' + this.renderDeleteConfirmModal() +
+    '</div>'
   );
 };
 
@@ -1214,7 +1237,7 @@ Dashboard.prototype.renderPricePage = function () {
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
             (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
               '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' +
-              '<button data-action="delete-product" data-id="' + p.id + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
+              '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
             '</div>' : '') +
           '</div>' +
         '</div></div>';
@@ -1242,7 +1265,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
           (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
-          (isAdmin ? '<button data-action="delete-product" data-id="' + p.id + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
+          (isAdmin ? '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
         '</div>';
       var listMediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
