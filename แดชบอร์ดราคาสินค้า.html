@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -87,6 +88,9 @@ var CATEGORIES = [
   { value: "steel", label: "เหล็กเส้น / เหล็กรูปพรรณ" },
 ];
 var CAT_LABEL = Object.fromEntries(CATEGORIES.map(function (c) { return [c.value, c.label]; }));
+var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label, c.value]; }));
+
+var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ราคา", "หน่วย", "ราคาเดิม", "ภาษี", "SKU", "สต็อก"];
 
 var CAT_HUE = {
   cement: 60, steel: 250,
@@ -316,6 +320,9 @@ function Dashboard(root) {
     newProdVat: "vat",
     newProdImage: "",
     newProdError: "",
+    importMsg: "",
+    importMsgType: "",
+    importErrors: [],
     newUserName: "",
     newUserPassword: "",
     newUserRole: "viewer",
@@ -393,6 +400,8 @@ Dashboard.prototype.handleClick = function (e) {
     case "remove-file": this.removeFile(d.kind, d.folderId, d.fileId); break;
     case "remove-user": this.removeUser(d.username); break;
     case "remove-contact": this.removeContact(d.id); break;
+    case "download-import-template": this.downloadImportTemplate(); break;
+    case "dismiss-import-msg": this.setState({ importMsg: "", importMsgType: "", importErrors: [] }); break;
   }
 };
 
@@ -464,6 +473,12 @@ Dashboard.prototype.handleChange = function (e) {
   if (e.target.type === "file" && e.target.dataset.action === "upload-edit-image") {
     var file3 = e.target.files && e.target.files[0];
     if (file3) this.uploadProductImage(file3, "editImage");
+    e.target.value = "";
+    return;
+  }
+  if (e.target.type === "file" && e.target.dataset.action === "import-excel") {
+    var file4 = e.target.files && e.target.files[0];
+    if (file4) this.importExcelFile(file4);
     e.target.value = "";
     return;
   }
@@ -618,6 +633,80 @@ Dashboard.prototype.onAddProduct = function () {
     saveJSON(STORAGE.customProducts, customProducts);
     return { customProducts: customProducts, showAddForm: false, newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "" };
   });
+};
+
+Dashboard.prototype.downloadImportTemplate = function () {
+  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "ถุง", "", "VAT", "", 0];
+  var ws1 = XLSX.utils.aoa_to_sheet([IMPORT_HEADERS, example]);
+  var catRows = [["หมวดหมู่ที่ใช้ได้ (คัดลอกไปใส่ในคอลัมน์ \"หมวดหมู่\")"]].concat(
+    CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label]; })
+  );
+  var ws2 = XLSX.utils.aoa_to_sheet(catRows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws1, "สินค้า");
+  XLSX.utils.book_append_sheet(wb, ws2, "หมวดหมู่ที่ใช้ได้");
+  XLSX.writeFile(wb, "เทมเพลตนำเข้าสินค้า.xlsx");
+};
+
+Dashboard.prototype.importExcelFile = function (file) {
+  var self = this;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var data = new Uint8Array(reader.result);
+      var wb = XLSX.read(data, { type: "array" });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      var newProducts = [];
+      var errors = [];
+
+      rows.forEach(function (row, i) {
+        var rowNum = i + 2;
+        var name = String(row["ชื่อสินค้า"] || "").trim();
+        var catRaw = String(row["หมวดหมู่"] || "").trim();
+        var priceRaw = row["ราคา"];
+        var unit = String(row["หน่วย"] || "").trim();
+        if (!name && !catRaw && !unit && (priceRaw === "" || priceRaw == null)) return;
+
+        var price = parseFloat(priceRaw);
+        var cat = CATEGORIES.some(function (c) { return c.value === catRaw; }) ? catRaw : CAT_VALUE_BY_LABEL[catRaw];
+        var errs = [];
+        if (!name) errs.push("ไม่มีชื่อสินค้า");
+        if (!cat) errs.push('หมวดหมู่ไม่ถูกต้อง ("' + catRaw + '")');
+        if (isNaN(price) || price < 0) errs.push("ราคาไม่ถูกต้อง");
+        if (!unit) errs.push("ไม่มีหน่วยนับ");
+        if (errs.length) { errors.push("แถว " + rowNum + ": " + errs.join(", ")); return; }
+
+        var oldPriceRaw = row["ราคาเดิม"];
+        var oldPrice = (oldPriceRaw !== "" && oldPriceRaw != null) ? parseFloat(oldPriceRaw) : null;
+        if (oldPrice != null && isNaN(oldPrice)) oldPrice = null;
+        var vatRaw = String(row["ภาษี"] || "").trim().toLowerCase();
+        var vat = (vatRaw === "novat" || vatRaw === "no vat") ? "novat" : "vat";
+        var skuRaw = String(row["SKU"] || "").trim();
+        var stock = parseInt(row["สต็อก"], 10); if (isNaN(stock) || stock < 0) stock = 0;
+
+        newProducts.push({
+          id: "custom-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),
+          cat: cat, name: name, sku: skuRaw || ("CUS-" + String(Date.now()).slice(-5) + "-" + i),
+          price: price, oldPrice: oldPrice, unit: unit, stock: stock, vat: vat, image: "",
+        });
+      });
+
+      if (newProducts.length) {
+        self.setState(function (s2) {
+          var customProducts = s2.customProducts.concat(newProducts);
+          saveJSON(STORAGE.customProducts, customProducts);
+          var msg = "นำเข้าสำเร็จ " + newProducts.length + " รายการ" + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
+          return { customProducts: customProducts, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
+        });
+      } else {
+        self.setState({ importMsg: "ไม่พบข้อมูลสินค้าที่ถูกต้องในไฟล์", importMsgType: "error", importErrors: errors });
+      }
+    } catch (e) {
+      self.setState({ importMsg: "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบว่าเป็นไฟล์ Excel (.xlsx) ที่ถูกต้อง", importMsgType: "error", importErrors: [] });
+    }
+  };
+  reader.readAsArrayBuffer(file);
 };
 
 /* ---- folders (concrete / tis, shared logic) ---- */
@@ -968,8 +1057,25 @@ Dashboard.prototype.renderPricePage = function () {
         '<button data-action="set-view" data-view="grid" style="' + (gridActive ? activeBtn : inactiveBtn) + '">▦ กริด</button>' +
         '<button data-action="set-view" data-view="list" style="' + (!gridActive ? activeBtn : inactiveBtn) + '">☰ รายการ</button>' +
       '</div>' +
-      (isAdmin ? '<button data-action="toggle-add-form" style="margin-left:auto; padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
+      (isAdmin ? '<label style="margin-left:auto; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
+      (isAdmin ? '<button type="button" data-action="download-import-template" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
+      (isAdmin ? '<button data-action="toggle-add-form" style="padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
     '</div>';
+
+  var importBanner = "";
+  if (s.importMsg) {
+    var bannerBg = s.importMsgType === "error" ? "oklch(0.94 0.03 30)" : s.importMsgType === "warn" ? "oklch(0.95 0.05 90)" : "oklch(0.93 0.06 150)";
+    var bannerColor = s.importMsgType === "error" ? "oklch(0.5 0.15 30)" : s.importMsgType === "warn" ? "oklch(0.45 0.1 80)" : "oklch(0.4 0.12 150)";
+    var errDetails = (s.importErrors && s.importErrors.length) ?
+      '<div style="font-size:12px; margin-top:6px; opacity:.85; line-height:1.6;">' +
+        s.importErrors.slice(0, 10).map(esc).join("<br>") +
+        (s.importErrors.length > 10 ? "<br>...และอีก " + (s.importErrors.length - 10) + " แถว" : "") +
+      '</div>' : "";
+    importBanner = '<div style="background:' + bannerBg + '; color:' + bannerColor + '; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">' +
+      '<div style="font-size:13.5px; font-weight:600;">' + esc(s.importMsg) + errDetails + '</div>' +
+      '<button data-action="dismiss-import-msg" style="border:none; background:transparent; color:inherit; cursor:pointer; font-size:16px; line-height:1; padding:0;">✕</button>' +
+    '</div>';
+  }
 
   var addForm = "";
   if (s.showAddForm) {
@@ -1082,7 +1188,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
-    controls + addForm + resultCount + body +
+    importBanner + controls + addForm + resultCount + body +
   '</div>';
 };
 
