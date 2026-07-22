@@ -88,7 +88,7 @@ var CATEGORIES = [
 var CAT_LABEL = Object.fromEntries(CATEGORIES.map(function (c) { return [c.value, c.label]; }));
 var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label, c.value]; }));
 
-var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ราคา", "หน่วย", "ราคาเดิม", "ภาษี", "SKU", "สต็อก"];
+var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ราคา", "หน่วย", "ราคาเดิม", "ราคาช่อง 2", "ราคาช่อง 3", "ภาษี", "SKU", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
 var ADMIN_KEY = "b6f506b60d1297f2cc5a04aaac21ce5df09cc88c866f743d";
@@ -143,6 +143,14 @@ var DEFAULT_USERS = [
 /* ---------- helpers ---------- */
 
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
+function priceTiersHtml(p) {
+  var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
+  return '<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px;">' +
+    rows.map(function (r) {
+      return '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:11px; color:oklch(0.55 0.01 60); width:42px; flex:none;">' + r[0] + '</span><span style="font-family:Kanit; font-weight:700; font-size:15px; color:oklch(0.38 0.15 275);">' + (r[1] ? "฿" + r[1] : "-") + '</span></div>';
+    }).join("") +
+  '</div>';
+}
 function fmtN(n, decimals) {
   return Number(n).toLocaleString("th-TH", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
@@ -310,6 +318,8 @@ function Dashboard(root) {
     editingId: null,
     editName: "",
     editPrice: "",
+    editPrice2: "",
+    editPrice3: "",
     editUnit: "",
     editVat: "vat",
     editImage: "",
@@ -317,6 +327,8 @@ function Dashboard(root) {
     newProdName: "",
     newProdCat: "cement",
     newProdPrice: "",
+    newProdPrice2: "",
+    newProdPrice3: "",
     newProdUnit: "",
     newProdVat: "vat",
     newProdImage: "",
@@ -557,6 +569,9 @@ Dashboard.prototype.computeProducts = function () {
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
       hasDiscount: !!p.oldPrice,
+      price2Display: p.price2 != null ? fmt(p.price2) : "",
+      price3Display: p.price3 != null ? fmt(p.price3) : "",
+      hasMultiPrice: p.price2 != null || p.price3 != null,
       vatLabel: p.vat === "novat" ? "NO VAT" : "VAT",
       vatBadgeBg: p.vat === "novat" ? "oklch(0.93 0.03 85)" : "oklch(0.92 0.05 155)",
       vatBadgeColor: p.vat === "novat" ? "oklch(0.45 0.1 80)" : "oklch(0.4 0.09 155)",
@@ -570,7 +585,11 @@ Dashboard.prototype.computeProducts = function () {
 Dashboard.prototype.startEdit = function (id) {
   var p = this.getMergedProducts().find(function (x) { return x.id === id; });
   if (!p) return;
-  this.setState({ editingId: p.id, editName: p.name, editPrice: String(p.price), editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "" });
+  this.setState({
+    editingId: p.id, editName: p.name, editPrice: String(p.price),
+    editPrice2: p.price2 != null ? String(p.price2) : "", editPrice3: p.price3 != null ? String(p.price3) : "",
+    editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "",
+  });
 };
 
 Dashboard.prototype.saveEdit = function (id) {
@@ -582,6 +601,10 @@ Dashboard.prototype.saveEdit = function (id) {
   if (name) body.name = name;
   if (unit) body.unit = unit;
   if (!isNaN(price)) body.price = price;
+  var price2 = parseFloat(s.editPrice2);
+  var price3 = parseFloat(s.editPrice3);
+  body.price2 = isNaN(price2) ? null : price2;
+  body.price3 = isNaN(price3) ? null : price3;
   var self = this;
   apiRequest("/products/" + encodeURIComponent(id), { method: "PUT", auth: true, body: body })
     .then(function (updated) {
@@ -617,14 +640,16 @@ Dashboard.prototype.onAddProduct = function () {
     this.setState({ newProdError: "กรุณากรอกข้อมูลให้ครบและถูกต้อง" });
     return;
   }
-  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
+  var price2 = parseFloat(s.newProdPrice2); if (isNaN(price2)) price2 = null;
+  var price3 = parseFloat(s.newProdPrice3); if (isNaN(price3)) price3 = null;
+  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
   var self = this;
   apiRequest("/products", { method: "POST", auth: true, body: body })
     .then(function (created) {
       self.setState(function (s2) {
         return {
           products: s2.products.concat([created]), showAddForm: false,
-          newProdName: "", newProdPrice: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "",
+          newProdName: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "",
         };
       });
     })
@@ -649,7 +674,7 @@ Dashboard.prototype.removeProduct = function (id) {
 };
 
 Dashboard.prototype.downloadImportTemplate = function () {
-  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "ถุง", "", "VAT", "", 0];
+  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "ถุง", "", "", "", "VAT", "", 0];
   var ws1 = XLSX.utils.aoa_to_sheet([IMPORT_HEADERS, example]);
   var catRows = [["หมวดหมู่ที่ใช้ได้ (คัดลอกไปใส่ในคอลัมน์ \"หมวดหมู่\")"]].concat(
     CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label]; })
@@ -693,6 +718,12 @@ Dashboard.prototype.importExcelFile = function (file) {
         var oldPriceRaw = row["ราคาเดิม"];
         var oldPrice = (oldPriceRaw !== "" && oldPriceRaw != null) ? parseFloat(oldPriceRaw) : null;
         if (oldPrice != null && isNaN(oldPrice)) oldPrice = null;
+        var price2Raw = row["ราคาช่อง 2"];
+        var price2 = (price2Raw !== "" && price2Raw != null) ? parseFloat(price2Raw) : null;
+        if (price2 != null && isNaN(price2)) price2 = null;
+        var price3Raw = row["ราคาช่อง 3"];
+        var price3 = (price3Raw !== "" && price3Raw != null) ? parseFloat(price3Raw) : null;
+        if (price3 != null && isNaN(price3)) price3 = null;
         var vatRaw = String(row["ภาษี"] || "").trim().toLowerCase();
         var vat = (vatRaw === "novat" || vatRaw === "no vat") ? "novat" : "vat";
         var skuRaw = String(row["SKU"] || "").trim();
@@ -700,7 +731,7 @@ Dashboard.prototype.importExcelFile = function (file) {
 
         newProducts.push({
           cat: cat, name: name, sku: skuRaw,
-          price: price, oldPrice: oldPrice, unit: unit, stock: stock, vat: vat, image: "",
+          price: price, oldPrice: oldPrice, price2: price2, price3: price3, unit: unit, stock: stock, vat: vat, image: "",
         });
       });
 
@@ -1122,8 +1153,14 @@ Dashboard.prototype.renderPricePage = function () {
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หมวดหมู่' +
           '<select id="field-newProdCat" data-bind="newProdCat" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' + catOptsNoAll + '</select>' +
         '</label>' +
-        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา (บาท)' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 1 (บาท)' +
           '<input id="field-newProdPrice" type="number" min="0" step="0.01" required data-bind="newProdPrice" data-clear="newProdError" value="' + esc(s.newProdPrice) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 2 (ถ้ามี)' +
+          '<input id="field-newProdPrice2" type="number" min="0" step="0.01" data-bind="newProdPrice2" value="' + esc(s.newProdPrice2) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 3 (ถ้ามี)' +
+          '<input id="field-newProdPrice3" type="number" min="0" step="0.01" data-bind="newProdPrice3" value="' + esc(s.newProdPrice3) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
         '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หน่วยนับ' +
           '<input id="field-newProdUnit" type="text" required placeholder="เช่น ถุง, แผ่น, ชิ้น" data-bind="newProdUnit" data-clear="newProdError" value="' + esc(s.newProdUnit) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
@@ -1167,11 +1204,12 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">' + esc(p.name) + '</div>' +
           '<div style="font-size:11.5px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div>' +
+          (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
             '<span style="font-family:Kanit; font-weight:700; font-size:19px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' +
             (p.hasDiscount ? '<span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') +
             '<span style="font-size:11.5px; color:oklch(0.55 0.01 60);">/' + esc(p.unit) + '</span>' +
-          '</div>' +
+          '</div>') +
           '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
             (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
@@ -1186,7 +1224,9 @@ Dashboard.prototype.renderPricePage = function () {
       var editRow = p.isEditing ?
         '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
           '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="flex:1 1 220px; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา" style="width:80px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice2" type="number" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice3" type="number" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
             '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
@@ -1212,7 +1252,9 @@ Dashboard.prototype.renderPricePage = function () {
           '<div><div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div><div style="font-size:11px; color:oklch(0.55 0.01 60); font-family:ui-monospace,monospace;">SKU: ' + esc(p.sku) + '</div></div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.95 0.006 70); color:oklch(0.4 0.01 60);">' + esc(p.categoryLabel) + '</span></div>' +
-        '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>' +
+        '<div>' + (p.hasMultiPrice ? priceTiersHtml(p) :
+          '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
+        ) + '</div>' +
         '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + esc(p.unit) + '</div>' +
         editRow +
       '</div>';

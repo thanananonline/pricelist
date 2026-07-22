@@ -24,13 +24,19 @@ function requireAdmin(request, env) {
   return key && env.ADMIN_KEY && key === env.ADMIN_KEY;
 }
 
+function nullableNumber(v) {
+  return (v === null || v === undefined || v === "") ? null : Number(v);
+}
+
 function sanitizeProduct(body) {
   return {
     cat: String(body.cat || ""),
     name: String(body.name || "").trim(),
     sku: String(body.sku || "").trim(),
     price: Number(body.price) || 0,
-    oldPrice: (body.oldPrice === null || body.oldPrice === undefined || body.oldPrice === "") ? null : Number(body.oldPrice),
+    oldPrice: nullableNumber(body.oldPrice),
+    price2: nullableNumber(body.price2),
+    price3: nullableNumber(body.price3),
     unit: String(body.unit || "").trim(),
     stock: Number(body.stock) || 0,
     vat: body.vat === "novat" ? "novat" : "vat",
@@ -42,8 +48,8 @@ async function insertProduct(env, item) {
   const p = Object.assign({ id: genId() }, sanitizeProduct(item));
   if (!p.sku) p.sku = autoSku();
   await env.DB.prepare(
-    "INSERT INTO products (id, cat, name, sku, price, oldPrice, unit, stock, vat, image) VALUES (?,?,?,?,?,?,?,?,?,?)"
-  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.unit, p.stock, p.vat, p.image).run();
+    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image).run();
   return p;
 }
 
@@ -97,13 +103,13 @@ export default {
       });
       if (body.price !== undefined) merged.price = Number(body.price) || 0;
       if (body.stock !== undefined) merged.stock = Number(body.stock) || 0;
-      if (body.oldPrice !== undefined) {
-        merged.oldPrice = (body.oldPrice === null || body.oldPrice === "") ? null : Number(body.oldPrice);
-      }
+      if (body.oldPrice !== undefined) merged.oldPrice = nullableNumber(body.oldPrice);
+      if (body.price2 !== undefined) merged.price2 = nullableNumber(body.price2);
+      if (body.price3 !== undefined) merged.price3 = nullableNumber(body.price3);
 
       await env.DB.prepare(
-        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, unit=?, stock=?, vat=?, image=? WHERE id=?"
-      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.unit, merged.stock, merged.vat, merged.image, id).run();
+        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=? WHERE id=?"
+      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, id).run();
       return json(merged);
     }
 

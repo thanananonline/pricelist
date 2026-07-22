@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS products (
   sku TEXT NOT NULL,
   price REAL NOT NULL,
   oldPrice REAL,
+  price2 REAL,
+  price3 REAL,
   unit TEXT NOT NULL,
   stock INTEGER NOT NULL DEFAULT 0,
   vat TEXT NOT NULL DEFAULT 'vat',
