@@ -1107,9 +1107,9 @@ Dashboard.prototype.renderCategoryBox = function () {
 };
 
 var CALC_SIDEBAR_ITEMS = [
-  { value: "slab", label: "คำนวณแผ่น", icon: "▭" },
-  { value: "steel", label: "คำนวณเหล็ก", icon: "▮" },
-  { value: "stirrup", label: "คำนวณเหล็กปอก", icon: "▯" },
+  { value: "slab", label: "คำนวณแผ่น" },
+  { value: "steel", label: "คำนวณเหล็ก" },
+  { value: "stirrup", label: "คำนวณเหล็กปอก" },
 ];
 
 Dashboard.prototype.renderCalcSidebar = function () {
@@ -1118,7 +1118,6 @@ Dashboard.prototype.renderCalcSidebar = function () {
   var itemsHtml = CALC_SIDEBAR_ITEMS.map(function (opt) {
     var isActive = opt.value === s.calcProductType;
     return '<button data-action="calc-set-type" data-type="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
-      '<span style="font-size:13px;">' + opt.icon + '</span>' +
       '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
     '</button>';
   }).join("");
