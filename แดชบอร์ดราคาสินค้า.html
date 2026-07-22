@@ -18,6 +18,7 @@
   button, input, select { font-family: inherit; }
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
+  .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
 
   /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
   @media (max-width: 1024px) {
@@ -39,6 +40,7 @@
     }
     .sidebar-brand { display: none !important; }
     .nav-btn { flex: none !important; white-space: nowrap !important; font-size: 12px !important; padding: 9px 11px !important; }
+    .cat-sidebar { display: none !important; }
     .topbar { padding: 14px !important; gap: 10px !important; }
     .page-content { padding: 16px 12px 36px !important; }
     .list-table { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -269,6 +271,8 @@ function Dashboard(root) {
     newTisFolderName: "",
     search: "",
     category: "all",
+    catSidebarCollapsed: false,
+    calcSidebarCollapsed: false,
     sortBy: "name",
     view: "grid",
     overrides: {},
@@ -348,7 +352,10 @@ Dashboard.prototype.handleClick = function (e) {
     case "nav": this.setState({ page: d.page }); break;
     case "toggle-auth-mode": e.preventDefault(); this.onToggleMode(); break;
     case "set-view": this.setState({ view: d.view }); break;
-    case "calc-set-type": this.setState({ calcProductType: d.type }); break;
+    case "set-category": this.setState({ category: d.category }); break;
+    case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
+    case "toggle-calc-sidebar": this.setState(function (s2) { return { calcSidebarCollapsed: !s2.calcSidebarCollapsed }; }); break;
+    case "calc-set-type": this.setState({ page: "calc", calcProductType: d.type }); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -849,9 +856,11 @@ Dashboard.prototype.renderDashboard = function () {
         '<div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>' +
       '</div>' +
       navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
+      (page === "price" ? this.renderCategoryBox() : "") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("คำนวณราคาสินค้า", "🧮", "calc", page === "calc") +
+      (page === "calc" ? this.renderCalcSidebar() : "") +
       navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
       navItem("ติดต่อเรา", "☎️", "contact", page === "contact") +
     '</div>';
@@ -911,10 +920,6 @@ Dashboard.prototype.renderPricePage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:28px; color:' + stat.color + ';">' + stat.value + '</div></div>';
   }).join("");
 
-  var categoryOptionsHtml = CATEGORIES.map(function (opt) {
-    return '<option value="' + opt.value + '"' + (opt.value === s.category ? " selected" : "") + '>' + esc(opt.label) + '</option>';
-  }).join("");
-
   var sortOptions = [
     ["name", "เรียง: ชื่อ (ก-ฮ)"], ["price_asc", "เรียง: ราคาต่ำ-สูง"], ["price_desc", "เรียง: ราคาสูง-ต่ำ"],
   ];
@@ -932,7 +937,6 @@ Dashboard.prototype.renderPricePage = function () {
         '<input id="field-search" type="text" data-bind="search" value="' + esc(s.search) + '" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." style="width:100%; padding:11px 14px 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
         '<span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>' +
       '</div>' +
-      '<select id="field-category" data-bind="category" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">' + categoryOptionsHtml + '</select>' +
       '<select id="field-sortBy" data-bind="sortBy" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">' + sortOptionsHtml + '</select>' +
       '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px;">' +
         '<button data-action="set-view" data-view="grid" style="' + (gridActive ? activeBtn : inactiveBtn) + '">▦ กริด</button>' +
@@ -1054,6 +1058,51 @@ Dashboard.prototype.renderPricePage = function () {
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     controls + addForm + resultCount + body +
   '</div>';
+};
+
+Dashboard.prototype.renderCategoryBox = function () {
+  var s = this.state;
+  var catExpanded = !s.catSidebarCollapsed;
+  var categoryRowsHtml = CATEGORIES.map(function (opt) {
+    var isActive = opt.value === s.category;
+    return '<button data-action="set-category" data-category="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
+      '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
+      '<span style="font-size:13px; flex:none; color:rgba(255,255,255,.4);">›</span>' +
+    '</button>';
+  }).join("");
+
+  return '<div class="cat-sidebar" style="width:100%; min-width:0; box-sizing:border-box; background:transparent; border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:1px; margin:2px 0 8px;">' +
+      '<button data-action="toggle-cat-sidebar" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:10px; border:none; border-radius:8px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; background:transparent; color:#fff;">' +
+        '<span style="display:flex; align-items:center; gap:10px;"><span style="font-size:15px;">📦</span><span>สินค้า</span></span>' +
+        '<span style="font-size:11px; color:rgba(255,255,255,.6); transition:transform .15s; transform:rotate(' + (catExpanded ? "0deg" : "-90deg") + ');">▾</span>' +
+      '</button>' +
+      (catExpanded ? categoryRowsHtml : "") +
+    '</div>';
+};
+
+var CALC_SIDEBAR_ITEMS = [
+  { value: "slab", label: "คำนวณแผ่น", icon: "▭" },
+  { value: "steel", label: "คำนวณเหล็ก", icon: "▮" },
+];
+
+Dashboard.prototype.renderCalcSidebar = function () {
+  var s = this.state;
+  var calcExpanded = !s.calcSidebarCollapsed;
+  var itemsHtml = CALC_SIDEBAR_ITEMS.map(function (opt) {
+    var isActive = opt.value === s.calcProductType;
+    return '<button data-action="calc-set-type" data-type="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
+      '<span style="font-size:13px;">' + opt.icon + '</span>' +
+      '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
+    '</button>';
+  }).join("");
+
+  return '<div class="cat-sidebar" style="width:100%; min-width:0; box-sizing:border-box; background:transparent; border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:1px; margin:2px 0 8px;">' +
+      '<button data-action="toggle-calc-sidebar" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:10px; border:none; border-radius:8px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; background:transparent; color:#fff;">' +
+        '<span style="display:flex; align-items:center; gap:10px;"><span style="font-size:15px;">🧮</span><span>ประเภทการคำนวณ</span></span>' +
+        '<span style="font-size:11px; color:rgba(255,255,255,.6); transition:transform .15s; transform:rotate(' + (calcExpanded ? "0deg" : "-90deg") + ');">▾</span>' +
+      '</button>' +
+      (calcExpanded ? itemsHtml : "") +
+    '</div>';
 };
 
 Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
