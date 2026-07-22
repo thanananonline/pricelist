@@ -57,6 +57,7 @@
     input, select, textarea { font-size: 16px !important; }
     .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 120px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
     .steel-calc-row { grid-template-columns: 40px 290px 90px 70px 110px 110px 115px 130px !important; gap: 5px !important; }
+    .stirrup-calc-row { grid-template-columns: 40px 250px 160px 90px 120px 130px 140px !important; gap: 5px !important; }
   }
 </style>
 </head>
@@ -158,6 +159,7 @@ var DISCOUNT_TIERS = [
 var CALC_PRODUCT_TYPES = [
   { value: "slab", label: "แผ่นพื้นสำเร็จรูป", icon: "▭" },
   { value: "steel", label: "เหล็ก", icon: "▮" },
+  { value: "stirrup", label: "เหล็กปอก", icon: "▯" },
 ];
 
 var STEEL_PRODUCTS = [
@@ -182,6 +184,23 @@ var STEEL_PRODUCTS = [
 var STEEL_PRODUCTS_BY_ID = {};
 STEEL_PRODUCTS.forEach(function (p) { STEEL_PRODUCTS_BY_ID[p.id] = p; });
 
+var STIRRUP_BUNDLE_SIZE = 50;
+var STIRRUP_PRODUCTS = [
+  { id: "sp1", label: "เหล็กปอก 10x10 (6 มิล)", size: "10x10", mm: 6, weightPerBundle: 5.1 },
+  { id: "sp2", label: "เหล็กปอก 10x25 (6 มิล)", size: "10x25", mm: 6, weightPerBundle: 8.5 },
+  { id: "sp3", label: "เหล็กปอก 10x30 (6 มิล)", size: "10x30", mm: 6, weightPerBundle: 10 },
+  { id: "sp4", label: "เหล็กปอก 10x35 (6 มิล)", size: "10x35", mm: 6, weightPerBundle: 10.5 },
+  { id: "sp5", label: "เหล็กปอก 15x15 (6 มิล)", size: "15x15", mm: 6, weightPerBundle: 7.5 },
+  { id: "sp6", label: "เหล็กปอก 15x20 (6 มิล)", size: "15x20", mm: 6, weightPerBundle: 8 },
+  { id: "sp7", label: "เหล็กปอก 15x25 (6 มิล)", size: "15x25", mm: 6, weightPerBundle: 9.5 },
+  { id: "sp8", label: "เหล็กปอก 15x30 (6 มิล)", size: "15x30", mm: 6, weightPerBundle: 10.5 },
+  { id: "sp9", label: "เหล็กปอก 15x35 (6 มิล)", size: "15x35", mm: 6, weightPerBundle: 12 },
+  { id: "sp10", label: "เหล็กปอก 15x45 (6 มิล)", size: "15x45", mm: 6, weightPerBundle: 13.7 },
+  { id: "sp11", label: "เหล็กปอก 15x35 (9 มิล)", size: "15x35", mm: 9, weightPerBundle: 26 },
+];
+var STIRRUP_PRODUCTS_BY_ID = {};
+STIRRUP_PRODUCTS.forEach(function (p) { STIRRUP_PRODUCTS_BY_ID[p.id] = p; });
+
 function makeEmptyCalcRows(n) {
   var rows = [];
   for (var i = 0; i < n; i++) rows.push({ label: "", length: "", qty: "", discount: "", price: "" });
@@ -189,6 +208,12 @@ function makeEmptyCalcRows(n) {
 }
 
 function makeEmptySteelRows(n) {
+  var rows = [];
+  for (var i = 0; i < n; i++) rows.push({ product: "", qty: "", sellPrice: "" });
+  return rows;
+}
+
+function makeEmptyStirrupRows(n) {
   var rows = [];
   for (var i = 0; i < n; i++) rows.push({ product: "", qty: "", sellPrice: "" });
   return rows;
@@ -307,6 +332,7 @@ function Dashboard(root) {
     calcTruck10Capacity: "100",
     calcRows: makeEmptyCalcRows(10),
     calcSteelRows: makeEmptySteelRows(15),
+    calcStirrupRows: makeEmptyStirrupRows(15),
   };
 
   this.componentDidMount();
@@ -1083,6 +1109,7 @@ Dashboard.prototype.renderCategoryBox = function () {
 var CALC_SIDEBAR_ITEMS = [
   { value: "slab", label: "คำนวณแผ่น", icon: "▭" },
   { value: "steel", label: "คำนวณเหล็ก", icon: "▮" },
+  { value: "stirrup", label: "คำนวณเหล็กปอก", icon: "▯" },
 ];
 
 Dashboard.prototype.renderCalcSidebar = function () {
@@ -1495,6 +1522,73 @@ Dashboard.prototype.renderSteelCalc = function () {
     table;
 };
 
+Dashboard.prototype.computeStirrupRows = function () {
+  return this.state.calcStirrupRows.map(function (r, i) {
+    var product = STIRRUP_PRODUCTS_BY_ID[r.product];
+    var qty = parseFloat(r.qty);
+    var qtyValid = !isNaN(qty) && qty > 0;
+    var sellPrice = parseFloat(r.sellPrice); if (isNaN(sellPrice)) sellPrice = 0;
+    var row = {
+      index: i + 1, product: r.product, qty: r.qty, sellPrice: r.sellPrice,
+      hasProduct: !!product, weightPerBundle: product ? product.weightPerBundle : null,
+      hasTotals: !!product && qtyValid,
+    };
+    if (row.hasTotals) {
+      row.totalWeight = (qty / STIRRUP_BUNDLE_SIZE) * product.weightPerBundle;
+      row.totalSell = sellPrice * row.totalWeight;
+    }
+    return row;
+  });
+};
+
+Dashboard.prototype.renderStirrupCalc = function () {
+  var rows = this.computeStirrupRows();
+
+  var totalWeight = 0, totalSell = 0;
+  rows.forEach(function (r) {
+    if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; }
+  });
+
+  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
+  var headerCells = ["ลำดับ", "สินค้า", "น้ำหนัก/มัด (กก. ต่อ " + STIRRUP_BUNDLE_SIZE + " ปอก)", "จำนวน (ปอก)", "น้ำหนักรวม (กก.)", "ราคาขาย/กก. (บาท)", "ยอดขายรวม (บาท)"];
+  var colWidths = "32px 250px 140px 90px 110px 120px 130px";
+
+  var productOptionsHtml = function (selected) {
+    return '<option value=""' + (selected ? "" : " selected") + '>- เลือก -</option>' +
+      STIRRUP_PRODUCTS.map(function (p) { return '<option value="' + p.id + '"' + (selected === p.id ? " selected" : "") + '>' + esc(p.label) + '</option>'; }).join("");
+  };
+
+  var headerRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+
+  var dataRows = rows.map(function (r) {
+    var cells = [];
+    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcStirrupRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
+    cells.push('<div style="font-size:11px;">' + (r.weightPerBundle != null ? fmtN(r.weightPerBundle, 2) : "") + '</div>');
+    cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcStirrupRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
+    cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcStirrupRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
+    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
+    return '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+  }).join("");
+
+  var totalsRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+    '<div style="grid-column:1 / span 3; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
+    '<div></div>' +
+    '<div>' + fmtN(totalWeight, 2) + '</div>' +
+    '<div></div>' +
+    '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalSell, 2) + '</div>' +
+  '</div>';
+
+  var table = '<div class="list-table" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:24px;">' +
+    '<div>' + headerRow + dataRows + totalsRow + '</div>' +
+  '</div>';
+
+  return '<div style="margin-bottom:20px; font-size:13px; color:oklch(0.5 0.01 60); line-height:1.6;">เลือกขนาดเหล็กปอกในคอลัมน์ "สินค้า" แล้วกรอกจำนวนเป็นปอก และกรอกราคาขาย/กก. เอง ระบบคำนวณน้ำหนักรวม (จำนวนปอก ÷ ' + STIRRUP_BUNDLE_SIZE + ' × น้ำหนัก/มัด) และยอดขายรวม (น้ำหนักรวม × ราคาขาย/กก.) ให้อัตโนมัติ<br>หมายเหตุ: จำนวน ' + STIRRUP_BUNDLE_SIZE + ' ปอก/มัด</div>' +
+    table;
+};
+
 Dashboard.prototype.renderCalcPage = function () {
   var s = this.state;
 
@@ -1508,6 +1602,7 @@ Dashboard.prototype.renderCalcPage = function () {
   var typeConfig = CALC_PRODUCT_TYPES.filter(function (t) { return t.value === s.calcProductType; })[0];
   var body = s.calcProductType === "slab" ? this.renderSlabCalc() :
     s.calcProductType === "steel" ? this.renderSteelCalc() :
+    s.calcProductType === "stirrup" ? this.renderStirrupCalc() :
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:48px 20px; text-align:center; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีเครื่องคำนวณสำหรับ "' + esc(typeConfig ? typeConfig.label : s.calcProductType) + '"</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
