@@ -7,3 +7,7 @@ account_id = "16bf0a91e5640e6b32c52eea359c7783"
 binding = "DB"
 database_name = "thananan-pricelist-db"
 database_id = "e15155b4-42b3-4539-9f1a-495a6862f788"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "thananan-pricelist-files"

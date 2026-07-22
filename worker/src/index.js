@@ -75,6 +75,24 @@ async function upsertProductByName(env, item) {
   return { product: product, action: "created" };
 }
 
+function sizeLabelFor(bytes) {
+  const kb = bytes / 1024;
+  return kb > 1024 ? (kb / 1024).toFixed(1) + " MB" : kb.toFixed(0) + " KB";
+}
+
+async function loadFolders(env, kind) {
+  const foldersRes = await env.DB.prepare("SELECT * FROM folders WHERE kind = ?").bind(kind).all();
+  const filesRes = await env.DB.prepare("SELECT * FROM files WHERE kind = ?").bind(kind).all();
+  const filesByFolder = {};
+  filesRes.results.forEach(function (f) {
+    if (!filesByFolder[f.folder_id]) filesByFolder[f.folder_id] = [];
+    filesByFolder[f.folder_id].push({ id: f.id, name: f.name, sizeLabel: f.size_label });
+  });
+  return foldersRes.results.map(function (f) {
+    return { id: f.id, name: f.name, files: filesByFolder[f.id] || [] };
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -144,6 +162,88 @@ export default {
       const res = await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
       if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
       return json({ ok: true });
+    }
+
+    if (path === "/folders" && method === "GET") {
+      const kind = url.searchParams.get("kind");
+      if (!kind) return json({ error: "kind is required" }, 400);
+      const folders = await loadFolders(env, kind);
+      return json(folders);
+    }
+
+    if (path === "/folders" && method === "POST") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const kind = String(body.kind || "");
+      const name = String(body.name || "").trim();
+      if (!kind || !name) return json({ error: "kind and name are required" }, 400);
+      const id = genId();
+      await env.DB.prepare("INSERT INTO folders (id, kind, name) VALUES (?,?,?)").bind(id, kind, name).run();
+      return json({ id: id, name: name, files: [] }, 201);
+    }
+
+    const folderIdMatch = path.match(/^\/folders\/([^/]+)$/);
+    if (folderIdMatch && method === "DELETE") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(folderIdMatch[1]);
+      const filesRes = await env.DB.prepare("SELECT * FROM files WHERE folder_id = ?").bind(id).all();
+      for (const f of filesRes.results) {
+        await env.FILES.delete(f.r2_key);
+      }
+      await env.DB.prepare("DELETE FROM files WHERE folder_id = ?").bind(id).run();
+      const res = await env.DB.prepare("DELETE FROM folders WHERE id = ?").bind(id).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ ok: true });
+    }
+
+    if (path === "/files" && method === "POST") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      let form;
+      try { form = await request.formData(); } catch (e) { return json({ error: "invalid form data" }, 400); }
+      const file = form.get("file");
+      const folderId = String(form.get("folderId") || "");
+      const kind = String(form.get("kind") || "");
+      if (!file || !folderId || !kind) return json({ error: "file, folderId, kind are required" }, 400);
+      const folder = await env.DB.prepare("SELECT id FROM folders WHERE id = ?").bind(folderId).first();
+      if (!folder) return json({ error: "folder not found" }, 404);
+      const id = genId();
+      const r2Key = kind + "/" + folderId + "/" + id;
+      await env.FILES.put(r2Key, file.stream(), { httpMetadata: { contentType: file.type || "application/pdf" } });
+      const sizeLabel = sizeLabelFor(file.size);
+      const name = file.name || "document.pdf";
+      await env.DB.prepare(
+        "INSERT INTO files (id, folder_id, kind, name, size_label, r2_key) VALUES (?,?,?,?,?,?)"
+      ).bind(id, folderId, kind, name, sizeLabel, r2Key).run();
+      return json({ id: id, name: name, sizeLabel: sizeLabel }, 201);
+    }
+
+    const fileIdMatch = path.match(/^\/files\/([^/]+)$/);
+    if (fileIdMatch && method === "DELETE") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(fileIdMatch[1]);
+      const row = await env.DB.prepare("SELECT * FROM files WHERE id = ?").bind(id).first();
+      if (!row) return json({ error: "not found" }, 404);
+      await env.FILES.delete(row.r2_key);
+      await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(id).run();
+      return json({ ok: true });
+    }
+
+    if (fileIdMatch && method === "GET") {
+      const id = decodeURIComponent(fileIdMatch[1]);
+      const row = await env.DB.prepare("SELECT * FROM files WHERE id = ?").bind(id).first();
+      if (!row) return json({ error: "not found" }, 404);
+      const obj = await env.FILES.get(row.r2_key);
+      if (!obj) return json({ error: "file content not found" }, 404);
+      const dl = url.searchParams.get("dl") === "1";
+      return new Response(obj.body, {
+        status: 200,
+        headers: Object.assign({
+          "Content-Type": "application/pdf",
+          "Content-Disposition": (dl ? "attachment" : "inline") + "; filename*=UTF-8''" + encodeURIComponent(row.name),
+          "Cache-Control": "public, max-age=31536000",
+        }, CORS_HEADERS),
+      });
     }
 
     return json({ error: "not found" }, 404);

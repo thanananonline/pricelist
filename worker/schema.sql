@@ -12,3 +12,18 @@ CREATE TABLE IF NOT EXISTS products (
   vat TEXT NOT NULL DEFAULT 'vat',
   image TEXT NOT NULL DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS folders (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS files (
+  id TEXT PRIMARY KEY,
+  folder_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  name TEXT NOT NULL,
+  size_label TEXT NOT NULL,
+  r2_key TEXT NOT NULL
+);

@@ -70,8 +70,6 @@
 /* ---------- data ---------- */
 
 var STORAGE = {
-  concreteFolders: "thananan_concrete_folders",
-  tisFolders: "thananan_tis_folders",
   contacts: "thananan_contact_info",
   users: "thananan_users",
 };
@@ -95,12 +93,14 @@ var ADMIN_KEY = "b6f506b60d1297f2cc5a04aaac21ce5df09cc88c866f743d";
 
 function apiRequest(path, opts) {
   opts = opts || {};
-  var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+  var headers = Object.assign({}, opts.headers || {});
+  if (!opts.formData) headers["Content-Type"] = "application/json";
   if (opts.auth) headers["x-admin-key"] = ADMIN_KEY;
+  var body = opts.formData ? opts.formData : (opts.body ? JSON.stringify(opts.body) : undefined);
   return fetch(API_BASE + path, {
     method: opts.method || "GET",
     headers: headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    body: body,
   }).then(function (res) {
     if (!res.ok) {
       return res.json().catch(function () { return {}; }).then(function (errBody) {
@@ -120,18 +120,6 @@ function img(cat) {
   return { bg: "oklch(0.93 0.02 " + h + ")", stripe: "oklch(0.88 0.035 " + h + ")" };
 }
 
-var DEFAULT_CONCRETE_FOLDERS = [
-  { id: "cf-pipe", name: "ท่อ", files: [] },
-  { id: "cf-manhole", name: "บ่อพัก", files: [] },
-  { id: "cf-pile", name: "เสาเข็ม", files: [] },
-  { id: "cf-slab", name: "แผ่นพื้น", files: [] },
-];
-var DEFAULT_TIS_FOLDERS = [
-  { id: "tis-pipe", name: "ท่อคอนกรีต", files: [] },
-  { id: "tis-manhole", name: "บ่อพัก", files: [] },
-  { id: "tis-pile", name: "เสาเข็ม", files: [] },
-  { id: "tis-slab", name: "แผ่นพื้น", files: [] },
-];
 var DEFAULT_CONTACTS = [
   { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
 ];
@@ -249,16 +237,6 @@ function saveJSON(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
 }
 
-function dataUrlToBlob(dataUrl) {
-  var parts = dataUrl.split(",");
-  var mimeMatch = parts[0].match(/:(.*?);/);
-  var mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
-  var binary = atob(parts[1]);
-  var bytes = new Uint8Array(binary.length);
-  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
-}
-
 function resizeImageFile(file, maxDim, quality, callback) {
   var reader = new FileReader();
   reader.onload = function () {
@@ -300,10 +278,14 @@ function Dashboard(root) {
     confirmPassword: "",
     users: DEFAULT_USERS,
     page: "price",
-    concreteFolders: DEFAULT_CONCRETE_FOLDERS,
+    concreteFolders: [],
+    concreteFoldersLoading: true,
+    concreteFoldersError: "",
     activeConcreteFolderId: null,
     newConcreteFolderName: "",
-    tisFolders: DEFAULT_TIS_FOLDERS,
+    tisFolders: [],
+    tisFoldersLoading: true,
+    tisFoldersError: "",
     activeTisFolderId: null,
     newTisFolderName: "",
     search: "",
@@ -369,15 +351,31 @@ function Dashboard(root) {
 }
 
 Dashboard.prototype.componentDidMount = function () {
-  var cf = loadJSON(STORAGE.concreteFolders, DEFAULT_CONCRETE_FOLDERS);
-  this.state.concreteFolders = Array.isArray(cf) ? cf : DEFAULT_CONCRETE_FOLDERS;
-  var tf = loadJSON(STORAGE.tisFolders, DEFAULT_TIS_FOLDERS);
-  this.state.tisFolders = Array.isArray(tf) ? tf : DEFAULT_TIS_FOLDERS;
   var ct = loadJSON(STORAGE.contacts, DEFAULT_CONTACTS);
   this.state.contacts = Array.isArray(ct) ? ct : DEFAULT_CONTACTS;
   var us = loadJSON(STORAGE.users, DEFAULT_USERS);
   this.state.users = (Array.isArray(us) && us.length) ? us : DEFAULT_USERS;
   this.loadProducts();
+  this.loadFolders("concrete");
+  this.loadFolders("tis");
+};
+
+Dashboard.prototype.loadFolders = function (kind) {
+  var k = this._folderKeys(kind);
+  var self = this;
+  self.state[k.loadingKey] = true;
+  apiRequest("/folders?kind=" + encodeURIComponent(kind)).then(function (folders) {
+    var patch = {};
+    patch[k.stateKey] = folders;
+    patch[k.loadingKey] = false;
+    patch[k.errorKey] = "";
+    self.setState(patch);
+  }).catch(function () {
+    var patch = {};
+    patch[k.loadingKey] = false;
+    patch[k.errorKey] = "โหลดข้อมูลโฟลเดอร์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่";
+    self.setState(patch);
+  });
 };
 
 Dashboard.prototype.loadProducts = function () {
@@ -420,6 +418,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); break;
     case "delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); this.removeProduct(d.id); break;
     case "reload-products": this.loadProducts(); break;
+    case "reload-folders": this.loadFolders(d.kind); break;
     case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
@@ -487,8 +486,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
 Dashboard.prototype.handleChange = function (e) {
   if (e.target.type === "file" && e.target.dataset.action === "upload-file") {
     var kind = e.target.dataset.kind;
-    var file = e.target.files && e.target.files[0];
-    if (file) this.uploadFile(kind, file);
+    if (e.target.files && e.target.files.length) this.uploadFiles(kind, e.target.files);
     e.target.value = "";
     return;
   }
@@ -767,55 +765,48 @@ Dashboard.prototype.importExcelFile = function (file) {
 
 Dashboard.prototype._folderKeys = function (kind) {
   return kind === "concrete"
-    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", storageKey: STORAGE.concreteFolders, idPrefix: "cf" }
-    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", storageKey: STORAGE.tisFolders, idPrefix: "tis" };
-};
-
-Dashboard.prototype.getBlobUrl = function (file) {
-  if (!this._blobUrlCache) this._blobUrlCache = {};
-  if (!this._blobUrlCache[file.id]) {
-    try {
-      this._blobUrlCache[file.id] = URL.createObjectURL(dataUrlToBlob(file.url));
-    } catch (e) {
-      return file.url;
-    }
-  }
-  return this._blobUrlCache[file.id];
-};
-
-Dashboard.prototype.revokeBlobUrl = function (fileId) {
-  if (this._blobUrlCache && this._blobUrlCache[fileId]) {
-    URL.revokeObjectURL(this._blobUrlCache[fileId]);
-    delete this._blobUrlCache[fileId];
-  }
+    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError" }
+    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError" };
 };
 
 Dashboard.prototype.addFolder = function (kind) {
   var k = this._folderKeys(kind);
   var name = (this.state[k.nameKey] || "").trim();
   if (!name) return;
-  var id = k.idPrefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
   var self = this;
-  this.setState(function (s) {
-    var folders = s[k.stateKey].concat([{ id: id, name: name, files: [] }]);
-    saveJSON(k.storageKey, folders);
-    var patch = {};
-    patch[k.stateKey] = folders;
-    patch[k.nameKey] = "";
-    return patch;
-  });
+  apiRequest("/folders", { method: "POST", auth: true, body: { kind: kind, name: name } })
+    .then(function (folder) {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].concat([folder]);
+        patch[k.nameKey] = "";
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      var patch = {};
+      patch[k.errorKey] = "เพิ่มโฟลเดอร์ไม่สำเร็จ: " + err.message;
+      self.setState(patch);
+    });
 };
 
 Dashboard.prototype.removeFolder = function (kind, id) {
   var k = this._folderKeys(kind);
-  this.setState(function (s) {
-    var folders = s[k.stateKey].filter(function (f) { return f.id !== id; });
-    saveJSON(k.storageKey, folders);
-    var patch = {};
-    patch[k.stateKey] = folders;
-    if (s[k.activeKey] === id) patch[k.activeKey] = null;
-    return patch;
-  });
+  var self = this;
+  apiRequest("/folders/" + encodeURIComponent(id), { method: "DELETE", auth: true })
+    .then(function () {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].filter(function (f) { return f.id !== id; });
+        if (s[k.activeKey] === id) patch[k.activeKey] = null;
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      var patch = {};
+      patch[k.errorKey] = "ลบโฟลเดอร์ไม่สำเร็จ: " + err.message;
+      self.setState(patch);
+    });
 };
 
 Dashboard.prototype.openFolder = function (kind, id) {
@@ -832,44 +823,53 @@ Dashboard.prototype.closeFolder = function (kind) {
   this.setState(patch);
 };
 
-Dashboard.prototype.uploadFile = function (kind, file) {
+Dashboard.prototype.uploadFiles = function (kind, fileList) {
   var k = this._folderKeys(kind);
   var activeId = this.state[k.activeKey];
   if (!activeId) return;
-  var sizeKb = file.size / 1024;
-  var sizeLabel = sizeKb > 1024 ? (sizeKb / 1024).toFixed(1) + " MB" : sizeKb.toFixed(0) + " KB";
-  var fileId = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
   var self = this;
-  var reader = new FileReader();
-  reader.onload = function () {
-    var url = reader.result;
+  var files = Array.prototype.slice.call(fileList);
+  var uploads = files.map(function (file) {
+    var form = new FormData();
+    form.append("folderId", activeId);
+    form.append("kind", kind);
+    form.append("file", file, file.name);
+    return apiRequest("/files", { method: "POST", auth: true, formData: form });
+  });
+  Promise.allSettled(uploads).then(function (results) {
+    var uploaded = results.filter(function (r) { return r.status === "fulfilled"; }).map(function (r) { return r.value; });
+    var failedCount = results.length - uploaded.length;
     self.setState(function (s) {
-      var folders = s[k.stateKey].map(function (f) {
-        if (f.id !== activeId) return f;
-        return Object.assign({}, f, { files: f.files.concat([{ id: fileId, name: file.name, sizeLabel: sizeLabel, url: url }]) });
-      });
-      saveJSON(k.storageKey, folders);
       var patch = {};
-      patch[k.stateKey] = folders;
+      patch[k.stateKey] = s[k.stateKey].map(function (f) {
+        if (f.id !== activeId) return f;
+        return Object.assign({}, f, { files: f.files.concat(uploaded) });
+      });
+      patch[k.errorKey] = failedCount ? "อัปโหลดไม่สำเร็จ " + failedCount + " ไฟล์" : "";
       return patch;
     });
-  };
-  reader.readAsDataURL(file);
+  });
 };
 
 Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
   var k = this._folderKeys(kind);
-  this.revokeBlobUrl(fileId);
-  this.setState(function (s) {
-    var folders = s[k.stateKey].map(function (f) {
-      if (f.id !== folderId) return f;
-      return Object.assign({}, f, { files: f.files.filter(function (x) { return x.id !== fileId; }) });
+  var self = this;
+  apiRequest("/files/" + encodeURIComponent(fileId), { method: "DELETE", auth: true })
+    .then(function () {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].map(function (f) {
+          if (f.id !== folderId) return f;
+          return Object.assign({}, f, { files: f.files.filter(function (x) { return x.id !== fileId; }) });
+        });
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      var patch = {};
+      patch[k.errorKey] = "ลบไฟล์ไม่สำเร็จ: " + err.message;
+      self.setState(patch);
     });
-    saveJSON(k.storageKey, folders);
-    var patch = {};
-    patch[k.stateKey] = folders;
-    return patch;
-  });
 };
 
 /* ---- users ---- */
@@ -1344,6 +1344,21 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   var s = this.state;
   var isAdmin = this.isAdmin();
   var k = this._folderKeys(kind);
+
+  if (s[k.loadingKey]) {
+    return '<div class="page-content" style="padding:60px 32px; max-width:1000px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+      '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลโฟลเดอร์...</div>' +
+    '</div>';
+  }
+
+  var errorBanner = "";
+  if (s[k.errorKey]) {
+    errorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+      '<div style="font-size:13.5px; font-weight:600;">' + esc(s[k.errorKey]) + '</div>' +
+      '<button data-action="reload-folders" data-kind="' + kind + '" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+    '</div>';
+  }
+
   var folders = s[k.stateKey];
   var activeId = s[k.activeKey];
   var active = folders.find(function (f) { return f.id === activeId; });
@@ -1366,7 +1381,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
     return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
       '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
-      addFolderForm +
+      errorBanner + addFolderForm +
       '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px;">' + foldersHtml + '</div>' +
     '</div>';
   }
@@ -1374,8 +1389,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
   var uploadBox = isAdmin ?
     '<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">' +
-      '<input type="file" accept="application/pdf" ' + uploadAction + ' style="display:none;" />' +
-      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
+      '<input type="file" accept="application/pdf" multiple ' + uploadAction + ' style="display:none;" />' +
+      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
     '</label>' : '';
 
   var filesBody;
@@ -1383,11 +1398,13 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์ในโฟลเดอร์นี้</div>';
   } else {
     filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + active.files.map(function (f) {
+      var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
+      var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
-        '<a href="' + self.getBlobUrl(f) + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
-        '<a href="' + f.url + '" download="' + esc(f.name) + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+        '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
+        '<a href="' + downloadUrl + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
         (isAdmin ? '<button data-action="remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
@@ -1397,7 +1414,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
-    '</div>' + uploadBox + filesBody +
+    '</div>' + errorBanner + uploadBox + filesBody +
   '</div>';
 };
 
