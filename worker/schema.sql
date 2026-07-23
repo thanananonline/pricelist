@@ -27,3 +27,17 @@ CREATE TABLE IF NOT EXISTS files (
   size_label TEXT NOT NULL,
   r2_key TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS contacts (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  department TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL,
+  address TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  username TEXT PRIMARY KEY,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer'
+);

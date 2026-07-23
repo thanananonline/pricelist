@@ -246,6 +246,66 @@ export default {
       });
     }
 
+    if (path === "/contacts" && method === "GET") {
+      const { results } = await env.DB.prepare("SELECT * FROM contacts").all();
+      return json(results);
+    }
+
+    if (path === "/contacts" && method === "POST") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const contact = {
+        id: genId(),
+        name: String(body.name || "").trim(),
+        department: String(body.department || "").trim(),
+        phone: String(body.phone || "").trim(),
+        address: String(body.address || "").trim(),
+      };
+      if (!contact.name || !contact.phone) return json({ error: "name and phone are required" }, 400);
+      await env.DB.prepare(
+        "INSERT INTO contacts (id, name, department, phone, address) VALUES (?,?,?,?,?)"
+      ).bind(contact.id, contact.name, contact.department, contact.phone, contact.address).run();
+      return json(contact, 201);
+    }
+
+    const contactIdMatch = path.match(/^\/contacts\/([^/]+)$/);
+    if (contactIdMatch && method === "DELETE") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(contactIdMatch[1]);
+      const res = await env.DB.prepare("DELETE FROM contacts WHERE id = ?").bind(id).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ ok: true });
+    }
+
+    if (path === "/users" && method === "GET") {
+      const { results } = await env.DB.prepare("SELECT * FROM users").all();
+      return json(results);
+    }
+
+    if (path === "/users" && method === "POST") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const username = String(body.username || "").trim();
+      const password = String(body.password || "").trim();
+      const role = body.role === "admin" ? "admin" : "viewer";
+      if (!username || !password) return json({ error: "username and password are required" }, 400);
+      const existing = await env.DB.prepare("SELECT username FROM users WHERE username = ?").bind(username).first();
+      if (existing) return json({ error: "username already exists" }, 409);
+      await env.DB.prepare("INSERT INTO users (username, password, role) VALUES (?,?,?)").bind(username, password, role).run();
+      return json({ username: username, password: password, role: role }, 201);
+    }
+
+    const userIdMatch = path.match(/^\/users\/([^/]+)$/);
+    if (userIdMatch && method === "DELETE") {
+      if (!requireAdmin(request, env)) return json({ error: "unauthorized" }, 401);
+      const username = decodeURIComponent(userIdMatch[1]);
+      const res = await env.DB.prepare("DELETE FROM users WHERE username = ?").bind(username).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ ok: true });
+    }
+
     return json({ error: "not found" }, 404);
   },
 };
