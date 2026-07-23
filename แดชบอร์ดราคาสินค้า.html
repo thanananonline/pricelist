@@ -251,13 +251,24 @@ function resizeImageFile(file, maxDim, quality, callback) {
 
 /* ---------- component ---------- */
 
+function getSavedUsername() {
+  try { return localStorage.getItem("pricelistUsername") || ""; } catch (e) { return ""; }
+}
+function saveUsername(username) {
+  try { localStorage.setItem("pricelistUsername", username); } catch (e) {}
+}
+function clearSavedUsername() {
+  try { localStorage.removeItem("pricelistUsername"); } catch (e) {}
+}
+
 function Dashboard(root) {
   this.root = root;
+  var savedUsername = getSavedUsername();
   this.state = {
-    loggedIn: false,
+    loggedIn: !!savedUsername,
     authMode: "login",
     authError: "",
-    username: "",
+    username: savedUsername,
     password: "",
     confirmPassword: "",
     users: DEFAULT_USERS,
@@ -500,6 +511,13 @@ Dashboard.prototype.handleFieldChange = function (e) {
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
+  if (!this.state.loggedIn) {
+    // Render synchronously (no debounce) on the login screen: any delay via
+    // setTimeout breaks the input event's call stack, which makes mobile
+    // browsers drop/flicker the on-screen keyboard on refocus.
+    this.render();
+    return;
+  }
   var isCalcField = key.indexOf("calc") === 0;
   this._scheduleRender(isCalcField ? this.renderCalcOnly : this.render);
 };
@@ -547,6 +565,7 @@ Dashboard.prototype.onSubmitAuth = function () {
     if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
     var match = s.users.find(function (usr) { return usr.username === u && usr.password === s.password; });
     if (!match) { this.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }); return; }
+    saveUsername(u);
     this.setState({ loggedIn: true, authError: "" });
     return;
   }
@@ -557,6 +576,7 @@ Dashboard.prototype.onSubmitAuth = function () {
   var password = s.password;
   apiRequest("/users", { method: "POST", auth: true, body: { username: u, password: password, role: "viewer" } })
     .then(function (created) {
+      saveUsername(u);
       self.setState(function (s2) {
         return { users: s2.users.concat([created]), loggedIn: true, authError: "" };
       });
@@ -567,6 +587,7 @@ Dashboard.prototype.onSubmitAuth = function () {
 };
 
 Dashboard.prototype.onLogout = function () {
+  clearSavedUsername();
   this.setState({ loggedIn: false, password: "", confirmPassword: "", authMode: "login" });
 };
 
