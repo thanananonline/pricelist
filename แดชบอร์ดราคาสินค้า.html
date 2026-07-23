@@ -20,7 +20,7 @@
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
-  @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 
   /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
   @media (max-width: 1024px) {
@@ -1083,8 +1083,8 @@ Dashboard.prototype.renderToast = function () {
   if (!t) return "";
   var bg = t.type === "error" ? "oklch(0.5 0.15 30)" : "oklch(0.45 0.14 150)";
   var icon = t.type === "error" ? "⚠️" : "✅";
-  return '<div style="position:fixed; top:22px; right:22px; z-index:1200; background:' + bg + '; color:#fff; padding:14px 20px; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:700; max-width:360px; animation:toast-in .25s ease;">' +
-    '<span style="font-size:17px;">' + icon + '</span>' +
+  return '<div style="position:fixed; top:50%; left:50%; z-index:1200; background:' + bg + '; color:#fff; padding:16px 26px; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; max-width:360px; animation:toast-in .25s ease forwards;">' +
+    '<span style="font-size:18px;">' + icon + '</span>' +
     '<span>' + esc(t.message) + '</span>' +
   '</div>';
 };
