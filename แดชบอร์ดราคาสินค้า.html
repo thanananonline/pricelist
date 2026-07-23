@@ -285,6 +285,8 @@ function Dashboard(root) {
     deleteConfirmName: "",
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
+    userDeleteConfirm: null,
+    contactDeleteConfirm: null,
     editingId: null,
     editName: "",
     editPrice: "",
@@ -438,8 +440,12 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
     case "cancel-remove-file": this.setState({ fileDeleteConfirm: null }); break;
     case "confirm-remove-file": this.setState({ fileDeleteConfirm: null }); this.removeFile(d.kind, d.folderId, d.fileId); break;
-    case "remove-user": this.removeUser(d.username); break;
-    case "remove-contact": this.removeContact(d.id); break;
+    case "request-remove-user": this.setState({ userDeleteConfirm: { username: d.username } }); break;
+    case "cancel-remove-user": this.setState({ userDeleteConfirm: null }); break;
+    case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
+    case "request-remove-contact": this.setState({ contactDeleteConfirm: { id: d.id, name: d.name || "" } }); break;
+    case "cancel-remove-contact": this.setState({ contactDeleteConfirm: null }); break;
+    case "confirm-remove-contact": this.setState({ contactDeleteConfirm: null }); this.removeContact(d.id); break;
     case "download-import-template": this.downloadImportTemplate(); break;
     case "dismiss-import-msg": this.setState({ importMsg: "", importMsgType: "", importErrors: [] }); break;
   }
@@ -1053,15 +1059,21 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   var s = this.state;
   var fc = s.fileDeleteConfirm;
   var dc = s.folderDeleteConfirm;
-  if (!s.deleteConfirmId && !fc && !dc) return "";
-  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : "ยืนยันการลบสินค้า";
-  var name = fc ? fc.name : dc ? dc.name : s.deleteConfirmName;
-  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : "cancel-delete-product";
-  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : "ลบสินค้า";
+  var uc = s.userDeleteConfirm;
+  var cc = s.contactDeleteConfirm;
+  if (!s.deleteConfirmId && !fc && !dc && !uc && !cc) return "";
+  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : "ยืนยันการลบสินค้า";
+  var name = fc ? fc.name : dc ? dc.name : uc ? uc.username : cc ? cc.name : s.deleteConfirmName;
+  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : uc ? "cancel-remove-user" : cc ? "cancel-remove-contact" : "cancel-delete-product";
+  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : uc ? "ลบผู้ใช้" : cc ? "ลบรายชื่อติดต่อ" : "ลบสินค้า";
   var confirmAttrs = fc ?
     'data-action="confirm-remove-file" data-kind="' + esc(fc.kind) + '" data-folder-id="' + esc(fc.folderId) + '" data-file-id="' + esc(fc.fileId) + '"' :
     dc ?
     'data-action="confirm-remove-folder" data-kind="' + esc(dc.kind) + '" data-id="' + esc(dc.id) + '"' :
+    uc ?
+    'data-action="confirm-remove-user" data-username="' + esc(uc.username) + '"' :
+    cc ?
+    'data-action="confirm-remove-contact" data-id="' + esc(cc.id) + '"' :
     'data-action="delete-product" data-id="' + s.deleteConfirmId + '"';
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
@@ -1493,7 +1505,7 @@ Dashboard.prototype.renderUsersPage = function () {
       '<div style="width:34px; height:34px; border-radius:50%; background:oklch(0.92 0.02 45); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:oklch(0.38 0.15 275); flex:none;">' + esc(u.username.charAt(0).toUpperCase()) + '</div>' +
       '<div style="font-weight:600; font-size:14px; flex:1;">' + esc(u.username) + '</div>' +
       '<span style="font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:' + roleBg + '; color:' + roleColor + ';">' + roleLabel + '</span>' +
-      (isAdmin ? '<button data-action="remove-user" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+      (isAdmin ? '<button data-action="request-remove-user" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
     '</div>';
   }).join("");
 
@@ -1557,7 +1569,7 @@ Dashboard.prototype.renderContactPage = function () {
         '<div style="flex:1;"><div style="font-weight:700; font-size:14.5px;">' + esc(c.name) + ' <span style="font-weight:500; color:oklch(0.55 0.01 60); font-size:12.5px;">· ' + esc(c.department) + '</span></div>' +
         '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:4px;">📞 ' + esc(c.phone) + '</div>' +
         '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:2px;">📍 ' + esc(c.address) + '</div></div>' +
-        (isAdmin ? '<button data-action="remove-contact" data-id="' + c.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-contact" data-id="' + c.id + '" data-name="' + esc(c.name) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
   }
