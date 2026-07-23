@@ -512,10 +512,14 @@ Dashboard.prototype.handleFieldChange = function (e) {
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
   if (!this.state.loggedIn) {
-    // Render synchronously (no debounce) on the login screen: any delay via
-    // setTimeout breaks the input event's call stack, which makes mobile
-    // browsers drop/flicker the on-screen keyboard on refocus.
-    this.render();
+    // Never rebuild the DOM while typing on the login screen: even a
+    // synchronous re-render tears down and recreates the input, which is
+    // what causes the on-screen keyboard to stutter/jump on mobile. Just
+    // keep state in sync and hide any stale error message directly.
+    if (el.dataset.clear) {
+      var errEl = this.root.querySelector("#auth-error-box");
+      if (errEl) errEl.style.display = "none";
+    }
     return;
   }
   var isCalcField = key.indexOf("calc") === 0;
@@ -1072,7 +1076,7 @@ Dashboard.prototype.renderLogin = function () {
           '<input id="field-confirmPassword" type="password" data-bind="confirmPassword" data-clear="authError" value="' + esc(s.confirmPassword) + '" placeholder="confirm password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
         '</label>' : '') +
       (s.authError ?
-        '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.authError) + '</div>' : '') +
+        '<div id="auth-error-box" style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.authError) + '</div>' : '') +
       '<button type="submit" style="margin-top:6px; padding:12px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">' + esc(submitLabel) + '</button>' +
       '<div style="text-align:center; font-size:13px; color:oklch(0.5 0.01 60);">' + esc(toggleQ) + ' <a href="#" data-action="toggle-auth-mode" style="font-weight:600;">' + esc(toggleA) + '</a></div>' +
     '</form>' +
