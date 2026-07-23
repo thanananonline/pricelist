@@ -267,11 +267,13 @@ function Dashboard(root) {
     concreteFoldersError: "",
     activeConcreteFolderId: null,
     newConcreteFolderName: "",
+    concreteFileSearch: "",
     tisFolders: [],
     tisFoldersLoading: true,
     tisFoldersError: "",
     activeTisFolderId: null,
     newTisFolderName: "",
+    tisFileSearch: "",
     search: "",
     category: "all",
     catSidebarCollapsed: false,
@@ -791,8 +793,8 @@ Dashboard.prototype.importExcelFile = function (file) {
 
 Dashboard.prototype._folderKeys = function (kind) {
   return kind === "concrete"
-    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError" }
-    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError" };
+    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch" }
+    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch" };
 };
 
 Dashboard.prototype.addFolder = function (kind) {
@@ -839,6 +841,7 @@ Dashboard.prototype.openFolder = function (kind, id) {
   var k = this._folderKeys(kind);
   var patch = {};
   patch[k.activeKey] = id;
+  patch[k.searchKey] = "";
   this.setState(patch);
 };
 
@@ -846,6 +849,7 @@ Dashboard.prototype.closeFolder = function (kind) {
   var k = this._folderKeys(kind);
   var patch = {};
   patch[k.activeKey] = null;
+  patch[k.searchKey] = "";
   this.setState(patch);
 };
 
@@ -1468,11 +1472,20 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
     '</label>' : '';
 
+  var searchBox = '<div style="margin-bottom:16px;">' +
+    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="width:100%; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+  '</div>';
+
+  var query = (s[k.searchKey] || "").trim().toLowerCase();
+  var visibleFiles = query ? active.files.filter(function (f) { return f.name.toLowerCase().indexOf(query) !== -1; }) : active.files;
+
   var filesBody;
   if (active.files.length === 0) {
     filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์ในโฟลเดอร์นี้</div>';
+  } else if (visibleFiles.length === 0) {
+    filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ไม่พบไฟล์ที่ตรงกับคำค้นหา</div>';
   } else {
-    filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + active.files.map(function (f) {
+    filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
@@ -1489,7 +1502,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
-    '</div>' + errorBanner + uploadBox + filesBody +
+    '</div>' + errorBanner + uploadBox + (active.files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
 };
 
