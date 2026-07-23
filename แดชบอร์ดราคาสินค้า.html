@@ -1476,8 +1476,11 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="width:100%; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
   '</div>';
 
-  var query = (s[k.searchKey] || "").trim().toLowerCase();
-  var visibleFiles = query ? active.files.filter(function (f) { return f.name.toLowerCase().indexOf(query) !== -1; }) : active.files;
+  var queryTerms = (s[k.searchKey] || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  var visibleFiles = queryTerms.length ? active.files.filter(function (f) {
+    var name = f.name.toLowerCase();
+    return queryTerms.every(function (term) { return name.indexOf(term) !== -1; });
+  }) : active.files;
 
   var filesBody;
   if (active.files.length === 0) {
