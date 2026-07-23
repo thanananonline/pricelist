@@ -20,6 +20,7 @@
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
   /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
   @media (max-width: 1024px) {
@@ -303,6 +304,7 @@ function Dashboard(root) {
     importMsg: "",
     importMsgType: "",
     importErrors: [],
+    toast: null,
     newUserName: "",
     newUserPassword: "",
     newUserRole: "viewer",
@@ -389,6 +391,15 @@ Dashboard.prototype.setState = function (patch) {
   this._renderTimerStart = null;
   Object.assign(this.state, typeof patch === "function" ? patch(this.state) : patch);
   this.render();
+};
+
+Dashboard.prototype.showToast = function (message, type) {
+  clearTimeout(this._toastTimer);
+  var self = this;
+  this.setState({ toast: { message: message, type: type || "success" } });
+  this._toastTimer = setTimeout(function () {
+    self.setState({ toast: null });
+  }, 3000);
 };
 
 /* ---- event dispatch ---- */
@@ -749,6 +760,7 @@ Dashboard.prototype.importExcelFile = function (file) {
               var msg = "นำเข้าสำเร็จ: " + parts.join(", ") + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
               return { products: products, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
             });
+            self.showToast("นำเข้าข้อมูลสำเร็จ", "success");
           })
           .catch(function (err) {
             self.setState({ importMsg: "นำเข้าไม่สำเร็จ: " + err.message, importMsgType: "error", importErrors: errors });
@@ -850,6 +862,7 @@ Dashboard.prototype.uploadFiles = function (kind, fileList) {
       patch[k.errorKey] = failedCount ? "อัปโหลดไม่สำเร็จ " + failedCount + " ไฟล์" : "";
       return patch;
     });
+    if (uploaded.length) self.showToast("อัปโหลดสำเร็จ " + uploaded.length + " ไฟล์", "success");
   });
 };
 
@@ -1048,6 +1061,17 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   '</div>';
 };
 
+Dashboard.prototype.renderToast = function () {
+  var t = this.state.toast;
+  if (!t) return "";
+  var bg = t.type === "error" ? "oklch(0.5 0.15 30)" : "oklch(0.45 0.14 150)";
+  var icon = t.type === "error" ? "⚠️" : "✅";
+  return '<div style="position:fixed; top:22px; right:22px; z-index:1200; background:' + bg + '; color:#fff; padding:14px 20px; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:700; max-width:360px; animation:toast-in .25s ease;">' +
+    '<span style="font-size:17px;">' + icon + '</span>' +
+    '<span>' + esc(t.message) + '</span>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderDashboard = function () {
   var s = this.state;
   var page = s.page;
@@ -1098,7 +1122,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderToast() +
     '</div>'
   );
 };
