@@ -283,6 +283,8 @@ function Dashboard(root) {
     productsError: "",
     deleteConfirmId: null,
     deleteConfirmName: "",
+    fileDeleteConfirm: null,
+    folderDeleteConfirm: null,
     editingId: null,
     editName: "",
     editPrice: "",
@@ -430,8 +432,12 @@ Dashboard.prototype.handleClick = function (e) {
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
     case "close-folder": this.closeFolder(d.kind); break;
-    case "remove-folder": this.removeFolder(d.kind, d.id); break;
-    case "remove-file": this.removeFile(d.kind, d.folderId, d.fileId); break;
+    case "request-remove-folder": this.setState({ folderDeleteConfirm: { kind: d.kind, id: d.id, name: d.name || "" } }); break;
+    case "cancel-remove-folder": this.setState({ folderDeleteConfirm: null }); break;
+    case "confirm-remove-folder": this.setState({ folderDeleteConfirm: null }); this.removeFolder(d.kind, d.id); break;
+    case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
+    case "cancel-remove-file": this.setState({ fileDeleteConfirm: null }); break;
+    case "confirm-remove-file": this.setState({ fileDeleteConfirm: null }); this.removeFile(d.kind, d.folderId, d.fileId); break;
     case "remove-user": this.removeUser(d.username); break;
     case "remove-contact": this.removeContact(d.id); break;
     case "download-import-template": this.downloadImportTemplate(); break;
@@ -1045,17 +1051,28 @@ Dashboard.prototype.renderLogin = function () {
 
 Dashboard.prototype.renderDeleteConfirmModal = function () {
   var s = this.state;
-  if (!s.deleteConfirmId) return "";
+  var fc = s.fileDeleteConfirm;
+  var dc = s.folderDeleteConfirm;
+  if (!s.deleteConfirmId && !fc && !dc) return "";
+  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : "ยืนยันการลบสินค้า";
+  var name = fc ? fc.name : dc ? dc.name : s.deleteConfirmName;
+  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : "cancel-delete-product";
+  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : "ลบสินค้า";
+  var confirmAttrs = fc ?
+    'data-action="confirm-remove-file" data-kind="' + esc(fc.kind) + '" data-folder-id="' + esc(fc.folderId) + '" data-file-id="' + esc(fc.fileId) + '"' :
+    dc ?
+    'data-action="confirm-remove-folder" data-kind="' + esc(dc.kind) + '" data-id="' + esc(dc.id) + '"' :
+    'data-action="delete-product" data-id="' + s.deleteConfirmId + '"';
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">ยืนยันการลบสินค้า</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">' + title + '</div>' +
       '</div>' +
-      '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">ต้องการลบ "<strong>' + esc(s.deleteConfirmName) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</div>' +
+      '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">ต้องการลบ "<strong>' + esc(name) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</div>' +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
-        '<button data-action="cancel-delete-product" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
-        '<button data-action="delete-product" data-id="' + s.deleteConfirmId + '" style="padding:9px 16px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">ลบสินค้า</button>' +
+        '<button data-action="' + cancelAction + '" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button ' + confirmAttrs + ' style="padding:9px 16px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">' + confirmLabel + '</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -1415,7 +1432,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="font-size:30px;">📁</div>' +
         '<div style="font-weight:700; font-size:14.5px;">' + esc(f.name) + '</div>' +
         '<div style="font-size:12px; color:oklch(0.55 0.01 60);">' + f.files.length + ' ไฟล์</div>' +
-        (isAdmin ? '<button data-action="remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="position:absolute; top:12px; right:12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:12px; right:12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("");
 
@@ -1451,7 +1468,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<a href="' + downloadUrl + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
-        (isAdmin ? '<button data-action="remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
   }
