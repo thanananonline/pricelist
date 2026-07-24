@@ -59,7 +59,7 @@
      scrolls horizontally when it doesn't fit. */
   @media (hover: none) and (pointer: coarse) {
     input, select, textarea { font-size: 16px !important; }
-    .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 120px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
+    .calc-row { grid-template-columns: 46px 130px 85px 85px 70px 105px 115px 85px 95px 105px 85px 105px 105px !important; gap: 5px !important; }
     .steel-calc-row { grid-template-columns: 40px 290px 90px 70px 110px 110px 115px 130px !important; gap: 5px !important; }
     .stirrup-calc-row { grid-template-columns: 40px 250px 160px 90px 120px 130px 140px !important; gap: 5px !important; }
   }
@@ -289,12 +289,10 @@ function Dashboard(root) {
   this.state = {
     loggedIn: false,
     checkingSession: !!savedToken,
-    authMode: "login",
     authError: "",
     username: "",
     role: "",
     password: "",
-    confirmPassword: "",
     users: [],
     page: "price",
     concreteFolders: [],
@@ -439,8 +437,8 @@ Dashboard.prototype._checkIdleTimeout = function () {
     clearSessionToken();
     clearLastActivity();
     this.setState({
-      loggedIn: false, username: "", role: "", password: "", confirmPassword: "",
-      authMode: "login", users: [],
+      loggedIn: false, username: "", role: "", password: "",
+      users: [],
       authError: "ไม่ได้ใช้งานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่",
     });
   }
@@ -514,7 +512,6 @@ Dashboard.prototype.handleClick = function (e) {
   switch (action) {
     case "logout": this.onLogout(); break;
     case "nav": this.setState({ page: d.page }); break;
-    case "toggle-auth-mode": e.preventDefault(); this.onToggleMode(); break;
     case "set-view": this.setState({ view: d.view }); break;
     case "set-category": this.setState({ category: d.category }); break;
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
@@ -644,48 +641,27 @@ Dashboard.prototype.handleChange = function (e) {
 
 /* ---- auth ---- */
 
-Dashboard.prototype.onToggleMode = function () {
-  this.setState(function (s) {
-    return { authMode: s.authMode === "login" ? "register" : "login", authError: "", password: "", confirmPassword: "" };
-  });
-};
-
 Dashboard.prototype.onSubmitAuth = function () {
   var s = this.state;
   var u = s.username.trim();
   var self = this;
-  if (s.authMode === "login") {
-    if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
-    apiRequest("/auth/login", { method: "POST", body: { username: u, password: s.password } })
-      .then(function (res) {
-        saveSessionToken(res.token);
-        self.markActivity();
-        self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", authError: "" });
-        self.loadUsers();
-      })
-      .catch(function () {
-        self.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
-      });
-    return;
-  }
   if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
-  if (s.password !== s.confirmPassword) { this.setState({ authError: "รหัสผ่านไม่ตรงกัน" }); return; }
-  apiRequest("/auth/register", { method: "POST", body: { username: u, password: s.password } })
+  apiRequest("/auth/login", { method: "POST", body: { username: u, password: s.password } })
     .then(function (res) {
       saveSessionToken(res.token);
       self.markActivity();
-      self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", confirmPassword: "", authError: "" });
+      self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", authError: "" });
       self.loadUsers();
     })
-    .catch(function (err) {
-      self.setState({ authError: "สมัครสมาชิกไม่สำเร็จ: " + err.message });
+    .catch(function () {
+      self.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
     });
 };
 
 Dashboard.prototype.onLogout = function () {
   clearSessionToken();
   clearLastActivity();
-  this.setState({ loggedIn: false, username: "", role: "", password: "", confirmPassword: "", authMode: "login", users: [] });
+  this.setState({ loggedIn: false, username: "", role: "", password: "", users: [] });
 };
 
 /* ---- products ---- */
@@ -1165,11 +1141,7 @@ Dashboard.prototype.renderSessionCheck = function () {
 
 Dashboard.prototype.renderLogin = function () {
   var s = this.state;
-  var isRegister = s.authMode === "register";
-  var subtitle = isRegister ? "สร้างบัญชีผู้ใช้ใหม่" : "เข้าสู่ระบบแดชบอร์ดรายการราคาสินค้า";
-  var submitLabel = isRegister ? "สร้างบัญชี" : "เข้าสู่ระบบ";
-  var toggleQ = isRegister ? "มีบัญชีอยู่แล้ว?" : "ยังไม่มีบัญชี?";
-  var toggleA = isRegister ? "เข้าสู่ระบบ" : "สร้างผู้ใช้ใหม่";
+  var subtitle = "เข้าสู่ระบบแดชบอร์ดรายการราคาสินค้า";
 
   return (
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
@@ -1186,14 +1158,9 @@ Dashboard.prototype.renderLogin = function () {
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">รหัสผ่าน' +
         '<input id="field-password" type="password" data-bind="password" data-clear="authError" value="' + esc(s.password) + '" placeholder="password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
       '</label>' +
-      (isRegister ?
-        '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">ยืนยันรหัสผ่าน' +
-          '<input id="field-confirmPassword" type="password" data-bind="confirmPassword" data-clear="authError" value="' + esc(s.confirmPassword) + '" placeholder="confirm password" style="padding:11px 13px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none;" />' +
-        '</label>' : '') +
       (s.authError ?
         '<div id="auth-error-box" style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.authError) + '</div>' : '') +
-      '<button type="submit" style="margin-top:6px; padding:12px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">' + esc(submitLabel) + '</button>' +
-      '<div style="text-align:center; font-size:13px; color:oklch(0.5 0.01 60);">' + esc(toggleQ) + ' <a href="#" data-action="toggle-auth-mode" style="font-weight:600;">' + esc(toggleA) + '</a></div>' +
+      '<button type="submit" style="margin-top:6px; padding:12px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">เข้าสู่ระบบ</button>' +
     '</form>' +
     '</div></div>'
   );

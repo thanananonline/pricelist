@@ -1,7 +1,7 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-migration-key",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -227,57 +227,12 @@ export default {
       return json({ token: token, username: row.username, role: row.role });
     }
 
-    if (path === "/auth/register" && method === "POST") {
-      let body;
-      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
-      const username = String(body.username || "").trim();
-      const password = String(body.password || "");
-      if (!username || !password) return json({ error: "username and password are required" }, 400);
-      if (password.length < 4) return json({ error: "password must be at least 4 characters" }, 400);
-      const existing = await env.DB.prepare("SELECT username FROM users WHERE username = ?").bind(username).first();
-      if (existing) return json({ error: "username already exists" }, 409);
-      const passwordHash = await hashPassword(password);
-      const role = "viewer"; // self-registration can never grant admin
-      await env.DB.prepare("INSERT INTO users (username, password_hash, role) VALUES (?,?,?)").bind(username, passwordHash, role).run();
-      const token = await createSessionToken(env, username, role);
-      return json({ token: token, username: username, role: role }, 201);
-    }
-
     if (path === "/auth/me" && method === "GET") {
       const session = await requireAuth(request, env);
       if (!session) return json({ error: "unauthorized" }, 401);
       const row = await env.DB.prepare("SELECT username, role FROM users WHERE username = ?").bind(session.u).first();
       if (!row) return json({ error: "unauthorized" }, 401);
       return json(publicUser(row));
-    }
-
-    // One-time helper to migrate legacy plaintext `password` values into
-    // `password_hash` after `ALTER TABLE users ADD COLUMN password_hash TEXT`.
-    // Guarded by a secret set only for the duration of the migration; no-ops
-    // once the legacy column no longer has anything left to migrate.
-    if (path === "/internal/migrate-passwords" && method === "POST") {
-      const key = request.headers.get("x-migration-key");
-      if (!key || !env.MIGRATION_KEY || key !== env.MIGRATION_KEY) return json({ error: "not found" }, 404);
-      let rows;
-      try {
-        rows = (await env.DB.prepare("SELECT username, password FROM users WHERE password IS NOT NULL AND (password_hash IS NULL OR password_hash = '')").all()).results;
-      } catch (e) {
-        return json({ migrated: 0, note: "legacy password column not present (already migrated?)" });
-      }
-      let migrated = 0;
-      for (const row of rows) {
-        const hash = await hashPassword(row.password);
-        await env.DB.prepare("UPDATE users SET password_hash = ? WHERE username = ?").bind(hash, row.username).run();
-        migrated++;
-      }
-      let columnDropped = false;
-      try {
-        await env.DB.prepare("ALTER TABLE users DROP COLUMN password").run();
-        columnDropped = true;
-      } catch (e) {
-        // older SQLite/D1 versions may not support DROP COLUMN; drop it manually if so.
-      }
-      return json({ migrated: migrated, columnDropped: columnDropped });
     }
 
     if (path === "/products" && method === "GET") {
