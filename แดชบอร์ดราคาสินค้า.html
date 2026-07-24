@@ -1808,14 +1808,13 @@ Dashboard.prototype.computeCalcRows = function () {
       return { index: i + 1, label: r.label, length: r.length, qty: r.qty, discount: r.discount, price: r.price, hasData: false };
     }
     var d = isNaN(discount) ? 0 : discount;
-    var needsApproval = d > 7;
     var discountedPrice = Math.round(price * (1 - d / 100));
     var sqmPerSheet = plateWidth * length;
     var pricePerSheet = discountedPrice * sqmPerSheet;
     var weightPerSheet = weightPerSqm * sqmPerSheet;
     return {
       index: i + 1, label: r.label, length: r.length, qty: r.qty, discount: r.discount, price: r.price,
-      hasData: true, needsApproval: needsApproval,
+      hasData: true,
       discountedPrice: discountedPrice, sqmPerSheet: sqmPerSheet, pricePerSheet: pricePerSheet,
       weightPerSheet: weightPerSheet, totalSqm: sqmPerSheet * qty, totalWeight: weightPerSheet * qty, totalPrice: pricePerSheet * qty,
     };
@@ -1852,7 +1851,7 @@ Dashboard.prototype.renderSlabCalc = function () {
   var truckPlan = this.computeTruckPlan(totalWeight);
 
   var inputCellStyle = "padding:9px 11px; border-radius:8px; border:1px solid oklch(0.8 0.05 85); background:oklch(0.96 0.05 95); font-size:13.5px; font-family:inherit; width:100%;";
-  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
+  var rowInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box;";
 
   var topInputs =
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px;">' +
@@ -1871,46 +1870,41 @@ Dashboard.prototype.renderSlabCalc = function () {
     '</div>';
 
   var WIRE_OPTIONS = ["4 เส้น", "5 เส้น", "6 เส้น", "7 เส้น", "8 เส้น"];
-  var headerCells = ["ลำดับ", "สินค้า (ลวด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "สถานะ", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
-  var colWidths = "32px 88px 66px 64px 52px 92px 82px 88px 60px 72px 80px 62px 78px 76px";
+  var headerCells = ["ลำดับ", "สินค้า (ลวด)", "ความยาว (ม.)", "จำนวน (แผ่น)", "ส่วนลด %", "ราคาตั้ง (บ./ตรม.)", "ราคาหลังลด (บ./ตรม.)", "ตรม./แผ่น", "ราคา/แผ่น (บาท)", "น้ำหนัก/แผ่น (กก.)", "รวม ตรม.", "รวมน้ำหนัก (กก.)", "รวมราคา (บาท)"];
+  var colWidths = "48px minmax(96px,1.2fr) minmax(78px,1fr) minmax(78px,1fr) minmax(70px,1fr) minmax(96px,1.1fr) minmax(100px,1.1fr) minmax(76px,1fr) minmax(88px,1.1fr) minmax(96px,1.1fr) minmax(76px,1fr) minmax(90px,1.1fr) minmax(92px,1.1fr)";
 
-  var headerRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+  var headerRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     var wireOptionsHtml = '<option value=""' + (r.label ? "" : " selected") + '>- เลือก -</option>' +
       WIRE_OPTIONS.map(function (w) { return '<option value="' + w + '"' + (r.label === w ? " selected" : "") + '>' + w + '</option>'; }).join("");
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
     cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="length" value="' + esc(r.length) + '" style="' + rowInputStyle + '" />');
     cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="qty" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
-    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + rowInputStyle + '" />');
-    if (r.hasData) {
-      var statusBg = r.needsApproval ? "oklch(0.94 0.03 30)" : "oklch(0.92 0.05 155)";
-      var statusColor = r.needsApproval ? "oklch(0.5 0.15 30)" : "oklch(0.4 0.09 155)";
-      var statusLabel = r.needsApproval ? "ต้องขออนุมัติ" : "ขายส่ง";
-      cells.push('<div><span style="font-size:9.5px; font-weight:700; padding:2.5px 5px; border-radius:5px; background:' + statusBg + '; color:' + statusColor + '; white-space:nowrap;">' + statusLabel + '</span></div>');
-    } else {
-      cells.push('<div></div>');
-    }
+    var discountNum = parseFloat(r.discount);
+    var discountOverLimit = !isNaN(discountNum) && discountNum > 7;
+    var discountInputStyle = discountOverLimit ? rowInputStyle + "color:oklch(0.5 0.18 25); border-color:oklch(0.6 0.18 25); background:oklch(0.95 0.04 25); font-weight:700;" : rowInputStyle;
+    cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="discount" value="' + esc(r.discount) + '" style="' + discountInputStyle + '" />');
     cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="price" value="' + esc(r.price) + '" style="' + rowInputStyle + '" />');
     if (r.hasData) {
-      cells.push('<div style="font-size:11px;">' + fmtN(r.discountedPrice, 2) + '</div>');
-      cells.push('<div style="font-size:11px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
-      cells.push('<div style="font-size:11px; font-weight:600;">' + fmtN(r.pricePerSheet, 2) + '</div>');
-      cells.push('<div style="font-size:11px;">' + fmtN(r.weightPerSheet, 2) + '</div>');
-      cells.push('<div style="font-size:11px;">' + fmtN(r.totalSqm, 2) + '</div>');
-      cells.push('<div style="font-size:11px;">' + fmt(Math.round(r.totalWeight)) + '</div>');
-      cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + fmtN(r.totalPrice, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.discountedPrice, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.sqmPerSheet, 4) + '</div>');
+      cells.push('<div style="font-size:12.5px; font-weight:600;">' + fmtN(r.pricePerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.weightPerSheet, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmtN(r.totalSqm, 2) + '</div>');
+      cells.push('<div style="font-size:12.5px;">' + fmt(Math.round(r.totalWeight)) + '</div>');
+      cells.push('<div style="font-size:12.5px; font-weight:700; color:oklch(0.38 0.15 275);">' + fmtN(r.totalPrice, 2) + '</div>');
     } else {
       cells.push('<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>', '<div></div>');
     }
-    return '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+    return '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
-  var totalsRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
-    '<div style="grid-column:1 / span 11; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
+  var totalsRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:12px 14px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:12.5px;">' +
+    '<div style="grid-column:1 / span 10; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
     '<div>' + fmtN(totalSqm, 2) + '</div>' +
     '<div>' + fmt(Math.round(totalWeight)) + '</div>' +
     '<div style="color:oklch(0.38 0.15 275);">' + fmtN(totalPrice, 2) + '</div>' +
@@ -1958,7 +1952,7 @@ Dashboard.prototype.renderSlabCalc = function () {
     '<div style="margin-top:16px; background:oklch(0.96 0.006 70); border:1px solid oklch(0.9 0.008 60); border-radius:12px; padding:16px 20px; text-align:center; font-size:13.5px; color:oklch(0.55 0.01 60);">กรอกข้อมูลสินค้าด้านบนเพื่อดูคำแนะนำรถขนส่ง</div>';
 
   var footnote = '<div style="margin-top:16px; font-size:11.5px; color:oklch(0.55 0.01 60); line-height:1.6;">' +
-    'หมายเหตุ: ส่วนลดเกิน 7% สถานะจะขึ้น "ต้องขออนุมัติ" — ต้องขออนุมัติผู้จัดการก่อนเสนอราคา<br>' +
+    'หมายเหตุ: ส่วนลดเกิน 7% ต้องขออนุมัติผู้จัดการก่อนเสนอราคา<br>' +
     'คำแนะนำรถคิดจากน้ำหนักอย่างเดียว ควรตรวจสอบพื้นที่บรรทุกประกอบด้วย (รถ 10 ล้อ ~' + fmt(truck10Cap) + ' ตรม./เที่ยว)' +
   '</div>';
 
@@ -1995,32 +1989,32 @@ Dashboard.prototype.renderSteelCalc = function () {
     if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; }
   });
 
-  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
+  var rowInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box;";
   var headerCells = ["ลำดับ", "สินค้า", "จำนวน", "หน่วย", "น้ำหนัก/หน่วย (กก.)", "น้ำหนักรวม (กก.)", "ราคาขาย/หน่วย (บาท)", "ยอดขายรวม (บาท)"];
-  var colWidths = "32px 270px 75px 60px 100px 100px 105px 120px";
+  var colWidths = "48px minmax(220px,2fr) minmax(80px,0.8fr) minmax(64px,0.6fr) minmax(104px,1fr) minmax(104px,1fr) minmax(112px,1.05fr) minmax(120px,1.1fr)";
 
   var productOptionsHtml = function (selected) {
     return '<option value=""' + (selected ? "" : " selected") + '>- เลือก -</option>' +
       STEEL_PRODUCTS.map(function (p) { return '<option value="' + p.id + '"' + (selected === p.id ? " selected" : "") + '>' + esc(p.label) + '</option>'; }).join("");
   };
 
-  var headerRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+  var headerRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcSteelRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
     cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcSteelRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
-    cells.push('<div style="font-size:11px;">' + esc(r.unit || "") + '</div>');
-    cells.push('<div style="font-size:11px;">' + (r.weightPerUnit != null ? fmtN(r.weightPerUnit, 2) : "") + '</div>');
-    cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
+    cells.push('<div style="font-size:12.5px;">' + esc(r.unit || "") + '</div>');
+    cells.push('<div style="font-size:12.5px;">' + (r.weightPerUnit != null ? fmtN(r.weightPerUnit, 2) : "") + '</div>');
+    cells.push('<div style="font-size:12.5px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
     cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcSteelRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
-    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
-    return '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+    cells.push('<div style="font-size:12.5px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
+    return '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
-  var totalsRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+  var totalsRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:12px 14px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:12.5px;">' +
     '<div style="grid-column:1 / span 4; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
     '<div></div>' +
     '<div>' + fmtN(totalWeight, 2) + '</div>' +
@@ -2063,31 +2057,31 @@ Dashboard.prototype.renderStirrupCalc = function () {
     if (r.hasTotals) { totalWeight += r.totalWeight; totalSell += r.totalSell; }
   });
 
-  var rowInputStyle = "padding:4px 5px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:11px; font-family:inherit; width:100%; box-sizing:border-box;";
+  var rowInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.85 0.01 60); font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box;";
   var headerCells = ["ลำดับ", "สินค้า", "น้ำหนัก/มัด (กก. ต่อ " + STIRRUP_BUNDLE_SIZE + " ปอก)", "จำนวน (ปอก)", "น้ำหนักรวม (กก.)", "ราคาขาย/กก. (บาท)", "ยอดขายรวม (บาท)"];
-  var colWidths = "32px 250px 140px 90px 110px 120px 130px";
+  var colWidths = "48px minmax(200px,2fr) minmax(150px,1.2fr) minmax(100px,0.9fr) minmax(120px,1.1fr) minmax(130px,1.2fr) minmax(140px,1.2fr)";
 
   var productOptionsHtml = function (selected) {
     return '<option value=""' + (selected ? "" : " selected") + '>- เลือก -</option>' +
       STIRRUP_PRODUCTS.map(function (p) { return '<option value="' + p.id + '"' + (selected === p.id ? " selected" : "") + '>' + esc(p.label) + '</option>'; }).join("");
   };
 
-  var headerRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; padding:8px 8px; background:oklch(0.96 0.006 70); font-size:10px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.25;">' +
+  var headerRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
     headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:11px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcStirrupRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
-    cells.push('<div style="font-size:11px;">' + (r.weightPerBundle != null ? fmtN(r.weightPerBundle, 2) : "") + '</div>');
+    cells.push('<div style="font-size:12.5px;">' + (r.weightPerBundle != null ? fmtN(r.weightPerBundle, 2) : "") + '</div>');
     cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcStirrupRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
-    cells.push('<div style="font-size:11px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
+    cells.push('<div style="font-size:12.5px;">' + (r.hasTotals ? fmtN(r.totalWeight, 2) : "") + '</div>');
     cells.push('<input type="text" inputmode="decimal" data-calc-row="' + (r.index - 1) + '" data-calc-field="sellPrice" data-calc-store="calcStirrupRows" value="' + esc(r.sellPrice) + '" style="' + rowInputStyle + '" />');
-    cells.push('<div style="font-size:11px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
-    return '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:5px 8px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
+    cells.push('<div style="font-size:12.5px; font-weight:700; color:oklch(0.38 0.15 275);">' + (r.hasTotals ? fmtN(r.totalSell, 2) : "") + '</div>');
+    return '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid oklch(0.93 0.006 70);">' + cells.join("") + '</div>';
   }).join("");
 
-  var totalsRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:3px; align-items:center; padding:8px 8px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:11px;">' +
+  var totalsRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; align-items:center; padding:12px 14px; border-top:2px solid oklch(0.85 0.01 60); background:oklch(0.96 0.006 70); font-weight:700; font-size:12.5px;">' +
     '<div style="grid-column:1 / span 3; text-align:right; padding-right:8px;">รวมทั้งหมด</div>' +
     '<div></div>' +
     '<div>' + fmtN(totalWeight, 2) + '</div>' +
