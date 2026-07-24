@@ -127,7 +127,9 @@ function apiRequest(path, opts) {
   }).then(function (res) {
     if (!res.ok) {
       return res.json().catch(function () { return {}; }).then(function (errBody) {
-        throw new Error(errBody.error || ("HTTP " + res.status));
+        var err = new Error(errBody.error || ("HTTP " + res.status));
+        err.status = res.status;
+        throw err;
       });
     }
     return res.json();
@@ -386,15 +388,25 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadContacts();
 };
 
-Dashboard.prototype.restoreSession = function () {
+Dashboard.prototype.restoreSession = function (attempt) {
   var self = this;
+  attempt = attempt || 0;
   apiRequest("/auth/me", { auth: true }).then(function (res) {
     self.markActivity();
     self.setState({ loggedIn: true, checkingSession: false, username: res.username, role: res.role });
     self.loadUsers();
-  }).catch(function () {
-    clearSessionToken();
-    clearLastActivity();
+  }).catch(function (err) {
+    // Only a genuine 401 (bad/expired token) should force a fresh login.
+    // A network blip, worker cold start, etc. must not throw away an
+    // otherwise-valid saved session -- retry a couple of times first.
+    if (err.status !== 401 && attempt < 2) {
+      setTimeout(function () { self.restoreSession(attempt + 1); }, 1500);
+      return;
+    }
+    if (err.status === 401) {
+      clearSessionToken();
+      clearLastActivity();
+    }
     self.setState({ loggedIn: false, checkingSession: false });
   });
 };
