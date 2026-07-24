@@ -5,7 +5,7 @@ const CORS_HEADERS = {
 };
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const PBKDF2_ITERATIONS = 210000;
+const PBKDF2_ITERATIONS = 100000; // Workers' WebCrypto rejects PBKDF2 above 100000 iterations
 
 function json(data, status) {
   return new Response(JSON.stringify(data), {
@@ -482,6 +482,20 @@ export default {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const username = decodeURIComponent(userIdMatch[1]);
       const res = await env.DB.prepare("DELETE FROM users WHERE username = ?").bind(username).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ ok: true });
+    }
+
+    const userPasswordMatch = path.match(/^\/users\/([^/]+)\/password$/);
+    if (userPasswordMatch && method === "PUT") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const username = decodeURIComponent(userPasswordMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const password = String(body.password || "");
+      if (password.length < 4) return json({ error: "password must be at least 4 characters" }, 400);
+      const passwordHash = await hashPassword(password);
+      const res = await env.DB.prepare("UPDATE users SET password_hash = ? WHERE username = ?").bind(passwordHash, username).run();
       if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
       return json({ ok: true });
     }

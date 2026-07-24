@@ -8,7 +8,7 @@
 
 const webcrypto = globalThis.crypto;
 const subtle = webcrypto.subtle;
-const ITERATIONS = 210000;
+const ITERATIONS = 100000; // must match worker/src/index.js PBKDF2_ITERATIONS (Workers caps PBKDF2 at 100000)
 
 function bufToB64Url(buf) {
   return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

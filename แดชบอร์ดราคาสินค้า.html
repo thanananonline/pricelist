@@ -345,6 +345,9 @@ function Dashboard(root) {
     newUserPassword: "",
     newUserRole: "viewer",
     userError: "",
+    passwordChangeTarget: null,
+    passwordChangeValue: "",
+    passwordChangeError: "",
     contacts: DEFAULT_CONTACTS,
     newContactName: "",
     newContactDept: "",
@@ -523,6 +526,8 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-remove-user": this.setState({ userDeleteConfirm: { username: d.username } }); break;
     case "cancel-remove-user": this.setState({ userDeleteConfirm: null }); break;
     case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
+    case "request-change-password": this.setState({ passwordChangeTarget: { username: d.username }, passwordChangeValue: "", passwordChangeError: "" }); break;
+    case "cancel-change-password": this.setState({ passwordChangeTarget: null, passwordChangeValue: "", passwordChangeError: "" }); break;
     case "request-remove-contact": this.setState({ contactDeleteConfirm: { id: d.id, name: d.name || "" } }); break;
     case "cancel-remove-contact": this.setState({ contactDeleteConfirm: null }); break;
     case "confirm-remove-contact": this.setState({ contactDeleteConfirm: null }); this.removeContact(d.id); break;
@@ -540,6 +545,7 @@ Dashboard.prototype.handleSubmit = function (e) {
     case "auth": this.onSubmitAuth(); break;
     case "add-product": this.onAddProduct(); break;
     case "add-user": this.onAddUser(); break;
+    case "change-password": this.onChangePassword(); break;
     case "add-contact": this.onAddContact(); break;
     case "add-folder":
       this.addFolder(form.dataset.kind);
@@ -1034,6 +1040,24 @@ Dashboard.prototype.removeUser = function (username) {
     });
 };
 
+Dashboard.prototype.onChangePassword = function () {
+  var s = this.state;
+  var target = s.passwordChangeTarget;
+  if (!target) return;
+  var p = s.passwordChangeValue.trim();
+  if (!p) { this.setState({ passwordChangeError: "กรุณากรอกรหัสผ่านใหม่" }); return; }
+  if (p.length < 4) { this.setState({ passwordChangeError: "รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร" }); return; }
+  var self = this;
+  apiRequest("/users/" + encodeURIComponent(target.username) + "/password", { method: "PUT", auth: true, body: { password: p } })
+    .then(function () {
+      self.setState({ passwordChangeTarget: null, passwordChangeValue: "", passwordChangeError: "" });
+      self.showToast("เปลี่ยนรหัสผ่านสำเร็จ");
+    })
+    .catch(function (err) {
+      self.setState({ passwordChangeError: "เปลี่ยนรหัสผ่านไม่สำเร็จ: " + err.message });
+    });
+};
+
 /* ---- contacts ---- */
 
 Dashboard.prototype.onAddContact = function () {
@@ -1195,6 +1219,30 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   '</div>';
 };
 
+Dashboard.prototype.renderChangePasswordModal = function () {
+  var s = this.state;
+  var t = s.passwordChangeTarget;
+  if (!t) return "";
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3);">' +
+    '<form data-form="change-password" style="display:flex; flex-direction:column; gap:16px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.92 0.05 275); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🔑</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">เปลี่ยนรหัสผ่าน: ' + esc(t.username) + '</div>' +
+      '</div>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">รหัสผ่านใหม่' +
+        '<input id="field-passwordChangeValue" type="password" autocomplete="new-password" data-bind="passwordChangeValue" data-clear="passwordChangeError" value="' + esc(s.passwordChangeValue) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+      '</label>' +
+      (s.passwordChangeError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.passwordChangeError) + '</div>' : '') +
+      '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+        '<button type="button" data-action="cancel-change-password" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button type="submit" style="padding:9px 16px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึกรหัสผ่านใหม่</button>' +
+      '</div>' +
+    '</form>' +
+    '</div>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderToast = function () {
   var t = this.state.toast;
   if (!t) return "";
@@ -1256,7 +1304,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() + this.renderToast() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderToast() +
     '</div>'
   );
 };
@@ -1654,6 +1702,7 @@ Dashboard.prototype.renderUsersPage = function () {
       '<div style="width:34px; height:34px; border-radius:50%; background:oklch(0.92 0.02 45); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:oklch(0.38 0.15 275); flex:none;">' + esc(u.username.charAt(0).toUpperCase()) + '</div>' +
       '<div style="font-weight:600; font-size:14px; flex:1;">' + esc(u.username) + '</div>' +
       '<span style="font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:' + roleBg + '; color:' + roleColor + ';">' + roleLabel + '</span>' +
+      (isAdmin ? '<button data-action="request-change-password" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">เปลี่ยนรหัสผ่าน</button>' : '') +
       (isAdmin ? '<button data-action="request-remove-user" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
     '</div>';
   }).join("");
