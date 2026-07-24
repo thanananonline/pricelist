@@ -38,6 +38,6 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 CREATE TABLE IF NOT EXISTS users (
   username TEXT PRIMARY KEY,
-  password TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'viewer'
 );

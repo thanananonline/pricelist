@@ -20,6 +20,7 @@
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
+  .mobile-cat-bar { display: none; margin-bottom: 16px; }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 
   /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
@@ -43,6 +44,7 @@
     .sidebar-brand { display: none !important; }
     .nav-btn { flex: none !important; white-space: nowrap !important; font-size: 12px !important; padding: 9px 11px !important; }
     .cat-sidebar { display: none !important; }
+    .mobile-cat-bar { display: flex !important; flex-wrap: wrap; gap: 8px; }
     .topbar { padding: 14px !important; gap: 10px !important; }
     .page-content { padding: 16px 12px 36px !important; }
     .list-table { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -85,13 +87,38 @@ var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { ret
 var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
-var ADMIN_KEY = "b6f506b60d1297f2cc5a04aaac21ce5df09cc88c866f743d";
+
+function getSessionToken() {
+  try { return localStorage.getItem("pricelistToken") || ""; } catch (e) { return ""; }
+}
+function saveSessionToken(token) {
+  try { localStorage.setItem("pricelistToken", token); } catch (e) {}
+}
+function clearSessionToken() {
+  try { localStorage.removeItem("pricelistToken"); } catch (e) {}
+}
+
+// Same idle timeout on phone and desktop: 30 minutes with no activity forces
+// a fresh login, regardless of the token's own (much longer) server-side TTL.
+var SESSION_IDLE_LIMIT_MS = 30 * 60 * 1000;
+function getLastActivity() {
+  try { return parseInt(localStorage.getItem("pricelistLastActivity"), 10) || 0; } catch (e) { return 0; }
+}
+function saveLastActivity(ts) {
+  try { localStorage.setItem("pricelistLastActivity", String(ts)); } catch (e) {}
+}
+function clearLastActivity() {
+  try { localStorage.removeItem("pricelistLastActivity"); } catch (e) {}
+}
 
 function apiRequest(path, opts) {
   opts = opts || {};
   var headers = Object.assign({}, opts.headers || {});
   if (!opts.formData) headers["Content-Type"] = "application/json";
-  if (opts.auth) headers["x-admin-key"] = ADMIN_KEY;
+  if (opts.auth) {
+    var token = getSessionToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+  }
   var body = opts.formData ? opts.formData : (opts.body ? JSON.stringify(opts.body) : undefined);
   return fetch(API_BASE + path, {
     method: opts.method || "GET",
@@ -119,11 +146,6 @@ function img(cat) {
 var DEFAULT_CONTACTS = [
   { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
 ];
-var DEFAULT_USERS = [
-  { username: "admin", password: "1234", role: "admin" },
-  { username: "test", password: "1234", role: "viewer" },
-];
-
 /* ---------- helpers ---------- */
 
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
@@ -251,27 +273,24 @@ function resizeImageFile(file, maxDim, quality, callback) {
 
 /* ---------- component ---------- */
 
-function getSavedUsername() {
-  try { return localStorage.getItem("pricelistUsername") || ""; } catch (e) { return ""; }
-}
-function saveUsername(username) {
-  try { localStorage.setItem("pricelistUsername", username); } catch (e) {}
-}
-function clearSavedUsername() {
-  try { localStorage.removeItem("pricelistUsername"); } catch (e) {}
-}
-
 function Dashboard(root) {
   this.root = root;
-  var savedUsername = getSavedUsername();
+  var savedToken = getSessionToken();
+  if (savedToken && Date.now() - getLastActivity() > SESSION_IDLE_LIMIT_MS) {
+    clearSessionToken();
+    clearLastActivity();
+    savedToken = "";
+  }
   this.state = {
-    loggedIn: !!savedUsername,
+    loggedIn: false,
+    checkingSession: !!savedToken,
     authMode: "login",
     authError: "",
-    username: savedUsername,
+    username: "",
+    role: "",
     password: "",
     confirmPassword: "",
-    users: DEFAULT_USERS,
+    users: [],
     page: "price",
     concreteFolders: [],
     concreteFoldersLoading: true,
@@ -351,6 +370,10 @@ function Dashboard(root) {
   root.addEventListener("change", function (e) { self.handleChange(e); });
 
   this.render();
+
+  if (savedToken) this.restoreSession();
+
+  this._bindActivityTracking();
 }
 
 Dashboard.prototype.componentDidMount = function () {
@@ -358,7 +381,51 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadContacts();
-  this.loadUsers();
+};
+
+Dashboard.prototype.restoreSession = function () {
+  var self = this;
+  apiRequest("/auth/me", { auth: true }).then(function (res) {
+    self.markActivity();
+    self.setState({ loggedIn: true, checkingSession: false, username: res.username, role: res.role });
+    self.loadUsers();
+  }).catch(function () {
+    clearSessionToken();
+    clearLastActivity();
+    self.setState({ loggedIn: false, checkingSession: false });
+  });
+};
+
+// Any interaction resets the idle clock; a background timer forces logout
+// once 30 minutes pass without one, on both mobile and desktop browsers.
+Dashboard.prototype.markActivity = function () {
+  var now = Date.now();
+  if (now - (this._lastActivityWrite || 0) < 5000) return;
+  this._lastActivityWrite = now;
+  saveLastActivity(now);
+};
+
+Dashboard.prototype._bindActivityTracking = function () {
+  var self = this;
+  ["click", "keydown", "touchstart", "scroll", "mousemove"].forEach(function (evt) {
+    document.addEventListener(evt, function () {
+      if (self.state.loggedIn) self.markActivity();
+    }, { passive: true });
+  });
+  setInterval(function () { self._checkIdleTimeout(); }, 30 * 1000);
+};
+
+Dashboard.prototype._checkIdleTimeout = function () {
+  if (!this.state.loggedIn) return;
+  if (Date.now() - getLastActivity() > SESSION_IDLE_LIMIT_MS) {
+    clearSessionToken();
+    clearLastActivity();
+    this.setState({
+      loggedIn: false, username: "", role: "", password: "", confirmPassword: "",
+      authMode: "login", users: [],
+      authError: "ไม่ได้ใช้งานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่",
+    });
+  }
 };
 
 Dashboard.prototype.loadContacts = function () {
@@ -370,8 +437,8 @@ Dashboard.prototype.loadContacts = function () {
 
 Dashboard.prototype.loadUsers = function () {
   var self = this;
-  apiRequest("/users").then(function (users) {
-    if (users.length) self.setState({ users: users });
+  apiRequest("/users", { auth: true }).then(function (users) {
+    self.setState({ users: users });
   }).catch(function () {});
 };
 
@@ -565,25 +632,29 @@ Dashboard.prototype.onToggleMode = function () {
 Dashboard.prototype.onSubmitAuth = function () {
   var s = this.state;
   var u = s.username.trim();
+  var self = this;
   if (s.authMode === "login") {
     if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
-    var match = s.users.find(function (usr) { return usr.username === u && usr.password === s.password; });
-    if (!match) { this.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }); return; }
-    saveUsername(u);
-    this.setState({ loggedIn: true, authError: "" });
+    apiRequest("/auth/login", { method: "POST", body: { username: u, password: s.password } })
+      .then(function (res) {
+        saveSessionToken(res.token);
+        self.markActivity();
+        self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", authError: "" });
+        self.loadUsers();
+      })
+      .catch(function () {
+        self.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+      });
     return;
   }
   if (!u || !s.password.trim()) { this.setState({ authError: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }); return; }
   if (s.password !== s.confirmPassword) { this.setState({ authError: "รหัสผ่านไม่ตรงกัน" }); return; }
-  if (s.users.some(function (usr) { return usr.username === u; })) { this.setState({ authError: "ชื่อผู้ใช้นี้มีอยู่แล้ว" }); return; }
-  var self = this;
-  var password = s.password;
-  apiRequest("/users", { method: "POST", auth: true, body: { username: u, password: password, role: "viewer" } })
-    .then(function (created) {
-      saveUsername(u);
-      self.setState(function (s2) {
-        return { users: s2.users.concat([created]), loggedIn: true, authError: "" };
-      });
+  apiRequest("/auth/register", { method: "POST", body: { username: u, password: s.password } })
+    .then(function (res) {
+      saveSessionToken(res.token);
+      self.markActivity();
+      self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", confirmPassword: "", authError: "" });
+      self.loadUsers();
     })
     .catch(function (err) {
       self.setState({ authError: "สมัครสมาชิกไม่สำเร็จ: " + err.message });
@@ -591,8 +662,9 @@ Dashboard.prototype.onSubmitAuth = function () {
 };
 
 Dashboard.prototype.onLogout = function () {
-  clearSavedUsername();
-  this.setState({ loggedIn: false, password: "", confirmPassword: "", authMode: "login" });
+  clearSessionToken();
+  clearLastActivity();
+  this.setState({ loggedIn: false, username: "", role: "", password: "", confirmPassword: "", authMode: "login", users: [] });
 };
 
 /* ---- products ---- */
@@ -1004,7 +1076,7 @@ Dashboard.prototype.render = function () {
   var selStart = active && "selectionStart" in active ? active.selectionStart : null;
   var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
 
-  this.root.innerHTML = this.state.loggedIn ? this.renderDashboard() : this.renderLogin();
+  this.root.innerHTML = this.state.checkingSession ? this.renderSessionCheck() : (this.state.loggedIn ? this.renderDashboard() : this.renderLogin());
 
   if (focusId) {
     var el = document.getElementById(focusId);
@@ -1046,6 +1118,10 @@ Dashboard.prototype.renderCalcOnly = function () {
     if (newScrollBox) newScrollBox.scrollLeft = tableScrollLeft;
   }
   window.scrollTo(pageScrollX, pageScrollY);
+};
+
+Dashboard.prototype.renderSessionCheck = function () {
+  return '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:oklch(0.26 0.13 275); color:#fff; font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; font-size:14px;">กำลังตรวจสอบการเข้าสู่ระบบ...</div>';
 };
 
 Dashboard.prototype.renderLogin = function () {
@@ -1186,9 +1262,7 @@ Dashboard.prototype.renderDashboard = function () {
 };
 
 Dashboard.prototype.isAdmin = function () {
-  var s = this.state;
-  var currentUser = s.users.find(function (u) { return u.username === s.username; });
-  return !currentUser || currentUser.role === "admin";
+  return this.state.role === "admin";
 };
 
 Dashboard.prototype.renderPricePage = function () {
@@ -1418,6 +1492,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
+    this.renderMobileCatBar() +
     productsErrorBanner + importBanner + controls + addForm + resultCount + body +
   '</div>';
 };
@@ -1440,6 +1515,15 @@ Dashboard.prototype.renderCategoryBox = function () {
       '</button>' +
       (catExpanded ? categoryRowsHtml : "") +
     '</div>';
+};
+
+Dashboard.prototype.renderMobileCatBar = function () {
+  var s = this.state;
+  var chips = CATEGORIES.map(function (opt) {
+    var active = opt.value === s.category;
+    return '<button data-action="set-category" data-category="' + opt.value + '" style="padding:8px 14px; border-radius:999px; border:1px solid ' + (active ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (active ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (active ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">' + esc(opt.label) + '</button>';
+  }).join("");
+  return '<div class="mobile-cat-bar">' + chips + '</div>';
 };
 
 var CALC_SIDEBAR_ITEMS = [
