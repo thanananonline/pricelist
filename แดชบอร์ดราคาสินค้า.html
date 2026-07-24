@@ -114,6 +114,13 @@ function clearLastActivity() {
   try { sessionStorage.removeItem("pricelistLastActivity"); } catch (e) {}
 }
 
+// Registered once by the Dashboard instance so any authenticated request
+// that comes back 401 (bad token, or a since-deleted/edited user re-checked
+// server-side) forces a logout with an explanation, no matter which call
+// site triggered it.
+var _sessionExpiredCallback = null;
+function onApiSessionExpired(cb) { _sessionExpiredCallback = cb; }
+
 function apiRequest(path, opts) {
   opts = opts || {};
   var headers = Object.assign({}, opts.headers || {});
@@ -132,6 +139,7 @@ function apiRequest(path, opts) {
       return res.json().catch(function () { return {}; }).then(function (errBody) {
         var err = new Error(errBody.error || ("HTTP " + res.status));
         err.status = res.status;
+        if (res.status === 401 && opts.auth && _sessionExpiredCallback) _sessionExpiredCallback();
         throw err;
       });
     }
@@ -148,9 +156,6 @@ function img(cat) {
   return { bg: "oklch(0.93 0.02 " + h + ")", stripe: "oklch(0.88 0.035 " + h + ")" };
 }
 
-var DEFAULT_CONTACTS = [
-  { id: "seed1", name: "คุณสมชาย ใจดี", department: "ฝ่ายขาย", phone: "081-234-5678", address: "99/1 ถนนสุขาภิบาล ตำบลบางพลี อำเภอบางพลี จังหวัดสมุทรปราการ 10540" },
-];
 /* ---------- helpers ---------- */
 
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
@@ -294,6 +299,8 @@ function Dashboard(root) {
     role: "",
     password: "",
     users: [],
+    usersLoading: true,
+    usersError: "",
     page: "price",
     concreteFolders: [],
     concreteFoldersLoading: true,
@@ -351,7 +358,9 @@ function Dashboard(root) {
     passwordChangeTarget: null,
     passwordChangeValue: "",
     passwordChangeError: "",
-    contacts: DEFAULT_CONTACTS,
+    contacts: [],
+    contactsLoading: true,
+    contactsError: "",
     newContactName: "",
     newContactDept: "",
     newContactPhone: "",
@@ -370,6 +379,7 @@ function Dashboard(root) {
   this.componentDidMount();
 
   var self = this;
+  onApiSessionExpired(function () { self.handleSessionExpired(); });
   root.addEventListener("click", function (e) { self.handleClick(e); });
   root.addEventListener("submit", function (e) { self.handleSubmit(e); });
   root.addEventListener("input", function (e) { self.handleFieldChange(e); });
@@ -397,18 +407,30 @@ Dashboard.prototype.restoreSession = function (attempt) {
     self.setState({ loggedIn: true, checkingSession: false, username: res.username, role: res.role });
     self.loadUsers();
   }).catch(function (err) {
-    // Only a genuine 401 (bad/expired token) should force a fresh login.
+    // A genuine 401 (bad/expired token, or the account no longer exists) is
+    // already handled by handleSessionExpired via the apiRequest hook.
     // A network blip, worker cold start, etc. must not throw away an
     // otherwise-valid saved session -- retry a couple of times first.
     if (err.status !== 401 && attempt < 2) {
       setTimeout(function () { self.restoreSession(attempt + 1); }, 1500);
       return;
     }
-    if (err.status === 401) {
-      clearSessionToken();
-      clearLastActivity();
+    if (err.status !== 401) {
+      self.setState({ loggedIn: false, checkingSession: false });
     }
-    self.setState({ loggedIn: false, checkingSession: false });
+  });
+};
+
+// Central handler for any authenticated request coming back 401: the token
+// is invalid/expired, or D1 no longer has the user (deleted, or role/password
+// changed elsewhere). Forces a fresh login and explains why.
+Dashboard.prototype.handleSessionExpired = function () {
+  clearSessionToken();
+  clearLastActivity();
+  this.setState({
+    loggedIn: false, checkingSession: false, username: "", role: "", password: "",
+    users: [],
+    authError: "เซสชันหมดอายุหรือบัญชีนี้ถูกยกเลิก กรุณาเข้าสู่ระบบใหม่",
   });
 };
 
@@ -446,16 +468,22 @@ Dashboard.prototype._checkIdleTimeout = function () {
 
 Dashboard.prototype.loadContacts = function () {
   var self = this;
+  self.state.contactsLoading = true;
   apiRequest("/contacts").then(function (contacts) {
-    self.setState({ contacts: contacts });
-  }).catch(function () {});
+    self.setState({ contacts: contacts, contactsLoading: false, contactsError: "" });
+  }).catch(function () {
+    self.setState({ contactsLoading: false, contactsError: "โหลดข้อมูลผู้ติดต่อไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
 };
 
 Dashboard.prototype.loadUsers = function () {
   var self = this;
+  self.state.usersLoading = true;
   apiRequest("/users", { auth: true }).then(function (users) {
-    self.setState({ users: users });
-  }).catch(function () {});
+    self.setState({ users: users, usersLoading: false, usersError: "" });
+  }).catch(function () {
+    self.setState({ usersLoading: false, usersError: "โหลดข้อมูลผู้ใช้ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
 };
 
 Dashboard.prototype.loadFolders = function (kind) {
@@ -525,6 +553,8 @@ Dashboard.prototype.handleClick = function (e) {
     case "delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); this.removeProduct(d.id); break;
     case "reload-products": this.loadProducts(); break;
     case "reload-folders": this.loadFolders(d.kind); break;
+    case "reload-contacts": this.loadContacts(); break;
+    case "reload-users": this.loadUsers(); break;
     case "clear-new-prod-image": this.setState({ newProdImage: "" }); break;
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
@@ -1676,6 +1706,20 @@ Dashboard.prototype.renderUsersPage = function () {
   var s = this.state;
   var isAdmin = this.isAdmin();
 
+  if (s.usersLoading) {
+    return '<div class="page-content" style="padding:60px 32px; max-width:700px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+      '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลผู้ใช้...</div>' +
+    '</div>';
+  }
+
+  var usersErrorBanner = "";
+  if (s.usersError) {
+    usersErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+      '<div style="font-size:13.5px; font-weight:600;">' + esc(s.usersError) + '</div>' +
+      '<button data-action="reload-users" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+    '</div>';
+  }
+
   var userRows = s.users.map(function (u) {
     var roleLabel = u.role === "admin" ? "ผู้ดูแลระบบ" : "ดูอย่างเดียว";
     var roleBg = u.role === "admin" ? "oklch(0.92 0.05 275)" : "oklch(0.95 0.006 70)";
@@ -1710,7 +1754,7 @@ Dashboard.prototype.renderUsersPage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
-    adminSection +
+    usersErrorBanner + adminSection +
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + userRows + '</div>' +
   '</div>';
 };
@@ -1718,6 +1762,20 @@ Dashboard.prototype.renderUsersPage = function () {
 Dashboard.prototype.renderContactPage = function () {
   var s = this.state;
   var isAdmin = this.isAdmin();
+
+  if (s.contactsLoading) {
+    return '<div class="page-content" style="padding:60px 32px; max-width:700px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+      '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลผู้ติดต่อ...</div>' +
+    '</div>';
+  }
+
+  var contactsErrorBanner = "";
+  if (s.contactsError) {
+    contactsErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+      '<div style="font-size:13.5px; font-weight:600;">' + esc(s.contactsError) + '</div>' +
+      '<button data-action="reload-contacts" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+    '</div>';
+  }
 
   var addForm = isAdmin ?
     '<form data-form="add-contact" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">' +
@@ -1757,7 +1815,7 @@ Dashboard.prototype.renderContactPage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
     '<div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
-    addForm + body +
+    contactsErrorBanner + addForm + body +
   '</div>';
 };
 

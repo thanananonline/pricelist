@@ -115,16 +115,19 @@ async function getSession(request, env) {
   return await verifySessionToken(m[1], env);
 }
 
+// Re-checks against D1 (not just the token signature/expiry) so a deleted
+// user's still-valid token stops working immediately instead of waiting out
+// the token's 30-day lifetime.
 async function requireAuth(request, env) {
-  return await getSession(request, env);
-}
-
-// Re-checks against D1 (not just the token) so a role change/deletion takes
-// effect immediately instead of waiting out the token's 30-day lifetime.
-async function requireAdmin(request, env) {
   var session = await getSession(request, env);
   if (!session) return null;
   var row = await env.DB.prepare("SELECT username, role FROM users WHERE username = ?").bind(session.u).first();
+  if (!row) return null;
+  return row;
+}
+
+async function requireAdmin(request, env) {
+  var row = await requireAuth(request, env);
   if (!row || row.role !== "admin") return null;
   return row;
 }
@@ -228,9 +231,7 @@ export default {
     }
 
     if (path === "/auth/me" && method === "GET") {
-      const session = await requireAuth(request, env);
-      if (!session) return json({ error: "unauthorized" }, 401);
-      const row = await env.DB.prepare("SELECT username, role FROM users WHERE username = ?").bind(session.u).first();
+      const row = await requireAuth(request, env);
       if (!row) return json({ error: "unauthorized" }, 401);
       return json(publicUser(row));
     }
