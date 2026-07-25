@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -72,17 +73,7 @@
 
 /* ---------- data ---------- */
 
-var CATEGORIES = [
-  { value: "all", label: "ทุกหมวดหมู่" },
-  { value: "concrete_pipe", label: "ผลิตภัณฑ์คอนกรีต - ท่อ" },
-  { value: "concrete_manhole", label: "ผลิตภัณฑ์คอนกรีต - บ่อพัก" },
-  { value: "concrete_pile", label: "ผลิตภัณฑ์คอนกรีต - เสาเข็ม" },
-  { value: "concrete_slab", label: "ผลิตภัณฑ์คอนกรีต - แผ่นพื้น" },
-  { value: "cement", label: "ปูนถุง" },
-  { value: "steel", label: "เหล็กเส้น / เหล็กรูปพรรณ" },
-];
-var CAT_LABEL = Object.fromEntries(CATEGORIES.map(function (c) { return [c.value, c.label]; }));
-var CAT_VALUE_BY_LABEL = Object.fromEntries(CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label, c.value]; }));
+var ALL_CATEGORY = { value: "all", label: "ทุกหมวดหมู่" };
 
 var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
 
@@ -316,6 +307,13 @@ function Dashboard(root) {
     tisFileSearch: "",
     search: "",
     category: "all",
+    categories: [],
+    categoriesLoading: true,
+    categoriesError: "",
+    showManageCategories: false,
+    newCategoryName: "",
+    categoryError: "",
+    categoryDeleteConfirm: null,
     catSidebarCollapsed: false,
     calcSidebarCollapsed: false,
     sortBy: "name",
@@ -339,7 +337,7 @@ function Dashboard(root) {
     editImage: "",
     showAddForm: false,
     newProdName: "",
-    newProdCat: "cement",
+    newProdCat: "",
     newProdPrice: "",
     newProdPrice2: "",
     newProdPrice3: "",
@@ -394,6 +392,7 @@ function Dashboard(root) {
 
 Dashboard.prototype.componentDidMount = function () {
   this.loadProducts();
+  this.loadCategories();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadContacts();
@@ -514,6 +513,61 @@ Dashboard.prototype.loadProducts = function () {
   });
 };
 
+Dashboard.prototype.loadCategories = function () {
+  var self = this;
+  self.state.categoriesLoading = true;
+  apiRequest("/categories").then(function (categories) {
+    self.setState(function (s) {
+      var patch = { categories: categories, categoriesLoading: false, categoriesError: "" };
+      if (!s.newProdCat && categories.length) patch.newProdCat = categories[0].value;
+      return patch;
+    });
+  }).catch(function () {
+    self.setState({ categoriesLoading: false, categoriesError: "โหลดข้อมูลหมวดหมู่ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.catLabel = function (value) {
+  var found = this.state.categories.filter(function (c) { return c.value === value; })[0];
+  return found ? found.label : value;
+};
+
+Dashboard.prototype.catValueByLabel = function (label) {
+  var found = this.state.categories.filter(function (c) { return c.label === label; })[0];
+  return found ? found.value : "";
+};
+
+Dashboard.prototype.addCategory = function () {
+  var s = this.state;
+  var label = s.newCategoryName.trim();
+  if (!label) return;
+  var self = this;
+  apiRequest("/categories", { method: "POST", auth: true, body: { label: label } })
+    .then(function (category) {
+      self.setState(function (s2) {
+        var patch = { categories: s2.categories.concat([category]), newCategoryName: "", categoryError: "" };
+        if (!s2.newProdCat) patch.newProdCat = category.value;
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      self.setState({ categoryError: "เพิ่มหมวดหมู่ไม่สำเร็จ: " + err.message });
+    });
+};
+
+Dashboard.prototype.removeCategory = function (value) {
+  var self = this;
+  apiRequest("/categories/" + encodeURIComponent(value), { method: "DELETE", auth: true })
+    .then(function () {
+      self.setState(function (s2) {
+        return { categories: s2.categories.filter(function (c) { return c.value !== value; }) };
+      });
+    })
+    .catch(function (err) {
+      self.setState({ categoryError: "ลบหมวดหมู่ไม่สำเร็จ: " + err.message });
+    });
+};
+
 Dashboard.prototype.setState = function (patch) {
   clearTimeout(this._renderTimer);
   this._renderTimerStart = null;
@@ -575,6 +629,10 @@ Dashboard.prototype.handleClick = function (e) {
     case "confirm-remove-contact": this.setState({ contactDeleteConfirm: null }); this.removeContact(d.id); break;
     case "download-import-template": this.downloadImportTemplate(); break;
     case "dismiss-import-msg": this.setState({ importMsg: "", importMsgType: "", importErrors: [] }); break;
+    case "toggle-manage-categories": this.setState(function (s2) { return { showManageCategories: !s2.showManageCategories, categoryError: "" }; }); break;
+    case "request-remove-category": this.setState({ categoryDeleteConfirm: { value: d.value, label: d.label || "" } }); break;
+    case "cancel-remove-category": this.setState({ categoryDeleteConfirm: null }); break;
+    case "confirm-remove-category": this.setState({ categoryDeleteConfirm: null }); this.removeCategory(d.value); break;
   }
 };
 
@@ -589,6 +647,7 @@ Dashboard.prototype.handleSubmit = function (e) {
     case "add-user": this.onAddUser(); break;
     case "change-password": this.onChangePassword(); break;
     case "add-contact": this.onAddContact(); break;
+    case "add-category": this.addCategory(); break;
     case "add-folder":
       this.addFolder(form.dataset.kind);
       break;
@@ -716,10 +775,11 @@ Dashboard.prototype.computeProducts = function () {
   if (s.sortBy === "price_asc") list = list.slice().sort(function (a, b) { return a.price - b.price; });
   if (s.sortBy === "price_desc") list = list.slice().sort(function (a, b) { return b.price - a.price; });
 
+  var self = this;
   return list.map(function (p) {
     var im = img(p.cat);
     return {
-      id: p.id, name: p.name, sku: p.sku, categoryLabel: CAT_LABEL[p.cat], unit: p.unit,
+      id: p.id, name: p.name, sku: p.sku, categoryLabel: self.catLabel(p.cat), unit: p.unit,
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
       hasDiscount: !!p.oldPrice,
@@ -790,7 +850,7 @@ Dashboard.prototype.onAddProduct = function () {
   var name = s.newProdName.trim();
   var unit = s.newProdUnit.trim();
   var price = parseFloat(s.newProdPrice);
-  if (!name || !unit || isNaN(price) || price < 0) {
+  if (!name || !unit || !s.newProdCat || isNaN(price) || price < 0) {
     this.setState({ newProdError: "กรุณากรอกข้อมูลให้ครบและถูกต้อง" });
     return;
   }
@@ -828,16 +888,48 @@ Dashboard.prototype.removeProduct = function (id) {
 };
 
 Dashboard.prototype.downloadImportTemplate = function () {
-  var example = ["ปูนซีเมนต์ตัวอย่าง 50 กก.", "ปูนถุง", 145, "", "", "ถุง", "VAT", 0];
-  var ws1 = XLSX.utils.aoa_to_sheet([IMPORT_HEADERS, example]);
-  var catRows = [["หมวดหมู่ที่ใช้ได้ (คัดลอกไปใส่ในคอลัมน์ \"หมวดหมู่\")"]].concat(
-    CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (c) { return [c.label]; })
-  );
-  var ws2 = XLSX.utils.aoa_to_sheet(catRows);
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws1, "สินค้า");
-  XLSX.utils.book_append_sheet(wb, ws2, "หมวดหมู่ที่ใช้ได้");
-  XLSX.writeFile(wb, "เทมเพลตนำเข้าสินค้า.xlsx");
+  var categories = this.state.categories;
+  var catLabels = categories.map(function (c) { return c.label; });
+  var exampleCat = catLabels[0] || "";
+
+  var wb = new ExcelJS.Workbook();
+  var ws1 = wb.addWorksheet("สินค้า");
+  ws1.addRow(IMPORT_HEADERS);
+  ws1.addRow(["ปูนซีเมนต์ตัวอย่าง 50 กก.", exampleCat, 145, "", "", "ถุง", "VAT", 0]);
+  ws1.columns.forEach(function (col) { col.width = 20; });
+
+  var ws2 = wb.addWorksheet("หมวดหมู่ที่ใช้ได้");
+  ws2.addRow(['หมวดหมู่ที่ใช้ได้ (เลือกจาก dropdown ในคอลัมน์ "หมวดหมู่" ของชีตสินค้า)']);
+  catLabels.forEach(function (label) { ws2.addRow([label]); });
+  ws2.getColumn(1).width = 40;
+
+  // Category dropdown on column B ("หมวดหมู่") of the products sheet, sourced
+  // from the visible reference sheet so the list always matches what's on it.
+  if (catLabels.length) {
+    var listRange = "'หมวดหมู่ที่ใช้ได้'!$A$2:$A$" + (catLabels.length + 1);
+    for (var r = 2; r <= 500; r++) {
+      ws1.getCell("B" + r).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [listRange],
+        showErrorMessage: true,
+        errorTitle: "หมวดหมู่ไม่ถูกต้อง",
+        error: "กรุณาเลือกหมวดหมู่จากรายการที่กำหนดเท่านั้น",
+      };
+    }
+  }
+
+  wb.xlsx.writeBuffer().then(function (buffer) {
+    var blob = new Blob([buffer], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "เทมเพลตนำเข้าสินค้า.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
 };
 
 Dashboard.prototype.importExcelFile = function (file) {
@@ -861,7 +953,7 @@ Dashboard.prototype.importExcelFile = function (file) {
         if (!name && !catRaw && !unit && (priceRaw === "" || priceRaw == null)) return;
 
         var price = parseFloat(priceRaw);
-        var cat = CATEGORIES.some(function (c) { return c.value === catRaw; }) ? catRaw : CAT_VALUE_BY_LABEL[catRaw];
+        var cat = self.state.categories.some(function (c) { return c.value === catRaw; }) ? catRaw : self.catValueByLabel(catRaw);
         var errs = [];
         if (!name) errs.push("ไม่มีชื่อสินค้า");
         if (!cat) errs.push('หมวดหมู่ไม่ถูกต้อง ("' + catRaw + '")');
@@ -1203,11 +1295,12 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   var dc = s.folderDeleteConfirm;
   var uc = s.userDeleteConfirm;
   var cc = s.contactDeleteConfirm;
-  if (!s.deleteConfirmId && !fc && !dc && !uc && !cc) return "";
-  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : "ยืนยันการลบสินค้า";
-  var name = fc ? fc.name : dc ? dc.name : uc ? uc.username : cc ? cc.name : s.deleteConfirmName;
-  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : uc ? "cancel-remove-user" : cc ? "cancel-remove-contact" : "cancel-delete-product";
-  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : uc ? "ลบผู้ใช้" : cc ? "ลบรายชื่อติดต่อ" : "ลบสินค้า";
+  var catc = s.categoryDeleteConfirm;
+  if (!s.deleteConfirmId && !fc && !dc && !uc && !cc && !catc) return "";
+  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : catc ? "ยืนยันการลบหมวดหมู่" : "ยืนยันการลบสินค้า";
+  var name = fc ? fc.name : dc ? dc.name : uc ? uc.username : cc ? cc.name : catc ? catc.label : s.deleteConfirmName;
+  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : uc ? "cancel-remove-user" : cc ? "cancel-remove-contact" : catc ? "cancel-remove-category" : "cancel-delete-product";
+  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : uc ? "ลบผู้ใช้" : cc ? "ลบรายชื่อติดต่อ" : catc ? "ลบหมวดหมู่" : "ลบสินค้า";
   var confirmAttrs = fc ?
     'data-action="confirm-remove-file" data-kind="' + esc(fc.kind) + '" data-folder-id="' + esc(fc.folderId) + '" data-file-id="' + esc(fc.fileId) + '"' :
     dc ?
@@ -1216,6 +1309,8 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
     'data-action="confirm-remove-user" data-username="' + esc(uc.username) + '"' :
     cc ?
     'data-action="confirm-remove-contact" data-id="' + esc(cc.id) + '"' :
+    catc ?
+    'data-action="confirm-remove-category" data-value="' + esc(catc.value) + '"' :
     'data-action="delete-product" data-id="' + s.deleteConfirmId + '"';
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
@@ -1330,7 +1425,7 @@ Dashboard.prototype.renderPricePage = function () {
   var s = this.state;
   var isAdmin = this.isAdmin();
 
-  if (s.productsLoading) {
+  if (s.productsLoading || s.categoriesLoading) {
     return '<div class="page-content" style="padding:60px 32px; max-width:1360px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลสินค้า...</div>' +
     '</div>';
@@ -1343,7 +1438,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   var statCards = [
     { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "oklch(0.4 0.02 60)" },
-    { label: "หมวดหมู่สินค้า", value: CATEGORIES.length - 1, color: "oklch(0.4 0.02 60)" },
+    { label: "หมวดหมู่สินค้า", value: s.categories.length, color: "oklch(0.4 0.02 60)" },
     { label: "รายการลดราคา", value: discountCount, color: "oklch(0.38 0.15 275)" },
     { label: "สินค้า NO VAT", value: novatCount, color: "oklch(0.5 0.15 30)" },
   ];
@@ -1378,6 +1473,7 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>' +
       (isAdmin ? '<label style="margin-left:auto; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
       (isAdmin ? '<button type="button" data-action="download-import-template" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
+      (isAdmin ? '<button type="button" data-action="toggle-manage-categories" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' : '') +
       (isAdmin ? '<button data-action="toggle-add-form" style="padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
     '</div>';
 
@@ -1406,7 +1502,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   var addForm = "";
   if (s.showAddForm) {
-    var catOptsNoAll = CATEGORIES.filter(function (c) { return c.value !== "all"; }).map(function (opt) {
+    var catOptsNoAll = s.categories.map(function (opt) {
       return '<option value="' + opt.value + '"' + (opt.value === s.newProdCat ? " selected" : "") + '>' + esc(opt.label) + '</option>';
     }).join("");
     addForm =
@@ -1448,6 +1544,26 @@ Dashboard.prototype.renderPricePage = function () {
           (s.newProdError ? '<span style="font-size:12.5px; color:oklch(0.5 0.15 30);">' + esc(s.newProdError) + '</span>' : '') +
         '</div>' +
       '</form>';
+  }
+
+  var manageCategoriesPanel = "";
+  if (s.showManageCategories) {
+    var categoryRows = s.categories.map(function (c) {
+      return '<div style="display:flex; align-items:center; gap:12px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70);">' +
+        '<div style="flex:1; font-size:13.5px; font-weight:600;">' + esc(c.label) + '</div>' +
+        '<button data-action="request-remove-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' +
+      '</div>';
+    }).join("");
+    manageCategoriesPanel =
+      '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; margin-bottom:22px; overflow:hidden;">' +
+        '<div style="padding:16px 20px 0;"><div style="font-family:Kanit; font-weight:700; font-size:15.5px;">จัดการหมวดหมู่สินค้า</div></div>' +
+        '<form data-form="add-category" style="display:flex; gap:10px; padding:14px 20px;">' +
+          '<input id="field-newCategoryName" type="text" placeholder="ชื่อหมวดหมู่ใหม่..." data-bind="newCategoryName" data-clear="categoryError" value="' + esc(s.newCategoryName) + '" style="flex:1; padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none;" />' +
+          '<button type="submit" style="padding:10px 18px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มหมวดหมู่</button>' +
+        '</form>' +
+        (s.categoryError ? '<div style="font-size:12.5px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; margin:0 20px 14px; border-radius:8px;">' + esc(s.categoryError) + '</div>' : "") +
+        categoryRows +
+      '</div>';
   }
 
   var resultCount = '<div style="font-size:13.5px; color:oklch(0.5 0.01 60); margin-bottom:14px;">พบ <strong style="color:oklch(0.3 0.01 60);">' + products.length + '</strong> รายการ</div>';
@@ -1554,14 +1670,14 @@ Dashboard.prototype.renderPricePage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
-    productsErrorBanner + importBanner + controls + addForm + resultCount + body +
+    productsErrorBanner + importBanner + controls + manageCategoriesPanel + addForm + resultCount + body +
   '</div>';
 };
 
 Dashboard.prototype.renderCategoryBox = function () {
   var s = this.state;
   var catExpanded = !s.catSidebarCollapsed;
-  var categoryRowsHtml = CATEGORIES.map(function (opt) {
+  var categoryRowsHtml = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
     var isActive = opt.value === s.category;
     return '<button data-action="set-category" data-category="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
       '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
@@ -1580,7 +1696,7 @@ Dashboard.prototype.renderCategoryBox = function () {
 
 Dashboard.prototype.renderMobileCatBar = function () {
   var s = this.state;
-  var chips = CATEGORIES.map(function (opt) {
+  var chips = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
     var active = opt.value === s.category;
     return '<button data-action="set-category" data-category="' + opt.value + '" style="padding:8px 14px; border-radius:999px; border:1px solid ' + (active ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (active ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (active ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">' + esc(opt.label) + '</button>';
   }).join("");

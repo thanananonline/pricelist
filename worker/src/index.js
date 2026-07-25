@@ -14,8 +14,8 @@ function json(data, status) {
   });
 }
 
-function genId() {
-  return "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+function genId(prefix) {
+  return (prefix || "p") + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 }
 
 function autoSku() {
@@ -293,6 +293,36 @@ export default {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const id = decodeURIComponent(idMatch[1]);
       const res = await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ ok: true });
+    }
+
+    if (path === "/categories" && method === "GET") {
+      const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
+      return json(results);
+    }
+
+    if (path === "/categories" && method === "POST") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const label = String(body.label || "").trim();
+      if (!label) return json({ error: "label is required" }, 400);
+      const existing = await env.DB.prepare("SELECT value FROM categories WHERE label = ?").bind(label).first();
+      if (existing) return json({ error: "หมวดหมู่นี้มีอยู่แล้ว" }, 409);
+      const maxRow = await env.DB.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM categories").first();
+      const value = genId("cat");
+      await env.DB.prepare("INSERT INTO categories (value, label, sort_order) VALUES (?,?,?)").bind(value, label, maxRow.m + 1).run();
+      return json({ value: value, label: label }, 201);
+    }
+
+    const categoryValueMatch = path.match(/^\/categories\/([^/]+)$/);
+    if (categoryValueMatch && method === "DELETE") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const value = decodeURIComponent(categoryValueMatch[1]);
+      const inUse = await env.DB.prepare("SELECT COUNT(*) AS c FROM products WHERE cat = ?").bind(value).first();
+      if (inUse && inUse.c > 0) return json({ error: "หมวดหมู่นี้มีสินค้าอยู่ ไม่สามารถลบได้" }, 409);
+      const res = await env.DB.prepare("DELETE FROM categories WHERE value = ?").bind(value).run();
       if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
       return json({ ok: true });
     }
