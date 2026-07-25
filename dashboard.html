@@ -2100,11 +2100,15 @@ Dashboard.prototype.renderSlabCalc = function () {
   var colWidths = "48px minmax(96px,1.2fr) minmax(78px,1fr) minmax(78px,1fr) minmax(70px,1fr) minmax(96px,1.1fr) minmax(100px,1.1fr) minmax(76px,1fr) minmax(88px,1.1fr) minmax(96px,1.1fr) minmax(76px,1fr) minmax(90px,1.1fr) minmax(92px,1.1fr)";
 
   var headerRow = '<div class="calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
-    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+    headerCells.map(function (h, i) {
+      return i === 0
+        ? '<div style="position:sticky; left:0; z-index:2; background:oklch(0.96 0.006 70); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + h + '</div>'
+        : '<div>' + h + '</div>';
+    }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="position:sticky; left:0; z-index:1; background:#fff; font-size:12.5px; color:oklch(0.5 0.01 60); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + r.index + '</div>');
     var wireOptionsHtml = '<option value=""' + (r.label ? "" : " selected") + '>- เลือก -</option>' +
       WIRE_OPTIONS.map(function (w) { return '<option value="' + w + '"' + (r.label === w ? " selected" : "") + '>' + w + '</option>'; }).join("");
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-store="calcRows" data-calc-field="label" style="' + rowInputStyle + ' background:#fff;">' + wireOptionsHtml + '</select>');
@@ -2225,11 +2229,15 @@ Dashboard.prototype.renderSteelCalc = function () {
   };
 
   var headerRow = '<div class="steel-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
-    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+    headerCells.map(function (h, i) {
+      return i === 0
+        ? '<div style="position:sticky; left:0; z-index:2; background:oklch(0.96 0.006 70); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + h + '</div>'
+        : '<div>' + h + '</div>';
+    }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="position:sticky; left:0; z-index:1; background:#fff; font-size:12.5px; color:oklch(0.5 0.01 60); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + r.index + '</div>');
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcSteelRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
     cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcSteelRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
     cells.push('<div style="font-size:12.5px;">' + esc(r.unit || "") + '</div>');
@@ -2293,11 +2301,15 @@ Dashboard.prototype.renderStirrupCalc = function () {
   };
 
   var headerRow = '<div class="stirrup-calc-row" style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 14px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
-    headerCells.map(function (h) { return '<div>' + h + '</div>'; }).join("") + '</div>';
+    headerCells.map(function (h, i) {
+      return i === 0
+        ? '<div style="position:sticky; left:0; z-index:2; background:oklch(0.96 0.006 70); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + h + '</div>'
+        : '<div>' + h + '</div>';
+    }).join("") + '</div>';
 
   var dataRows = rows.map(function (r) {
     var cells = [];
-    cells.push('<div style="font-size:12.5px; color:oklch(0.5 0.01 60);">' + r.index + '</div>');
+    cells.push('<div style="position:sticky; left:0; z-index:1; background:#fff; font-size:12.5px; color:oklch(0.5 0.01 60); box-shadow:2px 0 4px rgba(0,0,0,.06);">' + r.index + '</div>');
     cells.push('<select data-calc-row="' + (r.index - 1) + '" data-calc-field="product" data-calc-store="calcStirrupRows" style="' + rowInputStyle + ' background:#fff;">' + productOptionsHtml(r.product) + '</select>');
     cells.push('<div style="font-size:12.5px;">' + (r.weightPerBundle != null ? fmtN(r.weightPerBundle, 2) : "") + '</div>');
     cells.push('<input type="text" inputmode="numeric" data-calc-row="' + (r.index - 1) + '" data-calc-field="qty" data-calc-store="calcStirrupRows" value="' + esc(r.qty) + '" style="' + rowInputStyle + '" />');
