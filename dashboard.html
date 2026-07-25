@@ -1361,8 +1361,8 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
       '</div>' +
       '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">ต้องการลบ "<strong>' + esc(name) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</div>' +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
-        '<button data-action="' + cancelAction + '" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
-        '<button ' + confirmAttrs + ' style="padding:9px 16px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">' + confirmLabel + '</button>' +
+        '<button data-action="' + cancelAction + '" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button ' + confirmAttrs + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">' + confirmLabel + '</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -1384,8 +1384,8 @@ Dashboard.prototype.renderChangePasswordModal = function () {
       '</label>' +
       (s.passwordChangeError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px;">' + esc(s.passwordChangeError) + '</div>' : '') +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
-        '<button type="button" data-action="cancel-change-password" style="padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
-        '<button type="submit" style="padding:9px 16px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึกรหัสผ่านใหม่</button>' +
+        '<button type="button" data-action="cancel-change-password" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึกรหัสผ่านใหม่</button>' +
       '</div>' +
     '</form>' +
     '</div>' +
@@ -1437,7 +1437,7 @@ Dashboard.prototype.renderDashboard = function () {
       '</div>' +
       '<div style="display:flex; align-items:center; gap:16px;">' +
         '<span style="font-size:13px; opacity:.85;">👤 ' + esc(s.username) + '</span>' +
-        '<button data-action="logout" style="padding:7px 14px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:12.5px; font-family:inherit; cursor:pointer;">ออกจากระบบ</button>' +
+        '<button data-action="logout" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer;">ออกจากระบบ</button>' +
       '</div>' +
     '</div>';
 
@@ -1497,8 +1497,8 @@ Dashboard.prototype.renderPricePage = function () {
     return '<option value="' + o[0] + '"' + (o[0] === s.sortBy ? " selected" : "") + '>' + o[1] + '</option>';
   }).join("");
 
-  var activeBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
-  var inactiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
+  var activeBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
+  var inactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
   var gridActive = s.view === "grid";
 
   var controls =
@@ -1512,17 +1512,17 @@ Dashboard.prototype.renderPricePage = function () {
         '<button data-action="set-view" data-view="grid" style="' + (gridActive ? activeBtn : inactiveBtn) + '">▦ กริด</button>' +
         '<button data-action="set-view" data-view="list" style="' + (!gridActive ? activeBtn : inactiveBtn) + '">☰ รายการ</button>' +
       '</div>' +
-      (isAdmin ? '<label style="margin-left:auto; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
-      (isAdmin ? '<button type="button" data-action="download-import-template" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
-      (isAdmin ? '<button type="button" data-action="toggle-manage-categories" style="padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' : '') +
-      (isAdmin ? '<button data-action="toggle-add-form" style="padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
+      (isAdmin ? '<label style="margin-left:auto; min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
+      (isAdmin ? '<button type="button" data-action="download-import-template" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
+      (isAdmin ? '<button type="button" data-action="toggle-manage-categories" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' : '') +
+      (isAdmin ? '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
     '</div>';
 
   var productsErrorBanner = "";
   if (s.productsError) {
     productsErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
       '<div style="font-size:13.5px; font-weight:600;">' + esc(s.productsError) + '</div>' +
-      '<button data-action="reload-products" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+      '<button data-action="reload-products" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
     '</div>';
   }
 
@@ -1537,7 +1537,7 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>' : "";
     importBanner = '<div style="background:' + bannerBg + '; color:' + bannerColor + '; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">' +
       '<div style="font-size:13.5px; font-weight:600;">' + esc(s.importMsg) + errDetails + '</div>' +
-      '<button data-action="dismiss-import-msg" style="border:none; background:transparent; color:inherit; cursor:pointer; font-size:16px; line-height:1; padding:0;">✕</button>' +
+      '<button data-action="dismiss-import-msg" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:inherit; cursor:pointer; font-size:16px; line-height:1; padding:0; flex:none;">✕</button>' +
     '</div>';
   }
 
@@ -1578,7 +1578,7 @@ Dashboard.prototype.renderPricePage = function () {
         (s.newProdImage ?
           '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:10px;">' +
             '<img src="' + s.newProdImage + '" alt="" style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid oklch(0.87 0.008 60);" />' +
-            '<button type="button" data-action="clear-new-prod-image" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:6px 10px; font-size:12px; cursor:pointer; font-family:inherit;">✕ ลบรูป</button>' +
+            '<button type="button" data-action="clear-new-prod-image" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:10px 14px; font-size:13px; cursor:pointer; font-family:inherit;">✕ ลบรูป</button>' +
           '</div>' : '') +
         '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px;">' +
           '<button type="submit" style="padding:11px 20px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มสินค้า</button>' +
@@ -1593,14 +1593,14 @@ Dashboard.prototype.renderPricePage = function () {
       if (s.editingCategoryValue === c.value) {
         return '<div style="display:flex; align-items:center; gap:10px; padding:9px 16px; border-top:1px solid oklch(0.93 0.006 70);">' +
           '<input id="field-editCategoryName" type="text" data-bind="editCategoryName" data-clear="categoryError" value="' + esc(s.editCategoryName) + '" style="flex:1; padding:7px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13.5px; font-family:inherit;" />' +
-          '<button data-action="save-edit-category" data-value="' + esc(c.value) + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:7px 12px; cursor:pointer; font-size:12.5px; font-weight:700; font-family:inherit;">บันทึก</button>' +
-          '<button data-action="cancel-edit-category" style="border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:7px 12px; cursor:pointer; font-size:12.5px; font-family:inherit;">ยกเลิก</button>' +
+          '<button data-action="save-edit-category" data-value="' + esc(c.value) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:10px 14px; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="cancel-edit-category" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:10px 14px; cursor:pointer; font-size:13px; font-family:inherit;">ยกเลิก</button>' +
         '</div>';
       }
       return '<div style="display:flex; align-items:center; gap:12px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="flex:1; font-size:13.5px; font-weight:600;">' + esc(c.label) + '</div>' +
-        '<button data-action="start-edit-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
-        '<button data-action="request-remove-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' +
+        '<button data-action="start-edit-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
+        '<button data-action="request-remove-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' +
       '</div>';
     }).join("");
     manageCategoriesPanel =
@@ -1641,10 +1641,10 @@ Dashboard.prototype.renderPricePage = function () {
           '</div>' +
           '<div style="display:flex; align-items:center; gap:6px;">' +
             (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
-            '<label style="font-size:11.5px; padding:6px 9px; border-radius:7px; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
-            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="border:none; background:transparent; color:oklch(0.5 0.15 30); font-size:11.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
+            '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
+            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.5 0.15 30); font-size:12.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
           '</div>' +
-          '<button data-action="save-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:7px 10px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:auto;">บันทึก</button>' +
+          '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:auto;">บันทึก</button>' +
         '</div>' :
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">' + esc(p.name) + '</div>' +
@@ -1657,8 +1657,8 @@ Dashboard.prototype.renderPricePage = function () {
           '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
             (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
-              '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' +
-              '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
+              '<button data-action="start-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:oklch(0.95 0.006 70); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' +
+              '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
             '</div>' : '') +
           '</div>' +
         '</div>';
@@ -1686,15 +1686,15 @@ Dashboard.prototype.renderPricePage = function () {
           '</select>' +
           '<div style="display:flex; align-items:center; gap:6px;">' +
             (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
-            '<label style="font-size:11.5px; padding:6px 9px; border-radius:7px; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
-            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="border:none; background:transparent; color:oklch(0.5 0.15 30); font-size:11.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
+            '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
+            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.5 0.15 30); font-size:12.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
           '</div>' +
-          '<button data-action="save-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
         '</div>' :
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
-          (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
-          (isAdmin ? '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; padding:5px 9px; font-size:11.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
+          (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:oklch(0.95 0.006 70); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
+          (isAdmin ? '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
         '</div>';
       var listMediaStyle = p.image ? "background:oklch(0.96 0.006 70) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
@@ -1793,7 +1793,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   if (s[k.errorKey]) {
     errorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
       '<div style="font-size:13.5px; font-weight:600;">' + esc(s[k.errorKey]) + '</div>' +
-      '<button data-action="reload-folders" data-kind="' + kind + '" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+      '<button data-action="reload-folders" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
     '</div>';
   }
 
@@ -1807,14 +1807,14 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="font-size:30px;">📁</div>' +
         '<div style="font-weight:700; font-size:14.5px;">' + esc(f.name) + '</div>' +
         '<div style="font-size:12px; color:oklch(0.55 0.01 60);">' + f.files.length + ' ไฟล์</div>' +
-        (isAdmin ? '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:12px; right:12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:4px; right:4px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("");
 
     var addFolderForm = isAdmin ?
       '<form data-form="add-folder" data-kind="' + kind + '" style="display:flex; gap:10px; margin-bottom:20px; max-width:420px;">' +
         '<input id="field-new' + (kind === "concrete" ? "Concrete" : "Tis") + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; padding:11px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none;" />' +
-        '<button type="submit" style="padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
+        '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
       '</form>' : '';
 
     return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
@@ -1832,8 +1832,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '</label>' : '';
 
   var fileViewGrid = s[k.viewKey] === "grid";
-  var fileViewActiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
-  var fileViewInactiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
+  var fileViewActiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
+  var fileViewInactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
   var fileViewToggle = '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px; flex:none;">' +
     '<button data-action="set-file-view" data-kind="' + kind + '" data-view="list" style="' + (fileViewGrid ? fileViewInactiveBtn : fileViewActiveBtn) + '">☰ รายการ</button>' +
     '<button data-action="set-file-view" data-kind="' + kind + '" data-view="grid" style="' + (fileViewGrid ? fileViewActiveBtn : fileViewInactiveBtn) + '">▦ กริด</button>' +
@@ -1860,13 +1860,13 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
       return '<div style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:10px; right:10px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:2px; right:2px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
         '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
         '<div style="font-weight:600; font-size:13px; line-height:1.35; overflow-wrap:break-word; word-break:break-word;">' + esc(f.name) + '</div>' +
         '<div style="font-size:11px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div>' +
         '<div style="display:flex; gap:6px; margin-top:4px;">' +
-          '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
-          '<a href="' + downloadUrl + '" style="font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:7px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+          '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
+          '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
         '</div>' +
       '</div>';
     }).join("") + '</div>';
@@ -1877,16 +1877,16 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
-        '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
-        '<a href="' + downloadUrl + '" style="font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+        '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
+        '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
-      '<button data-action="close-folder" data-kind="' + kind + '" style="border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
+      '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
     '</div>' + errorBanner + uploadBox + (active.files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
@@ -1906,7 +1906,7 @@ Dashboard.prototype.renderUsersPage = function () {
   if (s.usersError) {
     usersErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
       '<div style="font-size:13.5px; font-weight:600;">' + esc(s.usersError) + '</div>' +
-      '<button data-action="reload-users" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+      '<button data-action="reload-users" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
     '</div>';
   }
 
@@ -1918,8 +1918,8 @@ Dashboard.prototype.renderUsersPage = function () {
       '<div style="width:34px; height:34px; border-radius:50%; background:oklch(0.92 0.02 45); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:oklch(0.38 0.15 275); flex:none;">' + esc(u.username.charAt(0).toUpperCase()) + '</div>' +
       '<div style="font-weight:600; font-size:14px; flex:1;">' + esc(u.username) + '</div>' +
       '<span style="font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:' + roleBg + '; color:' + roleColor + ';">' + roleLabel + '</span>' +
-      (isAdmin ? '<button data-action="request-change-password" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">เปลี่ยนรหัสผ่าน</button>' : '') +
-      (isAdmin ? '<button data-action="request-remove-user" data-username="' + esc(u.username) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+      (isAdmin ? '<button data-action="request-change-password" data-username="' + esc(u.username) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">เปลี่ยนรหัสผ่าน</button>' : '') +
+      (isAdmin ? '<button data-action="request-remove-user" data-username="' + esc(u.username) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
     '</div>';
   }).join("");
 
@@ -1937,7 +1937,7 @@ Dashboard.prototype.renderUsersPage = function () {
           '<option value="admin"' + (s.newUserRole === "admin" ? " selected" : "") + '>ผู้ดูแลระบบ</option>' +
         '</select>' +
       '</label>' +
-      '<button type="submit" style="padding:11px 18px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มผู้ใช้</button>' +
+      '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มผู้ใช้</button>' +
     '</form>' +
     (s.userError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">' + esc(s.userError) + '</div>' : '')
     : '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ต้องเป็นผู้ดูแลระบบเพื่อจัดการผู้ใช้</div>';
@@ -1963,7 +1963,7 @@ Dashboard.prototype.renderContactPage = function () {
   if (s.contactsError) {
     contactsErrorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
       '<div style="font-size:13.5px; font-weight:600;">' + esc(s.contactsError) + '</div>' +
-      '<button data-action="reload-contacts" style="border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
+      '<button data-action="reload-contacts" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
     '</div>';
   }
 
@@ -1983,7 +1983,7 @@ Dashboard.prototype.renderContactPage = function () {
           '<input id="field-newContactAddress" type="text" data-bind="newContactAddress" value="' + esc(s.newContactAddress) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
         '</label>' +
       '</div>' +
-      '<button type="submit" style="padding:11px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มรายชื่อติดต่อ</button>' +
+      '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px; border:none; border-radius:9px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">+ เพิ่มรายชื่อติดต่อ</button>' +
     '</form>' +
     (s.contactError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">' + esc(s.contactError) + '</div>' : '')
     : '';
@@ -1997,7 +1997,7 @@ Dashboard.prototype.renderContactPage = function () {
         '<div style="flex:1;"><div style="font-weight:700; font-size:14.5px;">' + esc(c.name) + ' <span style="font-weight:500; color:oklch(0.55 0.01 60); font-size:12.5px;">· ' + esc(c.department) + '</span></div>' +
         '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:4px;">📞 ' + esc(c.phone) + '</div>' +
         '<div style="font-size:13px; color:oklch(0.45 0.01 60); margin-top:2px;">📍 ' + esc(c.address) + '</div></div>' +
-        (isAdmin ? '<button data-action="request-remove-contact" data-id="' + c.id + '" data-name="' + esc(c.name) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<button data-action="request-remove-contact" data-id="' + c.id + '" data-name="' + esc(c.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
   }
