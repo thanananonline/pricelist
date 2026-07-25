@@ -299,12 +299,14 @@ function Dashboard(root) {
     activeConcreteFolderId: null,
     newConcreteFolderName: "",
     concreteFileSearch: "",
+    concreteFileView: "list",
     tisFolders: [],
     tisFoldersLoading: true,
     tisFoldersError: "",
     activeTisFolderId: null,
     newTisFolderName: "",
     tisFileSearch: "",
+    tisFileView: "list",
     search: "",
     category: "all",
     categories: [],
@@ -641,6 +643,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "clear-edit-image": this.setState({ editImage: "" }); break;
     case "open-folder": this.openFolder(d.kind, d.id); break;
     case "close-folder": this.closeFolder(d.kind); break;
+    case "set-file-view": this.setFileView(d.kind, d.view); break;
     case "request-remove-folder": this.setState({ folderDeleteConfirm: { kind: d.kind, id: d.id, name: d.name || "" } }); break;
     case "cancel-remove-folder": this.setState({ folderDeleteConfirm: null }); break;
     case "confirm-remove-folder": this.setState({ folderDeleteConfirm: null }); this.removeFolder(d.kind, d.id); break;
@@ -1041,8 +1044,8 @@ Dashboard.prototype.importExcelFile = function (file) {
 
 Dashboard.prototype._folderKeys = function (kind) {
   return kind === "concrete"
-    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch" }
-    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch" };
+    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch", viewKey: "concreteFileView" }
+    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch", viewKey: "tisFileView" };
 };
 
 Dashboard.prototype.addFolder = function (kind) {
@@ -1098,6 +1101,13 @@ Dashboard.prototype.closeFolder = function (kind) {
   var patch = {};
   patch[k.activeKey] = null;
   patch[k.searchKey] = "";
+  this.setState(patch);
+};
+
+Dashboard.prototype.setFileView = function (kind, view) {
+  var k = this._folderKeys(kind);
+  var patch = {};
+  patch[k.viewKey] = view;
   this.setState(patch);
 };
 
@@ -1821,8 +1831,17 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
     '</label>' : '';
 
-  var searchBox = '<div style="margin-bottom:16px;">' +
-    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="width:100%; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+  var fileViewGrid = s[k.viewKey] === "grid";
+  var fileViewActiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
+  var fileViewInactiveBtn = "padding:7px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
+  var fileViewToggle = '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px; flex:none;">' +
+    '<button data-action="set-file-view" data-kind="' + kind + '" data-view="list" style="' + (fileViewGrid ? fileViewInactiveBtn : fileViewActiveBtn) + '">☰ รายการ</button>' +
+    '<button data-action="set-file-view" data-kind="' + kind + '" data-view="grid" style="' + (fileViewGrid ? fileViewActiveBtn : fileViewInactiveBtn) + '">▦ กริด</button>' +
+  '</div>';
+
+  var searchBox = '<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">' +
+    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="flex:1 1 200px; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+    fileViewToggle +
   '</div>';
 
   var queryTerms = (s[k.searchKey] || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -1836,6 +1855,21 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์ในโฟลเดอร์นี้</div>';
   } else if (visibleFiles.length === 0) {
     filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ไม่พบไฟล์ที่ตรงกับคำค้นหา</div>';
+  } else if (fileViewGrid) {
+    filesBody = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px;">' + visibleFiles.map(function (f) {
+      var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
+      var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
+      return '<div style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:10px; right:10px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
+        '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
+        '<div style="font-weight:600; font-size:13px; line-height:1.35; overflow-wrap:break-word; word-break:break-word;">' + esc(f.name) + '</div>' +
+        '<div style="font-size:11px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div>' +
+        '<div style="display:flex; gap:6px; margin-top:4px;">' +
+          '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
+          '<a href="' + downloadUrl + '" style="font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:7px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+        '</div>' +
+      '</div>';
+    }).join("") + '</div>';
   } else {
     filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
