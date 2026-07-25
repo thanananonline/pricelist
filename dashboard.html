@@ -702,12 +702,13 @@ Dashboard.prototype.getMergedProducts = function () {
 
 Dashboard.prototype.computeProducts = function () {
   var s = this.state;
-  var q = s.search.trim().toLowerCase();
+  var queryTerms = s.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
   var withOverrides = this.getMergedProducts();
 
   var list = withOverrides.filter(function (p) {
     var matchesCat = s.category === "all" || p.cat === s.category;
-    var matchesQ = !q || p.name.toLowerCase().indexOf(q) !== -1 || p.sku.toLowerCase().indexOf(q) !== -1;
+    var haystack = (p.name + " " + p.sku).toLowerCase();
+    var matchesQ = !queryTerms.length || queryTerms.every(function (term) { return haystack.indexOf(term) !== -1; });
     return matchesCat && matchesQ;
   });
 
