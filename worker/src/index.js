@@ -317,6 +317,20 @@ export default {
     }
 
     const categoryValueMatch = path.match(/^\/categories\/([^/]+)$/);
+    if (categoryValueMatch && method === "PUT") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const value = decodeURIComponent(categoryValueMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const label = String(body.label || "").trim();
+      if (!label) return json({ error: "label is required" }, 400);
+      const existing = await env.DB.prepare("SELECT value FROM categories WHERE label = ? AND value != ?").bind(label, value).first();
+      if (existing) return json({ error: "หมวดหมู่นี้มีอยู่แล้ว" }, 409);
+      const res = await env.DB.prepare("UPDATE categories SET label = ? WHERE value = ?").bind(label, value).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ value: value, label: label });
+    }
+
     if (categoryValueMatch && method === "DELETE") {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const value = decodeURIComponent(categoryValueMatch[1]);

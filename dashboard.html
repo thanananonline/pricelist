@@ -314,6 +314,8 @@ function Dashboard(root) {
     newCategoryName: "",
     categoryError: "",
     categoryDeleteConfirm: null,
+    editingCategoryValue: null,
+    editCategoryName: "",
     catSidebarCollapsed: false,
     calcSidebarCollapsed: false,
     sortBy: "name",
@@ -568,6 +570,32 @@ Dashboard.prototype.removeCategory = function (value) {
     });
 };
 
+Dashboard.prototype.startEditCategory = function (value, label) {
+  this.setState({ editingCategoryValue: value, editCategoryName: label, categoryError: "" });
+};
+
+Dashboard.prototype.cancelEditCategory = function () {
+  this.setState({ editingCategoryValue: null, editCategoryName: "" });
+};
+
+Dashboard.prototype.saveEditCategory = function (value) {
+  var label = this.state.editCategoryName.trim();
+  if (!label) { this.setState({ categoryError: "กรุณากรอกชื่อหมวดหมู่" }); return; }
+  var self = this;
+  apiRequest("/categories/" + encodeURIComponent(value), { method: "PUT", auth: true, body: { label: label } })
+    .then(function (updated) {
+      self.setState(function (s2) {
+        return {
+          categories: s2.categories.map(function (c) { return c.value === value ? updated : c; }),
+          editingCategoryValue: null, editCategoryName: "", categoryError: "",
+        };
+      });
+    })
+    .catch(function (err) {
+      self.setState({ categoryError: "แก้ไขหมวดหมู่ไม่สำเร็จ: " + err.message });
+    });
+};
+
 Dashboard.prototype.setState = function (patch) {
   clearTimeout(this._renderTimer);
   this._renderTimerStart = null;
@@ -633,6 +661,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-remove-category": this.setState({ categoryDeleteConfirm: { value: d.value, label: d.label || "" } }); break;
     case "cancel-remove-category": this.setState({ categoryDeleteConfirm: null }); break;
     case "confirm-remove-category": this.setState({ categoryDeleteConfirm: null }); this.removeCategory(d.value); break;
+    case "start-edit-category": this.startEditCategory(d.value, d.label || ""); break;
+    case "cancel-edit-category": this.cancelEditCategory(); break;
+    case "save-edit-category": this.saveEditCategory(d.value); break;
   }
 };
 
@@ -1549,8 +1580,16 @@ Dashboard.prototype.renderPricePage = function () {
   var manageCategoriesPanel = "";
   if (s.showManageCategories) {
     var categoryRows = s.categories.map(function (c) {
+      if (s.editingCategoryValue === c.value) {
+        return '<div style="display:flex; align-items:center; gap:10px; padding:9px 16px; border-top:1px solid oklch(0.93 0.006 70);">' +
+          '<input id="field-editCategoryName" type="text" data-bind="editCategoryName" data-clear="categoryError" value="' + esc(s.editCategoryName) + '" style="flex:1; padding:7px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13.5px; font-family:inherit;" />' +
+          '<button data-action="save-edit-category" data-value="' + esc(c.value) + '" style="border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:7px 12px; cursor:pointer; font-size:12.5px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="cancel-edit-category" style="border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:7px 12px; cursor:pointer; font-size:12.5px; font-family:inherit;">ยกเลิก</button>' +
+        '</div>';
+      }
       return '<div style="display:flex; align-items:center; gap:12px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="flex:1; font-size:13.5px; font-weight:600;">' + esc(c.label) + '</div>' +
+        '<button data-action="start-edit-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
         '<button data-action="request-remove-category" data-value="' + esc(c.value) + '" data-label="' + esc(c.label) + '" style="border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' +
       '</div>';
     }).join("");
