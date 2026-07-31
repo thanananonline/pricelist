@@ -447,6 +447,25 @@ export default {
     }
 
     const contactIdMatch = path.match(/^\/contacts\/([^/]+)$/);
+    if (contactIdMatch && method === "PUT") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(contactIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const contact = {
+        name: String(body.name || "").trim(),
+        department: String(body.department || "").trim(),
+        phone: String(body.phone || "").trim(),
+        address: String(body.address || "").trim(),
+      };
+      if (!contact.name || !contact.phone) return json({ error: "name and phone are required" }, 400);
+      const res = await env.DB.prepare(
+        "UPDATE contacts SET name = ?, department = ?, phone = ?, address = ? WHERE id = ?"
+      ).bind(contact.name, contact.department, contact.phone, contact.address, id).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json(Object.assign({ id: id }, contact));
+    }
+
     if (contactIdMatch && method === "DELETE") {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const id = decodeURIComponent(contactIdMatch[1]);
