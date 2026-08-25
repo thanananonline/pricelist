@@ -318,6 +318,13 @@ function Dashboard(root) {
     newTisFolderName: "",
     tisFileSearch: "",
     tisFileView: "list",
+    companyFolders: [],
+    companyFoldersLoading: true,
+    companyFoldersError: "",
+    activeCompanyFolderId: null,
+    newCompanyFolderName: "",
+    companyFileSearch: "",
+    companyFileView: "list",
     search: "",
     category: "all",
     categories: [],
@@ -415,6 +422,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadCategories();
   this.loadFolders("concrete");
   this.loadFolders("tis");
+  this.loadFolders("company");
   this.loadContacts();
 };
 
@@ -1062,9 +1070,12 @@ Dashboard.prototype.importExcelFile = function (file) {
 /* ---- folders (concrete / tis, shared logic) ---- */
 
 Dashboard.prototype._folderKeys = function (kind) {
-  return kind === "concrete"
-    ? { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch", viewKey: "concreteFileView" }
-    : { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch", viewKey: "tisFileView" };
+  var map = {
+    concrete: { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch", viewKey: "concreteFileView" },
+    tis: { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch", viewKey: "tisFileView" },
+    company: { stateKey: "companyFolders", activeKey: "activeCompanyFolderId", nameKey: "newCompanyFolderName", loadingKey: "companyFoldersLoading", errorKey: "companyFoldersError", searchKey: "companyFileSearch", viewKey: "companyFileView" },
+  };
+  return map[kind];
 };
 
 Dashboard.prototype.addFolder = function (kind) {
@@ -1474,6 +1485,7 @@ Dashboard.prototype.renderDashboard = function () {
       (page === "price" ? this.renderCategoryBox() : "") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
+      navItem("Company Profile", "🏢", "company", page === "company") +
       navItem("คำนวณราคาสินค้า", "🧮", "calc", page === "calc") +
       (page === "calc" ? this.renderCalcSidebar() : "") +
       navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
@@ -1496,6 +1508,7 @@ Dashboard.prototype.renderDashboard = function () {
   if (page === "price") pageContent = this.renderPricePage();
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
+  else if (page === "company") pageContent = this.renderFolderPage("company", "Company Profile", "จัดกลุ่มไฟล์ PDF ข้อมูลบริษัทเป็นโฟลเดอร์");
   else if (page === "calc") pageContent = '<div id="calc-container">' + this.renderCalcPage() + '</div>';
   else if (page === "users") pageContent = this.renderUsersPage();
   else pageContent = this.renderContactPage();
@@ -1864,7 +1877,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
     var addFolderForm = isAdmin ?
       '<form data-form="add-folder" data-kind="' + kind + '" style="display:flex; gap:10px; margin-bottom:20px; max-width:420px;">' +
-        '<input id="field-new' + (kind === "concrete" ? "Concrete" : "Tis") + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; padding:11px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none;" />' +
+        '<input id="field-new' + (kind.charAt(0).toUpperCase() + kind.slice(1)) + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; padding:11px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none;" />' +
         '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
       '</form>' : '';
 
