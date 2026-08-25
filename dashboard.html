@@ -24,28 +24,41 @@
   .mobile-cat-bar { display: none; margin-bottom: 16px; }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 
+  /* sidebar slide bar: a static rail on desktop that can collapse to
+     reclaim width, and an off-canvas drawer on mobile opened via the
+     hamburger button in the topbar (see [data-action="toggle-sidebar"]). */
+  .sidebar { transition: width .22s ease, padding .22s ease, transform .22s ease; }
+  .sidebar-backdrop { display: none; }
+
   /* tablets (e.g. iPad portrait): tighten spacing, keep sidebar layout */
   @media (max-width: 1024px) {
     .page-content { padding: 22px 20px 44px !important; }
     .topbar { padding: 16px 20px !important; }
   }
 
-  /* phones: collapse sidebar into a horizontal scrollable tab bar */
+  /* desktop/tablet: the toggle collapses the rail to zero width instead of
+     sliding it, since it stays part of the normal document flow. */
+  @media (min-width: 701px) {
+    .sidebar.sidebar-closed { width: 0 !important; padding: 0 !important; overflow: hidden; }
+  }
+
+  /* phones: the sidebar becomes an off-canvas drawer, closed by default */
   @media (max-width: 700px) {
-    .app-shell { flex-direction: column !important; }
     .sidebar {
-      width: 100% !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      padding: 10px !important;
-      gap: 6px !important;
-      overflow-x: auto !important;
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; height: 100vh !important; width: 240px !important; max-width: 82vw !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      padding: 20px 16px !important;
+      overflow-y: auto !important;
       -webkit-overflow-scrolling: touch;
-      /* hint that the tab bar scrolls sideways: darken the trailing edge */
-      box-shadow: inset -18px 0 12px -12px rgba(0,0,0,.35) !important;
+      transform: translateX(-100%) !important;
+      z-index: 60 !important;
+      box-shadow: 6px 0 24px rgba(0,0,0,.35) !important;
     }
-    .sidebar-brand { display: none !important; }
-    .nav-btn { flex: none !important; white-space: nowrap !important; font-size: 13px !important; padding: 11px 14px !important; min-height: 44px !important; }
+    .sidebar.sidebar-open { transform: translateX(0) !important; }
+    .sidebar-backdrop.show { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 55; }
+    .nav-btn { white-space: normal !important; }
     .cat-sidebar { display: none !important; }
     .mobile-cat-bar { display: flex !important; flex-wrap: wrap; gap: 8px; }
     .mobile-cat-bar button {
@@ -304,6 +317,9 @@ function Dashboard(root) {
     usersLoading: true,
     usersError: "",
     page: "price",
+    // Open by default on desktop (a static rail); closed by default on
+    // mobile (an off-canvas drawer opened via the hamburger button).
+    sidebarOpen: window.innerWidth > 700,
     concreteFolders: [],
     concreteFoldersLoading: true,
     concreteFoldersError: "",
@@ -650,7 +666,17 @@ Dashboard.prototype.handleClick = function (e) {
   var d = t.dataset;
   switch (action) {
     case "logout": this.onLogout(); break;
-    case "nav": this.setState({ page: d.page }); break;
+    case "nav":
+      this.setState(function (s2) {
+        var patch = { page: d.page };
+        // On the mobile drawer, picking a page should also close it; on the
+        // desktop rail, leave the open/closed choice as the user set it.
+        if (window.innerWidth <= 700) patch.sidebarOpen = false;
+        return patch;
+      });
+      break;
+    case "toggle-sidebar": this.setState(function (s2) { return { sidebarOpen: !s2.sidebarOpen }; }); break;
+    case "close-sidebar": this.setState({ sidebarOpen: false }); break;
     case "set-view": this.setState({ view: d.view }); break;
     case "set-category": this.setState({ category: d.category }); break;
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
@@ -1502,7 +1528,7 @@ Dashboard.prototype.renderDashboard = function () {
   };
 
   var sidebar =
-    '<div class="sidebar" style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
+    '<div class="sidebar' + (s.sidebarOpen ? " sidebar-open" : " sidebar-closed") + '" style="width:220px; flex:none; background:oklch(0.2 0.12 275); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
       '<div class="sidebar-brand" style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">' +
         '<div style="width:36px; height:36px; border-radius:9px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
         '<div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>' +
@@ -1521,6 +1547,7 @@ Dashboard.prototype.renderDashboard = function () {
   var topbar =
     '<div class="topbar" style="background:oklch(0.26 0.13 275); color:oklch(0.98 0.004 70); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">' +
       '<div style="display:flex; align-items:center; gap:14px;">' +
+        '<button data-action="toggle-sidebar" aria-label="เปิด/ปิดเมนู" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:18px; cursor:pointer; font-family:inherit; flex:none;">☰</button>' +
         '<div style="width:44px; height:44px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
         '<div><div style="font-family:Kanit; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div><div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div></div>' +
       '</div>' +
@@ -1542,6 +1569,7 @@ Dashboard.prototype.renderDashboard = function () {
   return (
     '<div style="min-height:100vh; background:oklch(0.975 0.006 70); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:oklch(0.24 0.01 60);">' +
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
+    '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
     '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderToast() +
     '</div>'
