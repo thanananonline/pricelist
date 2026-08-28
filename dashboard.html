@@ -798,6 +798,11 @@ Dashboard.prototype.handleFieldChange = function (e) {
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
+  // Same reasoning as the login screen below: a full re-render while typing
+  // tears down and recreates this input, jumping the cursor/keyboard. The
+  // input already shows what was typed, so nothing needs to re-render until
+  // Save/Cancel is clicked.
+  if (key === "editFolderName") return;
   if (!this.state.loggedIn) {
     // Never rebuild the DOM while typing on the login screen: even a
     // synchronous re-render tears down and recreates the input, which is
