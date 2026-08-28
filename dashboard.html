@@ -687,8 +687,16 @@ Dashboard.prototype.handleClick = function (e) {
   switch (action) {
     case "logout": this.onLogout(); break;
     case "nav":
+      var navFolderKeys = this._folderKeys(d.page);
       this.setState(function (s2) {
         var patch = { page: d.page };
+        // Clicking a sidebar tab should always land on that page's home
+        // view, not wherever the user last drilled into (e.g. an open
+        // folder) - so reset any folder navigation for the target page.
+        if (navFolderKeys) {
+          patch[navFolderKeys.activeKey] = null;
+          patch[navFolderKeys.searchKey] = "";
+        }
         // On the mobile drawer, picking a page should also close it; on the
         // desktop rail, leave the open/closed choice as the user set it.
         if (window.innerWidth <= 700) patch.sidebarOpen = false;
