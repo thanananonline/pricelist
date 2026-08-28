@@ -1668,13 +1668,11 @@ Dashboard.prototype.renderPricePage = function () {
 
   var products = this.computeProducts();
   var withOverrides = this.getMergedProducts();
-  var discountCount = withOverrides.filter(function (p) { return p.oldPrice; }).length;
   var novatCount = withOverrides.filter(function (p) { return p.vat === "novat"; }).length;
 
   var statCards = [
     { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "oklch(0.4 0.02 60)" },
     { label: "หมวดหมู่สินค้า", value: s.categories.length, color: "oklch(0.4 0.02 60)" },
-    { label: "รายการลดราคา", value: discountCount, color: "oklch(0.38 0.15 275)" },
     { label: "สินค้า NO VAT", value: novatCount, color: "oklch(0.5 0.15 30)" },
   ];
 
