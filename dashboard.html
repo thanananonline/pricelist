@@ -377,6 +377,10 @@ function Dashboard(root) {
     deleteConfirmName: "",
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
+    editingFolderId: null,
+    editFolderKind: "",
+    editFolderName: "",
+    folderEditError: "",
     userDeleteConfirm: null,
     contactDeleteConfirm: null,
     editingId: null,
@@ -716,6 +720,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-remove-folder": this.setState({ folderDeleteConfirm: { kind: d.kind, id: d.id, name: d.name || "" } }); break;
     case "cancel-remove-folder": this.setState({ folderDeleteConfirm: null }); break;
     case "confirm-remove-folder": this.setState({ folderDeleteConfirm: null }); this.removeFolder(d.kind, d.id); break;
+    case "start-edit-folder": this.startEditFolder(d.kind, d.id, d.name || ""); break;
+    case "cancel-edit-folder": this.cancelEditFolder(); break;
+    case "save-edit-folder": this.saveEditFolder(d.kind, d.id); break;
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
     case "cancel-remove-file": this.setState({ fileDeleteConfirm: null }); break;
     case "confirm-remove-file": this.setState({ fileDeleteConfirm: null }); this.removeFile(d.kind, d.folderId, d.fileId); break;
@@ -1165,6 +1172,38 @@ Dashboard.prototype.removeFolder = function (kind, id) {
       var patch = {};
       patch[k.errorKey] = "ลบโฟลเดอร์ไม่สำเร็จ: " + err.message;
       self.setState(patch);
+    });
+};
+
+Dashboard.prototype.startEditFolder = function (kind, id, name) {
+  this.setState({ editingFolderId: id, editFolderKind: kind, editFolderName: name, folderEditError: "" });
+};
+
+Dashboard.prototype.cancelEditFolder = function () {
+  this.setState({ editingFolderId: null, editFolderKind: "", editFolderName: "", folderEditError: "" });
+};
+
+Dashboard.prototype.saveEditFolder = function (kind, id) {
+  var name = this.state.editFolderName.trim();
+  if (!name) { this.setState({ folderEditError: "กรุณากรอกชื่อโฟลเดอร์" }); return; }
+  var k = this._folderKeys(kind);
+  var self = this;
+  apiRequest("/folders/" + encodeURIComponent(id), { method: "PUT", auth: true, body: { name: name } })
+    .then(function (updated) {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].map(function (f) {
+          return f.id === id ? Object.assign({}, f, { name: updated.name }) : f;
+        });
+        patch.editingFolderId = null;
+        patch.editFolderKind = "";
+        patch.editFolderName = "";
+        patch.folderEditError = "";
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      self.setState({ folderEditError: "แก้ไขชื่อโฟลเดอร์ไม่สำเร็จ: " + err.message });
     });
 };
 
@@ -1943,11 +1982,25 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
   if (!active) {
     var foldersHtml = folders.map(function (f) {
+      if (isAdmin && s.editingFolderId === f.id) {
+        return '<div style="position:relative; background:#fff; border:1px solid oklch(0.85 0.02 275); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:8px;">' +
+          '<div style="font-size:30px;">📁</div>' +
+          '<input type="text" data-bind="editFolderName" data-clear="folderEditError" value="' + esc(s.editFolderName) + '" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13.5px; font-family:inherit;" />' +
+          (s.folderEditError ? '<div style="font-size:11.5px; color:oklch(0.5 0.15 30);">' + esc(s.folderEditError) + '</div>' : '') +
+          '<div style="display:flex; gap:8px;">' +
+            '<button data-action="save-edit-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 10px; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+            '<button data-action="cancel-edit-folder" style="min-height:44px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 10px; cursor:pointer; font-size:13px; font-family:inherit;">ยกเลิก</button>' +
+          '</div>' +
+        '</div>';
+      }
       return '<div class="folder-card" data-action="open-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:20px; cursor:pointer; display:flex; flex-direction:column; gap:8px;">' +
         '<div style="font-size:30px;">📁</div>' +
         '<div style="font-weight:700; font-size:14.5px;">' + esc(f.name) + '</div>' +
         '<div style="font-size:12px; color:oklch(0.55 0.01 60);">' + f.files.length + ' ไฟล์</div>' +
-        (isAdmin ? '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:4px; right:4px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<div style="position:absolute; top:4px; right:4px; display:flex;">' +
+          '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:12.5px; font-family:inherit;">แก้ไข</button>' +
+          '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' +
+        '</div>' : '') +
       '</div>';
     }).join("");
 
@@ -2024,10 +2077,25 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     }).join("") + '</div>';
   }
 
+  var folderHeader;
+  if (isAdmin && s.editingFolderId === active.id) {
+    folderHeader = '<div style="display:flex; align-items:center; gap:8px; flex:1; flex-wrap:wrap;">' +
+      '<input type="text" data-bind="editFolderName" data-clear="folderEditError" value="' + esc(s.editFolderName) + '" style="flex:1; min-width:160px; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:15px; font-family:inherit;" />' +
+      '<button data-action="save-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+      '<button data-action="cancel-edit-folder" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:inherit;">ยกเลิก</button>' +
+      (s.folderEditError ? '<div style="width:100%; font-size:11.5px; color:oklch(0.5 0.15 30);">' + esc(s.folderEditError) + '</div>' : '') +
+    '</div>';
+  } else {
+    folderHeader = '<div style="flex:1; display:flex; align-items:center; gap:8px;">' +
+      '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
+      (isAdmin ? '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
+    '</div>';
+  }
+
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
-      '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
+      folderHeader +
     '</div>' + errorBanner + uploadBox + (active.files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
 };
