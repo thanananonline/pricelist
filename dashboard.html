@@ -554,9 +554,9 @@ Dashboard.prototype.loadFolders = function (kind) {
     patch[k.stateKey] = folders;
     patch[k.loadingKey] = false;
     patch[k.errorKey] = "";
-    // "company" and "mit" have no folder-picker UI -- they always work against
-    // a single, implicit folder, so just activate whichever one already exists.
-    if ((kind === "company" || kind === "mit") && folders.length) patch[k.activeKey] = folders[0].id;
+    // "company" has no folder-picker UI -- it always works against a single,
+    // implicit folder, so just activate whichever one already exists.
+    if (kind === "company" && folders.length) patch[k.activeKey] = folders[0].id;
     self.setState(patch);
   }).catch(function () {
     var patch = {};
@@ -811,7 +811,6 @@ Dashboard.prototype.handleChange = function (e) {
     var kind = e.target.dataset.kind;
     if (e.target.files && e.target.files.length) {
       if (kind === "company") this.uploadCompanyFiles(e.target.files);
-      else if (kind === "mit") this.uploadMitFiles(e.target.files);
       else this.uploadFiles(kind, e.target.files);
     }
     e.target.value = "";
@@ -1212,26 +1211,6 @@ Dashboard.prototype.uploadCompanyFiles = function (fileList) {
     });
 };
 
-// "mit" has no folder-picker UI: the first upload silently creates the
-// one implicit folder it stores files in, then uploads into it as usual.
-Dashboard.prototype.uploadMitFiles = function (fileList) {
-  var self = this;
-  if (this.state.activeMitFolderId) {
-    this.uploadFiles("mit", fileList);
-    return;
-  }
-  apiRequest("/folders", { method: "POST", auth: true, body: { kind: "mit", name: "เอกสาร MiT" } })
-    .then(function (folder) {
-      self.setState(function (s) {
-        return { mitFolders: s.mitFolders.concat([folder]), activeMitFolderId: folder.id };
-      });
-      self.uploadFiles("mit", fileList);
-    })
-    .catch(function (err) {
-      self.setState({ mitFoldersError: "เตรียมพื้นที่จัดเก็บไฟล์ไม่สำเร็จ: " + err.message });
-    });
-};
-
 Dashboard.prototype.uploadFiles = function (kind, fileList) {
   var k = this._folderKeys(kind);
   var activeId = this.state[k.activeKey];
@@ -1604,7 +1583,7 @@ Dashboard.prototype.renderDashboard = function () {
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
   else if (page === "catalog") pageContent = this.renderFolderPage("catalog", "แคตตาล็อก", "จัดกลุ่มไฟล์ PDF แคตตาล็อกสินค้าเป็นโฟลเดอร์ตามประเภทสินค้า");
-  else if (page === "mit") pageContent = this.renderMitPage();
+  else if (page === "mit") pageContent = this.renderFolderPage("mit", "เอกสาร MiT", "จัดกลุ่มไฟล์ PDF เอกสาร MiT เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "calc") pageContent = '<div id="calc-container">' + this.renderCalcPage() + '</div>';
   else if (page === "users") pageContent = this.renderUsersPage();
   else pageContent = this.renderContactPage();
@@ -2141,98 +2120,6 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">Company Profile</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">ไฟล์ข้อมูลบริษัท เช่น โบรชัวร์ เอกสารแนะนำบริษัท</div></div>' +
-    errorBanner + uploadBox + (files.length > 0 ? searchBox : "") + filesBody +
-  '</div>';
-};
-
-// เอกสาร MiT has no folder-picker step: it always reads/writes the
-// single implicit "mit" folder (created lazily on first upload, see
-// uploadMitFiles), so this only renders the file browser itself.
-Dashboard.prototype.renderMitPage = function () {
-  var s = this.state;
-  var isAdmin = this.isAdmin();
-  var kind = "mit";
-  var k = this._folderKeys(kind);
-
-  if (s[k.loadingKey]) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:1000px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
-      '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูล...</div>' +
-    '</div>';
-  }
-
-  var errorBanner = "";
-  if (s[k.errorKey]) {
-    errorBanner = '<div style="background:oklch(0.94 0.03 30); color:oklch(0.5 0.15 30); border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
-      '<div style="font-size:13.5px; font-weight:600;">' + esc(s[k.errorKey]) + '</div>' +
-      '<button data-action="reload-folders" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.5 0.15 30); background:transparent; color:oklch(0.5 0.15 30); border-radius:8px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">ลองใหม่</button>' +
-    '</div>';
-  }
-
-  var active = s[k.stateKey].find(function (f) { return f.id === s[k.activeKey]; });
-  var files = active ? active.files : [];
-
-  var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
-  var uploadBox = isAdmin ?
-    '<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">' +
-      '<input type="file" accept="application/pdf" multiple ' + uploadAction + ' style="display:none;" />' +
-      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
-    '</label>' : '';
-
-  var fileViewGrid = s[k.viewKey] === "grid";
-  var fileViewActiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
-  var fileViewInactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
-  var fileViewToggle = '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px; flex:none;">' +
-    '<button data-action="set-file-view" data-kind="' + kind + '" data-view="list" style="' + (fileViewGrid ? fileViewInactiveBtn : fileViewActiveBtn) + '">☰ รายการ</button>' +
-    '<button data-action="set-file-view" data-kind="' + kind + '" data-view="grid" style="' + (fileViewGrid ? fileViewActiveBtn : fileViewInactiveBtn) + '">▦ กริด</button>' +
-  '</div>';
-
-  var searchBox = '<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">' +
-    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์..." style="flex:1 1 200px; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
-    fileViewToggle +
-  '</div>';
-
-  var queryTerms = (s[k.searchKey] || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
-  var visibleFiles = queryTerms.length ? files.filter(function (f) {
-    var name = f.name.toLowerCase();
-    return queryTerms.every(function (term) { return name.indexOf(term) !== -1; });
-  }) : files;
-
-  var filesBody;
-  if (files.length === 0) {
-    filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ยังไม่มีไฟล์เอกสาร MiT</div>';
-  } else if (visibleFiles.length === 0) {
-    filesBody = '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ไม่พบไฟล์ที่ตรงกับคำค้นหา</div>';
-  } else if (fileViewGrid) {
-    filesBody = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px;">' + visibleFiles.map(function (f) {
-      var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
-      var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
-      return '<div style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:2px; right:2px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
-        '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
-        '<div style="font-weight:600; font-size:13px; line-height:1.35; overflow-wrap:break-word; word-break:break-word;">' + esc(f.name) + '</div>' +
-        '<div style="font-size:11px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div>' +
-        '<div style="display:flex; gap:6px; margin-top:4px;">' +
-          '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
-          '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
-        '</div>' +
-      '</div>';
-    }).join("") + '</div>';
-  } else {
-    filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + visibleFiles.map(function (f) {
-      var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
-      var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
-      return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
-        '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
-        '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
-        '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
-        '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
-      '</div>';
-    }).join("") + '</div>';
-  }
-
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
-    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">เอกสาร MiT</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">ไฟล์เอกสาร MiT</div></div>' +
     errorBanner + uploadBox + (files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
 };
