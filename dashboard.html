@@ -341,6 +341,13 @@ function Dashboard(root) {
     newCompanyFolderName: "",
     companyFileSearch: "",
     companyFileView: "list",
+    catalogFolders: [],
+    catalogFoldersLoading: true,
+    catalogFoldersError: "",
+    activeCatalogFolderId: null,
+    newCatalogFolderName: "",
+    catalogFileSearch: "",
+    catalogFileView: "list",
     search: "",
     category: "all",
     categories: [],
@@ -439,6 +446,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
+  this.loadFolders("catalog");
   this.loadContacts();
 };
 
@@ -1106,6 +1114,7 @@ Dashboard.prototype._folderKeys = function (kind) {
     concrete: { stateKey: "concreteFolders", activeKey: "activeConcreteFolderId", nameKey: "newConcreteFolderName", loadingKey: "concreteFoldersLoading", errorKey: "concreteFoldersError", searchKey: "concreteFileSearch", viewKey: "concreteFileView" },
     tis: { stateKey: "tisFolders", activeKey: "activeTisFolderId", nameKey: "newTisFolderName", loadingKey: "tisFoldersLoading", errorKey: "tisFoldersError", searchKey: "tisFileSearch", viewKey: "tisFileView" },
     company: { stateKey: "companyFolders", activeKey: "activeCompanyFolderId", nameKey: "newCompanyFolderName", loadingKey: "companyFoldersLoading", errorKey: "companyFoldersError", searchKey: "companyFileSearch", viewKey: "companyFileView" },
+    catalog: { stateKey: "catalogFolders", activeKey: "activeCatalogFolderId", nameKey: "newCatalogFolderName", loadingKey: "catalogFoldersLoading", errorKey: "catalogFoldersError", searchKey: "catalogFileSearch", viewKey: "catalogFileView" },
   };
   return map[kind];
 };
@@ -1538,6 +1547,7 @@ Dashboard.prototype.renderDashboard = function () {
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("Company Profile", "🏢", "company", page === "company") +
+      navItem("แคตตาล็อก", "📚", "catalog", page === "catalog") +
       navItem("คำนวณราคาสินค้า", "🧮", "calc", page === "calc") +
       (page === "calc" ? this.renderCalcSidebar() : "") +
       navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
@@ -1562,6 +1572,7 @@ Dashboard.prototype.renderDashboard = function () {
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
+  else if (page === "catalog") pageContent = this.renderFolderPage("catalog", "แคตตาล็อก", "จัดกลุ่มไฟล์ PDF แคตตาล็อกสินค้าเป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "calc") pageContent = '<div id="calc-container">' + this.renderCalcPage() + '</div>';
   else if (page === "users") pageContent = this.renderUsersPage();
   else pageContent = this.renderContactPage();
