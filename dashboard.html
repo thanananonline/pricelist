@@ -449,6 +449,7 @@ function Dashboard(root) {
   root.addEventListener("submit", function (e) { self.handleSubmit(e); });
   root.addEventListener("input", function (e) { self.handleFieldChange(e); });
   root.addEventListener("change", function (e) { self.handleChange(e); });
+  root.addEventListener("keydown", function (e) { self.handleCalcKeyDown(e); });
 
   this.render();
 
@@ -837,6 +838,27 @@ Dashboard.prototype.handleFieldChange = function (e) {
   }
   var isCalcField = key.indexOf("calc") === 0;
   this._scheduleRender(isCalcField ? this.renderCalcOnly : this.render);
+};
+
+Dashboard.prototype.handleCalcKeyDown = function (e) {
+  if (e.key !== "Enter") return;
+  var rowEl = e.target.closest("[data-calc-row]");
+  if (!rowEl) return;
+  var rowContainer = rowEl.parentElement;
+  if (!rowContainer) return;
+  e.preventDefault();
+  var fields = Array.prototype.slice.call(rowContainer.querySelectorAll("[data-calc-row]"));
+  var curIdx = fields.indexOf(rowEl);
+  if (curIdx > -1 && curIdx < fields.length - 1) {
+    fields[curIdx + 1].focus();
+    return;
+  }
+  var nextRow = rowContainer.nextElementSibling;
+  while (nextRow) {
+    var nextField = nextRow.querySelector("[data-calc-row]");
+    if (nextField) { nextField.focus(); return; }
+    nextRow = nextRow.nextElementSibling;
+  }
 };
 
 Dashboard.prototype.handleChange = function (e) {
