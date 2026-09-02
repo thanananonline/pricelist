@@ -715,10 +715,13 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-sidebar": this.setState(function (s2) { return { sidebarOpen: !s2.sidebarOpen }; }); break;
     case "close-sidebar": this.setState({ sidebarOpen: false }); break;
     case "set-view": this.setState({ view: d.view }); break;
-    case "clear-search":
-      this.setState({ search: "" });
-      var searchEl = this.root.querySelector("#field-search");
-      if (searchEl) searchEl.focus();
+    case "clear-field":
+      var fieldKey = d.field;
+      var fieldPatch = {};
+      fieldPatch[fieldKey] = "";
+      this.setState(fieldPatch);
+      var fieldEl = this.root.querySelector("#field-" + fieldKey);
+      if (fieldEl) fieldEl.focus();
       break;
     case "set-category": this.setState({ category: d.category }); break;
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
@@ -1784,7 +1787,7 @@ Dashboard.prototype.renderPricePage = function () {
       '<div style="position:relative; flex:1 1 240px; min-width:200px;">' +
         '<input id="field-search" type="text" data-bind="search" value="' + esc(s.search) + '" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." style="width:100%; padding:11px ' + (s.search ? "38px" : "14px") + ' 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
         '<span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>' +
-        (s.search ? '<button type="button" data-action="clear-search" aria-label="ล้างคำค้นหา" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:oklch(0.5 0.01 60); font-size:15px; line-height:1; cursor:pointer; padding:0;">✕</button>' : '') +
+        (s.search ? '<button type="button" data-action="clear-field" data-field="search" aria-label="ล้างคำค้นหา" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:oklch(0.5 0.01 60); font-size:15px; line-height:1; cursor:pointer; padding:0;">✕</button>' : '') +
       '</div>' +
       '<select id="field-sortBy" data-bind="sortBy" style="padding:11px 12px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:oklch(0.98 0.004 70); color:inherit;">' + sortOptionsHtml + '</select>' +
       '<div style="display:flex; gap:4px; background:oklch(0.95 0.006 70); padding:4px; border-radius:10px;">' +
@@ -2132,7 +2135,10 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   '</div>';
 
   var searchBox = '<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">' +
-    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="flex:1 1 200px; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+    '<div style="position:relative; flex:1 1 200px; max-width:360px;">' +
+      '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์ในโฟลเดอร์นี้..." style="width:100%; box-sizing:border-box; padding:10px ' + (s[k.searchKey] ? "34px" : "14px") + ' 10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+      (s[k.searchKey] ? '<button type="button" data-action="clear-field" data-field="' + k.searchKey + '" aria-label="ล้างคำค้นหา" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:oklch(0.5 0.01 60); font-size:15px; line-height:1; cursor:pointer; padding:0;">✕</button>' : '') +
+    '</div>' +
     fileViewToggle +
   '</div>';
 
@@ -2265,7 +2271,10 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
   '</div>';
 
   var searchBox = '<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">' +
-    '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์..." style="flex:1 1 200px; max-width:360px; padding:10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+    '<div style="position:relative; flex:1 1 200px; max-width:360px;">' +
+      '<input id="field-' + k.searchKey + '" type="text" data-bind="' + k.searchKey + '" value="' + esc(s[k.searchKey]) + '" placeholder="ค้นหาไฟล์..." style="width:100%; box-sizing:border-box; padding:10px ' + (s[k.searchKey] ? "34px" : "14px") + ' 10px 14px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
+      (s[k.searchKey] ? '<button type="button" data-action="clear-field" data-field="' + k.searchKey + '" aria-label="ล้างคำค้นหา" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:oklch(0.5 0.01 60); font-size:15px; line-height:1; cursor:pointer; padding:0;">✕</button>' : '') +
+    '</div>' +
     fileViewToggle +
   '</div>';
 
