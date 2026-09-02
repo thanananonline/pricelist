@@ -408,6 +408,18 @@ export default {
     }
 
     const fileIdMatch = path.match(/^\/files\/([^/]+)$/);
+    if (fileIdMatch && method === "PUT") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(fileIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const name = String(body.name || "").trim();
+      if (!name) return json({ error: "name is required" }, 400);
+      const res = await env.DB.prepare("UPDATE files SET name = ? WHERE id = ?").bind(name, id).run();
+      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      return json({ id: id, name: name });
+    }
+
     if (fileIdMatch && method === "DELETE") {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const id = decodeURIComponent(fileIdMatch[1]);

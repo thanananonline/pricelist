@@ -381,6 +381,11 @@ function Dashboard(root) {
     editFolderKind: "",
     editFolderName: "",
     folderEditError: "",
+    editingFileId: null,
+    editFileKind: "",
+    editFileFolderId: "",
+    editFileName: "",
+    fileEditError: "",
     userDeleteConfirm: null,
     contactDeleteConfirm: null,
     editingId: null,
@@ -736,6 +741,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
     case "cancel-remove-file": this.setState({ fileDeleteConfirm: null }); break;
     case "confirm-remove-file": this.setState({ fileDeleteConfirm: null }); this.removeFile(d.kind, d.folderId, d.fileId); break;
+    case "start-edit-file": this.startEditFile(d.kind, d.folderId, d.fileId, d.name || ""); break;
+    case "cancel-edit-file": this.cancelEditFile(); break;
+    case "save-edit-file": this.saveEditFile(d.kind, d.folderId, d.fileId); break;
     case "request-remove-user": this.setState({ userDeleteConfirm: { username: d.username } }); break;
     case "cancel-remove-user": this.setState({ userDeleteConfirm: null }); break;
     case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
@@ -812,7 +820,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
   // tears down and recreates this input, jumping the cursor/keyboard. The
   // input already shows what was typed, so nothing needs to re-render until
   // Save/Cancel is clicked.
-  if (key === "editFolderName") return;
+  if (key === "editFolderName" || key === "editFileName") return;
   if (!this.state.loggedIn) {
     // Never rebuild the DOM while typing on the login screen: even a
     // synchronous re-render tears down and recreates the input, which is
@@ -1219,6 +1227,42 @@ Dashboard.prototype.saveEditFolder = function (kind, id) {
     })
     .catch(function (err) {
       self.setState({ folderEditError: "แก้ไขชื่อโฟลเดอร์ไม่สำเร็จ: " + err.message });
+    });
+};
+
+Dashboard.prototype.startEditFile = function (kind, folderId, fileId, name) {
+  this.setState({ editingFileId: fileId, editFileKind: kind, editFileFolderId: folderId, editFileName: name, fileEditError: "" });
+};
+
+Dashboard.prototype.cancelEditFile = function () {
+  this.setState({ editingFileId: null, editFileKind: "", editFileFolderId: "", editFileName: "", fileEditError: "" });
+};
+
+Dashboard.prototype.saveEditFile = function (kind, folderId, fileId) {
+  var name = this.state.editFileName.trim();
+  if (!name) { this.setState({ fileEditError: "กรุณากรอกชื่อไฟล์" }); return; }
+  var k = this._folderKeys(kind);
+  var self = this;
+  apiRequest("/files/" + encodeURIComponent(fileId), { method: "PUT", auth: true, body: { name: name } })
+    .then(function (updated) {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].map(function (f) {
+          if (f.id !== folderId) return f;
+          return Object.assign({}, f, { files: f.files.map(function (x) {
+            return x.id === fileId ? Object.assign({}, x, { name: updated.name }) : x;
+          }) });
+        });
+        patch.editingFileId = null;
+        patch.editFileKind = "";
+        patch.editFileFolderId = "";
+        patch.editFileName = "";
+        patch.fileEditError = "";
+        return patch;
+      });
+    })
+    .catch(function (err) {
+      self.setState({ fileEditError: "แก้ไขชื่อไฟล์ไม่สำเร็จ: " + err.message });
     });
 };
 
@@ -2031,9 +2075,9 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
   var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
   var uploadBox = isAdmin ?
-    '<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">' +
+    '<label style="display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; margin-bottom:24px;">' +
       '<input type="file" accept="application/pdf" multiple ' + uploadAction + ' style="display:none;" />' +
-      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
+      '📄 เพิ่มไฟล์ PDF' +
     '</label>' : '';
 
   var fileViewGrid = s[k.viewKey] === "grid";
@@ -2064,8 +2108,22 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     filesBody = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
+      if (isAdmin && s.editingFileId === f.id) {
+        return '<div style="position:relative; background:#fff; border:1px solid oklch(0.85 0.02 275); border-radius:14px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+          '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
+          '<input type="text" data-bind="editFileName" data-clear="fileEditError" value="' + esc(s.editFileName) + '" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13px; font-family:inherit;" />' +
+          (s.fileEditError ? '<div style="font-size:11px; color:oklch(0.5 0.15 30);">' + esc(s.fileEditError) + '</div>' : '') +
+          '<div style="display:flex; gap:6px; width:100%;">' +
+            '<button data-action="save-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="min-height:40px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 10px; cursor:pointer; font-size:12.5px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+            '<button data-action="cancel-edit-file" style="min-height:40px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 10px; cursor:pointer; font-size:12.5px; font-family:inherit;">ยกเลิก</button>' +
+          '</div>' +
+        '</div>';
+      }
       return '<div style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:2px; right:2px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<div style="position:absolute; top:2px; right:2px; display:flex;">' +
+          '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:12px; font-family:inherit;">แก้ไข</button>' +
+          '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' +
+        '</div>' : '') +
         '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
         '<div style="font-weight:600; font-size:13px; line-height:1.35; overflow-wrap:break-word; word-break:break-word;">' + esc(f.name) + '</div>' +
         '<div style="font-size:11px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div>' +
@@ -2079,11 +2137,21 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
+      if (isAdmin && s.editingFileId === f.id) {
+        return '<div style="display:flex; align-items:center; gap:10px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70); flex-wrap:wrap;">' +
+          '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
+          '<input type="text" data-bind="editFileName" data-clear="fileEditError" value="' + esc(s.editFileName) + '" style="flex:1; min-width:160px; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:14px; font-family:inherit;" />' +
+          '<button data-action="save-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="min-height:40px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="cancel-edit-file" style="min-height:40px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:inherit;">ยกเลิก</button>' +
+          (s.fileEditError ? '<div style="width:100%; font-size:11.5px; color:oklch(0.5 0.15 30);">' + esc(s.fileEditError) + '</div>' : '') +
+        '</div>';
+      }
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+        (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
         (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
@@ -2140,9 +2208,9 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
 
   var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
   var uploadBox = isAdmin ?
-    '<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed oklch(0.8 0.02 60); border-radius:14px; padding:36px 20px; background:#fff; cursor:pointer; margin-bottom:24px;">' +
+    '<label style="display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; margin-bottom:24px;">' +
       '<input type="file" accept="application/pdf" multiple ' + uploadAction + ' style="display:none;" />' +
-      '<div style="font-size:28px;">📄</div><div style="font-size:14.5px; font-weight:600;">คลิกเพื่ออัปโหลดไฟล์ PDF (เลือกได้หลายไฟล์)</div><div style="font-size:12.5px; color:oklch(0.5 0.01 60);">รองรับเฉพาะไฟล์ .pdf</div>' +
+      '📄 เพิ่มไฟล์ PDF' +
     '</label>' : '';
 
   var fileViewGrid = s[k.viewKey] === "grid";
@@ -2173,8 +2241,22 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
     filesBody = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
+      if (isAdmin && s.editingFileId === f.id) {
+        return '<div style="position:relative; background:#fff; border:1px solid oklch(0.85 0.02 275); border-radius:14px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+          '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
+          '<input type="text" data-bind="editFileName" data-clear="fileEditError" value="' + esc(s.editFileName) + '" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13px; font-family:inherit;" />' +
+          (s.fileEditError ? '<div style="font-size:11px; color:oklch(0.5 0.15 30);">' + esc(s.fileEditError) + '</div>' : '') +
+          '<div style="display:flex; gap:6px; width:100%;">' +
+            '<button data-action="save-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="min-height:40px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 10px; cursor:pointer; font-size:12.5px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+            '<button data-action="cancel-edit-file" style="min-height:40px; display:inline-flex; align-items:center;flex:1; justify-content:center; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 10px; cursor:pointer; font-size:12.5px; font-family:inherit;">ยกเลิก</button>' +
+          '</div>' +
+        '</div>';
+      }
       return '<div style="position:relative; background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
-        (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="position:absolute; top:2px; right:2px; min-width:44px; min-height:44px; display:inline-flex; align-items:center;display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' : '') +
+        (isAdmin ? '<div style="position:absolute; top:2px; right:2px; display:flex;">' +
+          '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:12px; font-family:inherit;">แก้ไข</button>' +
+          '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' +
+        '</div>' : '') +
         '<div style="width:52px; height:52px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
         '<div style="font-weight:600; font-size:13px; line-height:1.35; overflow-wrap:break-word; word-break:break-word;">' + esc(f.name) + '</div>' +
         '<div style="font-size:11px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div>' +
@@ -2188,11 +2270,21 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
     filesBody = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + visibleFiles.map(function (f) {
       var viewUrl = API_BASE + "/files/" + encodeURIComponent(f.id);
       var downloadUrl = API_BASE + "/files/" + encodeURIComponent(f.id) + "?dl=1";
+      if (isAdmin && s.editingFileId === f.id) {
+        return '<div style="display:flex; align-items:center; gap:10px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70); flex-wrap:wrap;">' +
+          '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
+          '<input type="text" data-bind="editFileName" data-clear="fileEditError" value="' + esc(s.editFileName) + '" style="flex:1; min-width:160px; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:14px; font-family:inherit;" />' +
+          '<button data-action="save-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" style="min-height:40px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="cancel-edit-file" style="min-height:40px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:inherit;">ยกเลิก</button>' +
+          (s.fileEditError ? '<div style="width:100%; font-size:11.5px; color:oklch(0.5 0.15 30);">' + esc(s.fileEditError) + '</div>' : '') +
+        '</div>';
+      }
       return '<div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<a href="' + downloadUrl + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.95 0.006 70); text-decoration:none;">ดาวน์โหลด</a>' +
+        (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
         (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
     }).join("") + '</div>';
