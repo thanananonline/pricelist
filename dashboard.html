@@ -396,6 +396,7 @@ function Dashboard(root) {
     editUnit: "",
     editVat: "vat",
     editImage: "",
+    editNote: "",
     showAddForm: false,
     newProdName: "",
     newProdCat: "",
@@ -405,6 +406,7 @@ function Dashboard(root) {
     newProdUnit: "",
     newProdVat: "vat",
     newProdImage: "",
+    newProdNote: "",
     newProdError: "",
     importMsg: "",
     importMsgType: "",
@@ -951,7 +953,7 @@ Dashboard.prototype.computeProducts = function () {
   return list.map(function (p) {
     var im = img(p.cat);
     return {
-      id: p.id, name: p.name, sku: p.sku, categoryLabel: self.catLabel(p.cat), unit: p.unit,
+      id: p.id, name: p.name, sku: p.sku, note: p.note || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
       hasDiscount: !!p.oldPrice,
@@ -974,7 +976,7 @@ Dashboard.prototype.startEdit = function (id) {
   this.setState({
     editingId: p.id, editName: p.name, editPrice: String(p.price),
     editPrice2: p.price2 != null ? String(p.price2) : "", editPrice3: p.price3 != null ? String(p.price3) : "",
-    editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "",
+    editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "", editNote: p.note || "",
   });
 };
 
@@ -983,7 +985,7 @@ Dashboard.prototype.saveEdit = function (id) {
   var price = parseFloat(s.editPrice);
   var name = s.editName.trim();
   var unit = s.editUnit.trim();
-  var body = { vat: s.editVat, image: s.editImage };
+  var body = { vat: s.editVat, image: s.editImage, note: s.editNote.trim() };
   if (name) body.name = name;
   if (unit) body.unit = unit;
   if (!isNaN(price)) body.price = price;
@@ -1028,14 +1030,14 @@ Dashboard.prototype.onAddProduct = function () {
   }
   var price2 = parseFloat(s.newProdPrice2); if (isNaN(price2)) price2 = null;
   var price3 = parseFloat(s.newProdPrice3); if (isNaN(price3)) price3 = null;
-  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "" };
+  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "", note: s.newProdNote.trim() };
   var self = this;
   apiRequest("/products", { method: "POST", auth: true, body: body })
     .then(function (created) {
       self.setState(function (s2) {
         return {
           products: s2.products.concat([created]), showAddForm: false,
-          newProdName: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdError: "",
+          newProdName: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdNote: "", newProdError: "",
         };
       });
     })
@@ -1857,6 +1859,9 @@ Dashboard.prototype.renderPricePage = function () {
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">รูปภาพสินค้า (ถ้ามี)' +
           '<input type="file" accept="image/*" data-action="upload-new-prod-image" style="padding:6px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:12.5px; font-family:inherit; background:#fff;" />' +
         '</label>' +
+        '<label style="grid-column:1 / -1; display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หมายเหตุ (ถ้ามี)' +
+          '<input id="field-newProdNote" type="text" data-bind="newProdNote" value="' + esc(s.newProdNote) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
         (s.newProdImage ?
           '<div style="grid-column:1 / -1; display:flex; align-items:center; gap:10px;">' +
             '<img src="' + s.newProdImage + '" alt="" style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid oklch(0.87 0.008 60);" />' +
@@ -1909,6 +1914,7 @@ Dashboard.prototype.renderPricePage = function () {
       var cardBody = p.isEditing ?
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<div style="display:flex; gap:6px;">' +
             '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ช่อง 1" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
             '<input id="field-editPrice2" type="number" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
@@ -1929,7 +1935,10 @@ Dashboard.prototype.renderPricePage = function () {
           '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:auto;">บันทึก</button>' +
         '</div>' :
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
-          '<div style="font-weight:600; font-size:14.5px; line-height:1.35; min-height:38px;">' + esc(p.name) + '</div>' +
+          '<div>' +
+            '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(p.name) + '</div>' +
+            (p.note ? '<div style="font-size:12px; color:oklch(0.55 0.01 60); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
+          '</div>' +
           (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
             '<span style="font-family:Kanit; font-weight:700; font-size:19px; color:oklch(0.38 0.15 275);">฿' + p.priceDisplay + '</span>' +
@@ -1956,7 +1965,10 @@ Dashboard.prototype.renderPricePage = function () {
     var rows = products.map(function (p) {
       var editRow = p.isEditing ?
         '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
-          '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="flex:1 1 220px; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<div style="display:flex; flex-direction:column; gap:6px; flex:1 1 220px;">' +
+            '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+            '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '</div>' +
           '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<input id="field-editPrice2" type="number" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<input id="field-editPrice3" type="number" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
@@ -1982,7 +1994,10 @@ Dashboard.prototype.renderPricePage = function () {
       return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="width:44px; height:44px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
-          '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
+          '<div>' +
+            '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
+            (p.note ? '<div style="font-size:12px; color:oklch(0.55 0.01 60); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
+          '</div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.95 0.006 70); color:oklch(0.4 0.01 60);">' + esc(p.categoryLabel) + '</span></div>' +
         '<div>' + (p.hasMultiPrice ? priceTiersHtml(p) :

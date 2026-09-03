@@ -153,6 +153,7 @@ function sanitizeProduct(body) {
     stock: Number(body.stock) || 0,
     vat: body.vat === "novat" ? "novat" : "vat",
     image: String(body.image || ""),
+    note: String(body.note || "").trim(),
   };
 }
 
@@ -160,8 +161,8 @@ async function insertProduct(env, item) {
   const p = Object.assign({ id: genId() }, sanitizeProduct(item));
   if (!p.sku) p.sku = autoSku();
   await env.DB.prepare(
-    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
-  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image).run();
+    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image, p.note).run();
   return p;
 }
 
@@ -177,10 +178,11 @@ async function upsertProductByName(env, item) {
       unit: sanitized.unit || existing.unit,
       stock: sanitized.stock,
       vat: sanitized.vat,
+      note: sanitized.note || existing.note,
     });
     await env.DB.prepare(
-      "UPDATE products SET cat=?, price=?, price2=?, price3=?, unit=?, stock=?, vat=? WHERE id=?"
-    ).bind(merged.cat, merged.price, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, existing.id).run();
+      "UPDATE products SET cat=?, price=?, price2=?, price3=?, unit=?, stock=?, vat=?, note=? WHERE id=?"
+    ).bind(merged.cat, merged.price, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.note, existing.id).run();
     return { product: merged, action: "updated" };
   }
   const product = await insertProduct(env, item);
@@ -274,7 +276,7 @@ export default {
       if (!existing) return json({ error: "not found" }, 404);
 
       const merged = Object.assign({}, existing);
-      ["cat", "name", "sku", "unit", "vat", "image"].forEach(function (k) {
+      ["cat", "name", "sku", "unit", "vat", "image", "note"].forEach(function (k) {
         if (body[k] !== undefined) merged[k] = String(body[k]);
       });
       if (body.price !== undefined) merged.price = Number(body.price) || 0;
@@ -284,8 +286,8 @@ export default {
       if (body.price3 !== undefined) merged.price3 = nullableNumber(body.price3);
 
       await env.DB.prepare(
-        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=? WHERE id=?"
-      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, id).run();
+        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=?, note=? WHERE id=?"
+      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, merged.note, id).run();
       return json(merged);
     }
 
