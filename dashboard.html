@@ -1864,8 +1864,8 @@ Dashboard.prototype.renderPricePage = function () {
   var inactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:oklch(0.5 0.01 60);";
   var gridActive = s.view === "grid";
 
-  var controls =
-    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:22px; display:flex; flex-wrap:wrap; gap:14px; align-items:center;">' +
+  var filterRow =
+    '<div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">' +
       '<div style="position:relative; flex:1 1 240px; min-width:200px;">' +
         '<input id="field-search" type="text" data-bind="search" value="' + esc(s.search) + '" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." style="width:100%; padding:11px ' + (s.search ? "38px" : "14px") + ' 11px 38px; border-radius:10px; border:1px solid oklch(0.87 0.008 60); font-size:14.5px; font-family:inherit; outline:none; background:oklch(0.98 0.004 70);" />' +
         '<span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.45;">🔍</span>' +
@@ -1876,11 +1876,24 @@ Dashboard.prototype.renderPricePage = function () {
         '<button data-action="set-view" data-view="grid" style="' + (gridActive ? activeBtn : inactiveBtn) + '">▦ กริด</button>' +
         '<button data-action="set-view" data-view="list" style="' + (!gridActive ? activeBtn : inactiveBtn) + '">☰ รายการ</button>' +
       '</div>' +
-      (isAdmin ? '<label style="margin-left:auto; min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
-      (isAdmin ? '<button type="button" data-action="download-import-template" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
-      (isAdmin ? '<button type="button" data-action="toggle-manage-categories" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' : '') +
-      (isAdmin && !s.selectMode ? '<button type="button" data-action="toggle-select-mode" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">☑️ เลือกหลายรายการ</button>' : '') +
-      (isAdmin ? '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
+    '</div>';
+
+  var adminActionsRow = "";
+  if (isAdmin) {
+    var utilityBtn = "min-height:44px; display:inline-flex; align-items:center; padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;";
+    adminActionsRow =
+      '<div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-top:1px solid oklch(0.93 0.006 70); padding-top:14px; margin-top:14px;">' +
+        '<label style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:transparent; border:1px solid oklch(0.87 0.008 60); color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' +
+        '<button type="button" data-action="download-import-template" style="' + utilityBtn + '">📄 เทมเพลต</button>' +
+        '<button type="button" data-action="toggle-manage-categories" style="' + utilityBtn + '">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' +
+        (!s.selectMode ? '<button type="button" data-action="toggle-select-mode" style="' + utilityBtn + '">☑️ เลือกหลายรายการ</button>' : '') +
+        '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center; margin-left:auto; padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' +
+      '</div>';
+  }
+
+  var controls =
+    '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:22px;">' +
+      filterRow + adminActionsRow +
     '</div>';
 
   var bulkBar = "";
