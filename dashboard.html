@@ -672,7 +672,6 @@ Dashboard.prototype.saveEditCategory = function (value) {
 
 Dashboard.prototype.setState = function (patch) {
   clearTimeout(this._renderTimer);
-  this._renderTimerStart = null;
   Object.assign(this.state, typeof patch === "function" ? patch(this.state) : patch);
   this.render();
 };
@@ -799,18 +798,15 @@ Dashboard.prototype.handleSubmit = function (e) {
   }
 };
 
+// Pure trailing-edge debounce: always wait for a pause in typing before
+// re-rendering. Forcing a render mid-keystroke (as an earlier version of
+// this did after 500ms of continuous typing) tears down and recreates the
+// focused input while the user is still actively typing, which is exactly
+// when losing/misplacing the cursor is most noticeable.
 Dashboard.prototype._scheduleRender = function (fn) {
   var self = this;
-  var now = Date.now();
-  if (!this._renderTimerStart) this._renderTimerStart = now;
   clearTimeout(this._renderTimer);
-  if (now - this._renderTimerStart >= 500) {
-    this._renderTimerStart = null;
-    fn.call(this);
-    return;
-  }
   this._renderTimer = setTimeout(function () {
-    self._renderTimerStart = null;
     fn.call(self);
   }, 150);
 };
@@ -1839,13 +1835,13 @@ Dashboard.prototype.renderPricePage = function () {
           '<select id="field-newProdCat" data-bind="newProdCat" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' + catOptsNoAll + '</select>' +
         '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 1 (บาท)' +
-          '<input id="field-newProdPrice" type="number" min="0" step="0.01" required data-bind="newProdPrice" data-clear="newProdError" value="' + esc(s.newProdPrice) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+          '<input id="field-newProdPrice" type="text" inputmode="decimal" required data-bind="newProdPrice" data-clear="newProdError" value="' + esc(s.newProdPrice) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
         '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 2 (ถ้ามี)' +
-          '<input id="field-newProdPrice2" type="number" min="0" step="0.01" data-bind="newProdPrice2" value="' + esc(s.newProdPrice2) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+          '<input id="field-newProdPrice2" type="text" inputmode="decimal" data-bind="newProdPrice2" value="' + esc(s.newProdPrice2) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
         '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">ราคา ช่อง 3 (ถ้ามี)' +
-          '<input id="field-newProdPrice3" type="number" min="0" step="0.01" data-bind="newProdPrice3" value="' + esc(s.newProdPrice3) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
+          '<input id="field-newProdPrice3" type="text" inputmode="decimal" data-bind="newProdPrice3" value="' + esc(s.newProdPrice3) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
         '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:oklch(0.4 0.01 60);">หน่วยนับ' +
           '<input id="field-newProdUnit" type="text" required placeholder="เช่น ถุง, แผ่น, ชิ้น" data-bind="newProdUnit" data-clear="newProdError" value="' + esc(s.newProdUnit) + '" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit;" />' +
@@ -1916,9 +1912,9 @@ Dashboard.prototype.renderPricePage = function () {
           '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<div style="display:flex; gap:6px;">' +
-            '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ช่อง 1" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-            '<input id="field-editPrice2" type="number" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-            '<input id="field-editPrice3" type="number" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+            '<input id="field-editPrice" type="text" inputmode="decimal" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ช่อง 1" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+            '<input id="field-editPrice2" type="text" inputmode="decimal" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+            '<input id="field-editPrice3" type="text" inputmode="decimal" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '</div>' +
           '<div style="display:flex; gap:6px;">' +
             '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
@@ -1969,9 +1965,9 @@ Dashboard.prototype.renderPricePage = function () {
             '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
             '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '</div>' +
-          '<input id="field-editPrice" type="number" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editPrice2" type="number" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editPrice3" type="number" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice" type="text" inputmode="decimal" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice2" type="text" inputmode="decimal" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          '<input id="field-editPrice3" type="text" inputmode="decimal" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
           '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
             '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
