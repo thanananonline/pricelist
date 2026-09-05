@@ -375,6 +375,9 @@ function Dashboard(root) {
     productsError: "",
     deleteConfirmId: null,
     deleteConfirmName: "",
+    selectMode: false,
+    selectedProductIds: [],
+    bulkDeleteConfirm: false,
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
     editingFolderId: null,
@@ -734,6 +737,29 @@ Dashboard.prototype.handleClick = function (e) {
     case "request-delete-product": this.setState({ deleteConfirmId: d.id, deleteConfirmName: d.name || "" }); break;
     case "cancel-delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); break;
     case "delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); this.removeProduct(d.id); break;
+    case "toggle-select-mode": this.setState(function (s2) { return { selectMode: !s2.selectMode, selectedProductIds: [] }; }); break;
+    case "toggle-select-product":
+      var toggleId = d.id;
+      this.setState(function (s2) {
+        var i = s2.selectedProductIds.indexOf(toggleId);
+        var next = i === -1 ? s2.selectedProductIds.concat([toggleId]) : s2.selectedProductIds.slice(0, i).concat(s2.selectedProductIds.slice(i + 1));
+        return { selectedProductIds: next };
+      });
+      break;
+    case "toggle-select-all-products":
+      var visibleIds = this.computeProducts().map(function (p) { return p.id; });
+      this.setState(function (s2) {
+        var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return s2.selectedProductIds.indexOf(id) !== -1; });
+        return { selectedProductIds: allSelected ? [] : visibleIds.slice() };
+      });
+      break;
+    case "request-bulk-delete-products": if (this.state.selectedProductIds.length) this.setState({ bulkDeleteConfirm: true }); break;
+    case "cancel-bulk-delete-products": this.setState({ bulkDeleteConfirm: false }); break;
+    case "confirm-bulk-delete-products":
+      var idsToDelete = this.state.selectedProductIds;
+      this.setState({ bulkDeleteConfirm: false });
+      this.removeProducts(idsToDelete);
+      break;
     case "reload-products": this.loadProducts(); break;
     case "reload-folders": this.loadFolders(d.kind); break;
     case "reload-contacts": this.loadContacts(); break;
@@ -1080,6 +1106,29 @@ Dashboard.prototype.removeProduct = function (id) {
         if (s2.editingId === id) patch.editingId = null;
         return patch;
       });
+    })
+    .catch(function (err) {
+      self.setState({ importMsg: "ลบสินค้าไม่สำเร็จ: " + err.message, importMsgType: "error" });
+    });
+};
+
+Dashboard.prototype.removeProducts = function (ids) {
+  if (!ids || !ids.length) return;
+  var self = this;
+  apiRequest("/products/bulk-delete", { method: "POST", auth: true, body: { ids: ids } })
+    .then(function () {
+      self.setState(function (s2) {
+        var idSet = {};
+        ids.forEach(function (id) { idSet[id] = true; });
+        var patch = {
+          products: s2.products.filter(function (p) { return !idSet[p.id]; }),
+          selectedProductIds: [],
+          selectMode: false,
+        };
+        if (idSet[s2.editingId]) patch.editingId = null;
+        return patch;
+      });
+      self.showToast("ลบสินค้า " + ids.length + " รายการแล้ว", "success");
     })
     .catch(function (err) {
       self.setState({ importMsg: "ลบสินค้าไม่สำเร็จ: " + err.message, importMsgType: "error" });
@@ -1627,12 +1676,15 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   var uc = s.userDeleteConfirm;
   var cc = s.contactDeleteConfirm;
   var catc = s.categoryDeleteConfirm;
-  if (!s.deleteConfirmId && !fc && !dc && !uc && !cc && !catc) return "";
-  var title = fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : catc ? "ยืนยันการลบหมวดหมู่" : "ยืนยันการลบสินค้า";
+  var bc = s.bulkDeleteConfirm;
+  if (!s.deleteConfirmId && !fc && !dc && !uc && !cc && !catc && !bc) return "";
+  var title = bc ? "ยืนยันการลบสินค้าหลายรายการ" : fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : catc ? "ยืนยันการลบหมวดหมู่" : "ยืนยันการลบสินค้า";
   var name = fc ? fc.name : dc ? dc.name : uc ? uc.username : cc ? cc.name : catc ? catc.label : s.deleteConfirmName;
-  var cancelAction = fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : uc ? "cancel-remove-user" : cc ? "cancel-remove-contact" : catc ? "cancel-remove-category" : "cancel-delete-product";
-  var confirmLabel = fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : uc ? "ลบผู้ใช้" : cc ? "ลบรายชื่อติดต่อ" : catc ? "ลบหมวดหมู่" : "ลบสินค้า";
-  var confirmAttrs = fc ?
+  var cancelAction = bc ? "cancel-bulk-delete-products" : fc ? "cancel-remove-file" : dc ? "cancel-remove-folder" : uc ? "cancel-remove-user" : cc ? "cancel-remove-contact" : catc ? "cancel-remove-category" : "cancel-delete-product";
+  var confirmLabel = bc ? "ลบ " + s.selectedProductIds.length + " รายการ" : fc ? "ลบไฟล์" : dc ? "ลบโฟลเดอร์" : uc ? "ลบผู้ใช้" : cc ? "ลบรายชื่อติดต่อ" : catc ? "ลบหมวดหมู่" : "ลบสินค้า";
+  var confirmAttrs = bc ?
+    'data-action="confirm-bulk-delete-products"' :
+    fc ?
     'data-action="confirm-remove-file" data-kind="' + esc(fc.kind) + '" data-folder-id="' + esc(fc.folderId) + '" data-file-id="' + esc(fc.fileId) + '"' :
     dc ?
     'data-action="confirm-remove-folder" data-kind="' + esc(dc.kind) + '" data-id="' + esc(dc.id) + '"' :
@@ -1643,13 +1695,16 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
     catc ?
     'data-action="confirm-remove-category" data-value="' + esc(catc.value) + '"' :
     'data-action="delete-product" data-id="' + s.deleteConfirmId + '"';
+  var message = bc ?
+    'ต้องการลบสินค้าที่เลือก <strong>' + s.selectedProductIds.length + '</strong> รายการใช่หรือไม่? การลบไม่สามารถย้อนกลับได้' :
+    'ต้องการลบ "<strong>' + esc(name) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้';
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
         '<div style="font-family:Kanit; font-weight:700; font-size:17px;">' + title + '</div>' +
       '</div>' +
-      '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">ต้องการลบ "<strong>' + esc(name) + '</strong>" ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</div>' +
+      '<div style="font-size:13.5px; color:oklch(0.4 0.01 60); line-height:1.6;">' + message + '</div>' +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
         '<button data-action="' + cancelAction + '" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
         '<button ' + confirmAttrs + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:oklch(0.5 0.15 30); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">' + confirmLabel + '</button>' +
@@ -1824,8 +1879,27 @@ Dashboard.prototype.renderPricePage = function () {
       (isAdmin ? '<label style="margin-left:auto; min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:#fff; border:1px solid oklch(0.87 0.008 60); color:oklch(0.4 0.01 60); font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' : '') +
       (isAdmin ? '<button type="button" data-action="download-import-template" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📄 เทมเพลต</button>' : '') +
       (isAdmin ? '<button type="button" data-action="toggle-manage-categories" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' : '') +
+      (isAdmin && !s.selectMode ? '<button type="button" data-action="toggle-select-mode" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:1px solid oklch(0.87 0.008 60); border-radius:10px; background:transparent; color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">☑️ เลือกหลายรายการ</button>' : '') +
       (isAdmin ? '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 16px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' : '') +
     '</div>';
+
+  var bulkBar = "";
+  if (isAdmin && s.selectMode) {
+    var visibleIds = products.map(function (p) { return p.id; });
+    var selectedCount = s.selectedProductIds.length;
+    var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return s.selectedProductIds.indexOf(id) !== -1; });
+    bulkBar = '<div style="background:oklch(0.95 0.05 275); border:1px solid oklch(0.85 0.06 275); border-radius:12px; padding:12px 18px; margin-bottom:18px; display:flex; flex-wrap:wrap; align-items:center; gap:14px;">' +
+      '<label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:oklch(0.35 0.1 275); cursor:pointer;">' +
+        '<input type="checkbox" data-action="toggle-select-all-products"' + (allSelected ? " checked" : "") + ' style="width:17px; height:17px; cursor:pointer; margin:0;" />' +
+        'เลือกทั้งหมด (' + visibleIds.length + ')' +
+      '</label>' +
+      '<div style="font-size:13px; color:oklch(0.4 0.01 60);">เลือกแล้ว <strong>' + selectedCount + '</strong> รายการ</div>' +
+      '<div style="margin-left:auto; display:flex; gap:8px;">' +
+        '<button type="button" data-action="request-bulk-delete-products"' + (selectedCount ? "" : " disabled") + ' style="min-height:40px; display:inline-flex; align-items:center;padding:9px 16px; border:none; border-radius:8px; background:' + (selectedCount ? "oklch(0.5 0.15 30)" : "oklch(0.85 0.01 60)") + '; color:#fff; font-size:13px; font-weight:700; cursor:' + (selectedCount ? "pointer" : "not-allowed") + '; font-family:inherit; white-space:nowrap;">🗑️ ลบที่เลือก</button>' +
+        '<button type="button" data-action="toggle-select-mode" style="min-height:40px; display:inline-flex; align-items:center;padding:9px 16px; border:1px solid oklch(0.85 0.06 275); border-radius:8px; background:#fff; color:oklch(0.4 0.1 275); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">ยกเลิก</button>' +
+      '</div>' +
+    '</div>';
+  }
 
   var productsErrorBanner = "";
   if (s.productsError) {
@@ -1981,6 +2055,7 @@ Dashboard.prototype.renderPricePage = function () {
       return '<div class="product-card" style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;">' +
         '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="position:relative; height:130px; ' + mediaStyle + (p.image ? ' cursor:pointer;' : '') + '">' +
           mediaSvg +
+          (isAdmin && s.selectMode && !p.isEditing ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:rgba(255,255,255,.92); border-radius:7px; padding:4px; display:flex; line-height:0;"><input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; margin:0;" /></div>' : '') +
           '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + '</span>' +
         '</div>' +
         cardBody +
@@ -2018,6 +2093,7 @@ Dashboard.prototype.renderPricePage = function () {
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
       return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
+          (isAdmin && s.selectMode && !p.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; flex:none; margin:0;" />' : '') +
           '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="width:44px; height:44px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
           '<div>' +
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
@@ -2040,7 +2116,7 @@ Dashboard.prototype.renderPricePage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
-    productsErrorBanner + importBanner + controls + manageCategoriesPanel + addForm + resultCount + body +
+    productsErrorBanner + importBanner + controls + bulkBar + manageCategoriesPanel + addForm + resultCount + body +
   '</div>';
 };
 

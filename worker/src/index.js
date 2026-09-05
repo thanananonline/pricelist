@@ -266,6 +266,24 @@ export default {
       return json({ created: created, updated: updated }, 201);
     }
 
+    if (path === "/products/bulk-delete" && method === "POST") {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const ids = Array.isArray(body && body.ids) ? body.ids.map(String).filter(Boolean) : [];
+      if (!ids.length) return json({ error: "ids is required" }, 400);
+      // D1 caps bound parameters per statement, so delete in chunks rather
+      // than binding an unbounded number of ids in one query.
+      let deleted = 0;
+      for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        const placeholders = chunk.map(function () { return "?"; }).join(",");
+        const res = await env.DB.prepare("DELETE FROM products WHERE id IN (" + placeholders + ")").bind(...chunk).run();
+        deleted += (res.meta && res.meta.changes) || 0;
+      }
+      return json({ ok: true, deleted: deleted });
+    }
+
     const idMatch = path.match(/^\/products\/([^/]+)$/);
     if (idMatch && (method === "PUT" || method === "PATCH")) {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
