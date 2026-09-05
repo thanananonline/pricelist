@@ -451,7 +451,7 @@ function Dashboard(root) {
   root.addEventListener("submit", function (e) { self.handleSubmit(e); });
   root.addEventListener("input", function (e) { self.handleFieldChange(e); });
   root.addEventListener("change", function (e) { self.handleChange(e); });
-  root.addEventListener("keydown", function (e) { self.handleCalcKeyDown(e); });
+  root.addEventListener("keydown", function (e) { self.handleFieldNavKeyDown(e); });
 
   this.render();
 
@@ -846,24 +846,53 @@ Dashboard.prototype.handleFieldChange = function (e) {
   this._scheduleRender(isCalcField ? this.renderCalcOnly : this.render);
 };
 
-Dashboard.prototype.handleCalcKeyDown = function (e) {
-  if (e.key !== "Enter") return;
-  var rowEl = e.target.closest("[data-calc-row]");
-  if (!rowEl) return;
-  var rowContainer = rowEl.parentElement;
-  if (!rowContainer) return;
-  e.preventDefault();
-  var fields = Array.prototype.slice.call(rowContainer.querySelectorAll("[data-calc-row]"));
-  var curIdx = fields.indexOf(rowEl);
-  if (curIdx > -1 && curIdx < fields.length - 1) {
-    fields[curIdx + 1].focus();
-    return;
+// Field selector shared by every fillable input/select across the app --
+// price fields, form fields, and calculator table cells alike -- so Enter
+// and Left/Right arrow navigation (below) works everywhere, not just the
+// calculator table it originally shipped for.
+var NAV_FIELD_SELECTOR = "[data-bind], [data-calc-row]";
+
+Dashboard.prototype._navFields = function () {
+  return Array.prototype.filter.call(
+    this.root.querySelectorAll(NAV_FIELD_SELECTOR),
+    function (el) { return !el.disabled && el.offsetParent !== null; }
+  );
+};
+
+Dashboard.prototype.handleFieldNavKeyDown = function (e) {
+  var key = e.key;
+  if (key !== "Enter" && key !== "ArrowLeft" && key !== "ArrowRight") return;
+  var el = e.target;
+  if (!el || !el.matches || !el.matches(NAV_FIELD_SELECTOR)) return;
+  if (el.tagName !== "INPUT" && el.tagName !== "SELECT") return;
+
+  var isArrow = key !== "Enter";
+  if (isArrow) {
+    // Leave <select> arrow keys alone (natively used to change the value),
+    // and only hijack a text field's arrows when the caret already sits at
+    // the very start/end with nothing selected -- so normal in-field cursor
+    // movement and text selection keep working everywhere else.
+    if (el.tagName !== "INPUT") return;
+    var pos = el.selectionStart, endPos = el.selectionEnd;
+    if (pos == null || pos !== endPos) return;
+    if (key === "ArrowLeft" && pos !== 0) return;
+    if (key === "ArrowRight" && pos !== el.value.length) return;
   }
-  var nextRow = rowContainer.nextElementSibling;
-  while (nextRow) {
-    var nextField = nextRow.querySelector("[data-calc-row]");
-    if (nextField) { nextField.focus(); return; }
-    nextRow = nextRow.nextElementSibling;
+
+  var fields = this._navFields();
+  var idx = fields.indexOf(el);
+  if (idx === -1) return;
+  var targetIdx = key === "ArrowLeft" ? idx - 1 : idx + 1;
+  // No field in that direction: let the browser do its default thing
+  // instead (e.g. Enter submitting the form the last field belongs to).
+  if (targetIdx < 0 || targetIdx >= fields.length) return;
+
+  e.preventDefault();
+  var next = fields[targetIdx];
+  next.focus();
+  if (isArrow && next.tagName === "INPUT") {
+    var caret = key === "ArrowLeft" ? next.value.length : 0;
+    try { next.setSelectionRange(caret, caret); } catch (err) {}
   }
 };
 
