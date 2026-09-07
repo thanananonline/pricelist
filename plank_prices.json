@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "category": "แผ่นพื้นสำเร็จรูป (Solid Floor Plank)",
+    "spec": "กว้าง 35 cm. หนา 5 cm. มอก.828-2546",
+    "unit": "บาท/ตร.ม.",
+    "list_price_basis": "ราคาตั้ง = ช่อง(3) สำหรับปริมาณ < 100 ตร.ม.",
+    "source_file": "ราคาตั้งแผ่นพื้น_ฝ่ายขาย_15-0โอเค ขึ้น production ขั้นที่ 4 เลย ทำแบบเดียวกับตอนขึ้นเมนูท่อ:
+- รัน migration บน production D1 (สร้างตาราง plank + seed) ระวังอย่าให้ seed ซ้ำ
+- deploy worker แล้ว push main ตามลำดับที่ถูกต้อง
+เสร็จแล้วบอกฉันว่าเปิด URL ไหนดูเมนูแผ่นพื้น และช่วยยืนยันว่าเมนูท่อ
+กับหน้าเดิมทั้งหมดยังทำงานปกติ ถ้าเจอจุดเสี่ยงหยุดถามก่อน7-69.pdf",
+    "effective_date_th": "15 เม.ย. 2569",
+    "vat_rate": 0.07,
+    "price_note": "exvat=ไม่รวม VAT (ปัดจำนวนเต็มก่อนคิด VAT), incvat=รวม VAT 7%",
+    "discount_tiers_percent": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "tier_groups": {
+      "ขายปลีก": {
+        "percent": [
+          2,
+          3,
+          4
+        ],
+        "note": "ปริมาณไม่เกิน 200 ตร.ม. / เครดิตนาน / งานโอนสิทธิ์ / ระยะทางไกล"
+      },
+      "ขายส่ง": {
+        "percent": [
+          5,
+          6,
+          7
+        ],
+        "note": "ปริมาณมากกว่า 200 ตร.ม. / เครดิตดี เงินไว / ระยะทางจากหน่วยงานไม่เกิน 30 กม."
+      }
+    },
+    "excluded_note": "ตัดกลุ่ม 'ต้องขออนุมัติ' (ลด 8-15%) ออกตามที่ผู้ใช้ระบุ"
+  },
+  "products": [
+    {
+      "type": "แผ่นพื้น 4 เส้น",
+      "wire_count": 4,
+      "wire_spec": "P.C.wire 4 mm",
+      "length_range": "ไม่เกิน 3.00 ม.",
+      "list_exvat": 240,
+      "list_incvat": 256.8,
+      "discounts": [
+        {
+          "percent": 2,
+          "exvat": 235,
+          "incvat": 251.45
+        },
+        {
+          "percent": 3,
+          "exvat": 233,
+          "incvat": 249.31
+        },
+        {
+          "percent": 4,
+          "exvat": 230,
+          "incvat": 246.1
+        },
+        {
+          "percent": 5,
+          "exvat": 228,
+          "incvat": 243.96
+        },
+        {
+          "percent": 6,
+          "exvat": 226,
+          "incvat": 241.82
+        },
+        {
+          "percent": 7,
+          "exvat": 223,
+          "incvat": 238.61
+        }
+      ]
+    },
+    {
+      "type": "แผ่นพื้น 5 เส้น",
+      "wire_count": 5,
+      "wire_spec": "P.C.wire 4 mm",
+      "length_range": "3.00-4.00 ม.",
+      "list_exvat": 250,
+      "list_incvat": 267.5,
+      "discounts": [
+        {
+          "percent": 2,
+          "exvat": 245,
+          "incvat": 262.15
+        },
+        {
+          "percent": 3,
+          "exvat": 243,
+          "incvat": 260.01
+        },
+        {
+          "percent": 4,
+          "exvat": 240,
+          "incvat": 256.8
+        },
+        {
+          "percent": 5,
+          "exvat": 238,
+          "incvat": 254.66
+        },
+        {
+          "percent": 6,
+          "exvat": 235,
+          "incvat": 251.45
+        },
+        {
+          "percent": 7,
+          "exvat": 233,
+          "incvat": 249.31
+        }
+      ]
+    },
+    {
+      "type": "แผ่นพื้น 6 เส้น",
+      "wire_count": 6,
+      "wire_spec": "P.C.wire 4 mm",
+      "length_range": "4.00-4.20 ม.",
+      "list_exvat": 260,
+      "list_incvat": 278.2,
+      "discounts": [
+        {
+          "percent": 2,
+          "exvat": 255,
+          "incvat": 272.85
+        },
+        {
+          "percent": 3,
+          "exvat": 252,
+          "incvat": 269.64
+        },
+        {
+          "percent": 4,
+          "exvat": 250,
+          "incvat": 267.5
+        },
+        {
+          "percent": 5,
+          "exvat": 247,
+          "incvat": 264.29
+        },
+        {
+          "percent": 6,
+          "exvat": 244,
+          "incvat": 261.08
+        },
+        {
+          "percent": 7,
+          "exvat": 242,
+          "incvat": 258.94
+        }
+      ]
+    },
+    {
+      "type": "แผ่นพื้น 7 เส้น",
+      "wire_count": 7,
+      "wire_spec": "P.C.wire 4 mm",
+      "length_range": "4.00-5.00 ม.",
+      "list_exvat": 275,
+      "list_incvat": 294.25,
+      "discounts": [
+        {
+          "percent": 2,
+          "exvat": 270,
+          "incvat": 288.9
+        },
+        {
+          "percent": 3,
+          "exvat": 267,
+          "incvat": 285.69
+        },
+        {
+          "percent": 4,
+          "exvat": 264,
+          "incvat": 282.48
+        },
+        {
+          "percent": 5,
+          "exvat": 261,
+          "incvat": 279.27
+        },
+        {
+          "percent": 6,
+          "exvat": 259,
+          "incvat": 277.13
+        },
+        {
+          "percent": 7,
+          "exvat": 256,
+          "incvat": 273.92
+        }
+      ]
+    },
+    {
+      "type": "แผ่นพื้น 8 เส้น",
+      "wire_count": 8,
+      "wire_spec": "P.C.wire 4 mm",
+      "length_range": "4.50-5.00 ม.",
+      "list_exvat": 290,
+      "list_incvat": 310.3,
+      "discounts": [
+        {
+          "percent": 2,
+          "exvat": 284,
+          "incvat": 303.88
+        },
+        {
+          "percent": 3,
+          "exvat": 281,
+          "incvat": 300.67
+        },
+        {
+          "percent": 4,
+          "exvat": 278,
+          "incvat": 297.46
+        },
+        {
+          "percent": 5,
+          "exvat": 276,
+          "incvat": 295.32
+        },
+        {
+          "percent": 6,
+          "exvat": 273,
+          "incvat": 292.11
+        },
+        {
+          "percent": 7,
+          "exvat": 270,
+          "incvat": 288.9
+        }
+      ]
+    }
+  ]
+}

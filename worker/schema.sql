@@ -72,3 +72,26 @@ CREATE TABLE IF NOT EXISTS pipe_discounts (
   incvat REAL NOT NULL,
   PRIMARY KEY (pipe_product_id, percent)
 );
+
+-- Solid floor plank price lists (see migrations/0006_add_plank_pricing.sql):
+-- same reasoning as pipe_products above, kept separate because the shape
+-- differs (priced per sq.m., no weight/load specs, 2%-7% discount ladder in
+-- 2 tiers instead of pipe's 3%-30% in 3 tiers).
+CREATE TABLE IF NOT EXISTS plank_products (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  wire_count INTEGER NOT NULL,
+  wire_spec TEXT NOT NULL,
+  length_range TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  list_exvat REAL NOT NULL,
+  list_incvat REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS plank_discounts (
+  plank_product_id TEXT NOT NULL REFERENCES plank_products(id),
+  percent INTEGER NOT NULL,
+  exvat REAL NOT NULL,
+  incvat REAL NOT NULL,
+  PRIMARY KEY (plank_product_id, percent)
+);

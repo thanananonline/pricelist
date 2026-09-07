@@ -215,6 +215,21 @@ function pipeTierGroupFor(percent) {
   return null;
 }
 
+// Discount-tier groups for the solid floor plank price table (from
+// plank_prices.json meta.tier_groups) -- only 2 groups (vs pipe's 3), and
+// the percent ladder itself is different (2%-7% vs pipe's 3%-30%), so this
+// is kept as its own config rather than reusing PIPE_TIER_GROUPS.
+var PLANK_TIER_GROUPS = [
+  { percents: [2, 3, 4], label: "ขายปลีก", note: "ปริมาณไม่เกิน 200 ตร.ม. / เครดิตนาน / งานโอนสิทธิ์ / ระยะทางไกล", bg: "oklch(0.94 0.05 155)", color: "oklch(0.35 0.09 155)" },
+  { percents: [5, 6, 7], label: "ขายส่ง", note: "ปริมาณมากกว่า 200 ตร.ม. / เครดิตดี เงินไว / ระยะทางจากหน่วยงานไม่เกิน 30 กม.", bg: "oklch(0.95 0.04 55)", color: "oklch(0.42 0.1 45)" },
+];
+function plankTierGroupFor(percent) {
+  for (var i = 0; i < PLANK_TIER_GROUPS.length; i++) {
+    if (PLANK_TIER_GROUPS[i].percents.indexOf(percent) !== -1) return PLANK_TIER_GROUPS[i];
+  }
+  return null;
+}
+
 var CALC_PRODUCT_TYPES = [
   { value: "slab", label: "แผ่นพื้นสำเร็จรูป" },
   { value: "steel", label: "เหล็ก" },
@@ -461,6 +476,15 @@ function Dashboard(root) {
     pipeEditListExvat: "",
     pipeEditListIncvat: "",
     pipeEditRows: [],
+    discountCategory: "pipe",
+    plankProducts: [],
+    plankProductsLoading: true,
+    plankProductsError: "",
+    plankSelectedType: "",
+    plankEditingId: null,
+    plankEditListExvat: "",
+    plankEditListIncvat: "",
+    plankEditRows: [],
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -492,6 +516,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadProducts();
   this.loadCategories();
   this.loadPipeProducts();
+  this.loadPlankProducts();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -675,6 +700,63 @@ Dashboard.prototype.savePipeEdit = function (id) {
   });
 };
 
+Dashboard.prototype.loadPlankProducts = function () {
+  var self = this;
+  self.state.plankProductsLoading = true;
+  apiRequest("/plank-products").then(function (plankProducts) {
+    self.setState({ plankProducts: plankProducts, plankProductsLoading: false, plankProductsError: "" });
+  }).catch(function () {
+    self.setState({ plankProductsLoading: false, plankProductsError: "โหลดข้อมูลตารางราคาแผ่นพื้นไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startPlankEdit = function (id) {
+  var p = this.state.plankProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    plankEditingId: id,
+    plankEditListExvat: String(p.listExvat),
+    plankEditListIncvat: String(p.listIncvat),
+    plankEditRows: p.discounts.map(function (d) {
+      return { percent: d.percent, exvat: String(d.exvat), incvat: String(d.incvat) };
+    }),
+  });
+};
+
+Dashboard.prototype.savePlankEdit = function (id) {
+  var s = this.state;
+  var listExvat = parseFloat(s.plankEditListExvat);
+  var listIncvat = parseFloat(s.plankEditListIncvat);
+  if (isNaN(listExvat) || isNaN(listIncvat)) {
+    this.showToast("กรุณากรอกราคาตั้งให้ถูกต้อง", "error");
+    return;
+  }
+  var discounts = [];
+  for (var i = 0; i < s.plankEditRows.length; i++) {
+    var r = s.plankEditRows[i];
+    var exvat = parseFloat(r.exvat);
+    var incvat = parseFloat(r.incvat);
+    if (isNaN(exvat) || isNaN(incvat)) {
+      this.showToast("กรุณากรอกราคาส่วนลดทุกช่องให้ถูกต้อง", "error");
+      return;
+    }
+    discounts.push({ percent: r.percent, exvat: exvat, incvat: incvat });
+  }
+  var self = this;
+  apiRequest("/plank-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { listExvat: listExvat, listIncvat: listIncvat, discounts: discounts },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var plankProducts = s2.plankProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { plankProducts: plankProducts, plankEditingId: null, plankEditRows: [] };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -820,6 +902,12 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-pipe": this.startPipeEdit(d.id); break;
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
+    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null }); break;
+    case "plank-set-type": this.setState({ plankSelectedType: d.type, plankEditingId: null }); break;
+    case "reload-plank-products": this.loadPlankProducts(); break;
+    case "start-edit-plank": this.startPlankEdit(d.id); break;
+    case "cancel-edit-plank": this.setState({ plankEditingId: null, plankEditRows: [] }); break;
+    case "save-edit-plank": this.savePlankEdit(d.id); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -933,7 +1021,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
     var field = rowEl.dataset.calcField;
     var storeKey = rowEl.dataset.calcStore || "calcRows";
     this.state[storeKey][idx][field] = rowEl.value;
-    this._scheduleRender(storeKey === "pipeEditRows" ? this.renderPipeOnly : this.renderCalcOnly);
+    this._scheduleRender(storeKey === "pipeEditRows" ? this.renderPipeOnly : (storeKey === "plankEditRows" ? this.renderPlankOnly : this.renderCalcOnly));
     return;
   }
   var el = e.target.closest("[data-bind]");
@@ -959,7 +1047,8 @@ Dashboard.prototype.handleFieldChange = function (e) {
   }
   var isCalcField = key.indexOf("calc") === 0;
   var isPipeEditField = key.indexOf("pipeEdit") === 0;
-  this._scheduleRender(isCalcField ? this.renderCalcOnly : (isPipeEditField ? this.renderPipeOnly : this.render));
+  var isPlankEditField = key.indexOf("plankEdit") === 0;
+  this._scheduleRender(isCalcField ? this.renderCalcOnly : (isPipeEditField ? this.renderPipeOnly : (isPlankEditField ? this.renderPlankOnly : this.render)));
 };
 
 // Field selector shared by every fillable input/select across the app --
@@ -1754,6 +1843,30 @@ Dashboard.prototype.renderPipeOnly = function () {
   }
 };
 
+// Same reasoning as renderPipeOnly above.
+Dashboard.prototype.renderPlankOnly = function () {
+  var container = document.getElementById("plank-container");
+  if (!container) { this.render(); return; }
+
+  var active = document.activeElement;
+  var focusId = active && active.id ? active.id : null;
+  var focusSelector = (!focusId && active && active.dataset && active.dataset.calcRow != null)
+    ? '[data-calc-row="' + active.dataset.calcRow + '"][data-calc-field="' + active.dataset.calcField + '"][data-calc-store="' + (active.dataset.calcStore || "calcRows") + '"]'
+    : null;
+  var selStart = active && "selectionStart" in active ? active.selectionStart : null;
+  var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
+
+  container.innerHTML = this.renderPlankPage();
+
+  var el = focusId ? document.getElementById(focusId) : (focusSelector ? container.querySelector(focusSelector) : null);
+  if (el) {
+    el.focus();
+    if (selStart != null && "setSelectionRange" in el) {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
+    }
+  }
+};
+
 Dashboard.prototype.renderSessionCheck = function () {
   return '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:oklch(0.26 0.13 275); color:#fff; font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; font-size:14px;">กำลังตรวจสอบการเข้าสู่ระบบ...</div>';
 };
@@ -1921,7 +2034,7 @@ Dashboard.prototype.renderDashboard = function () {
 
   var pageContent;
   if (page === "price") pageContent = this.renderPricePage();
-  else if (page === "pipe") pageContent = '<div id="pipe-container">' + this.renderPipePage() + '</div>';
+  else if (page === "pipe") pageContent = this.renderDiscountPage();
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
@@ -2898,6 +3011,153 @@ Dashboard.prototype.renderPipePage = function () {
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">' + typeButtons + '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ขนาด (เส้นผ่านศูนย์กลาง)</div>' +
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + sizeButtons + '</div>' +
+    infoCard + tableActionBar + table + legend +
+  '</div>';
+};
+
+// Wraps the pipe and plank discount tables behind a category switcher, so
+// one page ("ตารางราคาคอนกรีต" in the nav) can hold several product
+// categories with unrelated discount ladders. renderPipePage/renderPlankPage
+// keep rendering their own full page (title, selector, table, legend) --
+// this just adds the tab strip above whichever one is active.
+Dashboard.prototype.renderDiscountPage = function () {
+  var s = this.state;
+  var cat = s.discountCategory || "pipe";
+
+  var tabButton = function (key, label, icon) {
+    var isActive = cat === key;
+    return '<button data-action="discount-set-category" data-category="' + key + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.26 0.13 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.26 0.13 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">' + icon + ' ' + label + '</button>';
+  };
+
+  var tabs = '<div style="padding:28px 32px 0; max-width:980px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
+    tabButton("pipe", "ท่อคอนกรีต", "🚰") +
+    tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
+  '</div>';
+
+  var body = cat === "plank"
+    ? '<div id="plank-container">' + this.renderPlankPage() + '</div>'
+    : '<div id="pipe-container">' + this.renderPipePage() + '</div>';
+
+  return tabs + body;
+};
+
+Dashboard.prototype.renderPlankPage = function () {
+  var s = this.state;
+
+  if (s.plankProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.plankProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.plankProductsError) + '</div>' +
+      '<button data-action="reload-plank-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var products = s.plankProducts;
+  if (!products.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคาแผ่นพื้น</div>';
+  }
+
+  var types = products.map(function (p) { return p.type; });
+  var activeType = types.indexOf(s.plankSelectedType) !== -1 ? s.plankSelectedType : types[0];
+  var active = products.filter(function (p) { return p.type === activeType; })[0];
+  if (!active) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ไม่พบข้อมูลราคาสำหรับตัวเลือกนี้</div>';
+  }
+
+  var typeButtons = types.map(function (t) {
+    var isActive = t === activeType;
+    return '<button data-action="plank-set-type" data-type="' + esc(t) + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' + esc(t) + '</button>';
+  }).join("");
+
+  var infoItem = function (label, value) {
+    return '<div><div style="font-size:11.5px; color:oklch(0.55 0.01 60); margin-bottom:4px;">' + label + '</div><div style="font-family:Kanit; font-weight:700; font-size:16px; color:oklch(0.38 0.15 275);">' + value + '</div></div>';
+  };
+  var infoCard = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px;">' +
+    infoItem("ราคาตั้ง (ไม่รวม VAT)", "฿" + fmtN(active.listExvat, 2) + "/ตร.ม.") +
+    infoItem("ราคาตั้ง (รวม VAT 7%)", "฿" + fmtN(active.listIncvat, 2) + "/ตร.ม.") +
+    infoItem("ขนาดลวด", esc(active.wireSpec)) +
+    infoItem("ช่วงความยาว", esc(active.lengthRange)) +
+  '</div>';
+
+  var isAdmin = this.isAdmin();
+  var isEditingThis = s.plankEditingId === active.id;
+  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+
+  var colWidths = "100px 1fr 1fr 1fr";
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+    '<div>ส่วนลด</div><div>ราคา/ตร.ม. (ไม่รวม VAT)</div><div>ราคา/ตร.ม. (รวม VAT 7%)</div><div>เงื่อนไข</div>' +
+  '</div>';
+
+  var baseRow = isEditingThis ?
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+      '<input id="field-plankEditListExvat" type="text" inputmode="decimal" data-bind="plankEditListExvat" value="' + esc(s.plankEditListExvat) + '" style="' + editInputStyle + '" />' +
+      '<input id="field-plankEditListIncvat" type="text" inputmode="decimal" data-bind="plankEditListIncvat" value="' + esc(s.plankEditListIncvat) + '" style="' + editInputStyle + '" />' +
+      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+    '</div>' :
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+    '</div>';
+
+  var discountRows = isEditingThis ?
+    s.plankEditRows.map(function (r, i) {
+      var group = plankTierGroupFor(r.percent);
+      var bg = group ? group.bg : "#fff";
+      var color = group ? group.color : "oklch(0.4 0.01 60)";
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + r.percent + '%</div>' +
+        '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="plankEditRows" data-calc-field="exvat" value="' + esc(r.exvat) + '" style="' + editInputStyle + '" />' +
+        '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="plankEditRows" data-calc-field="incvat" value="' + esc(r.incvat) + '" style="' + editInputStyle + '" />' +
+        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      '</div>';
+    }).join("") :
+    active.discounts.map(function (d) {
+      var group = plankTierGroupFor(d.percent);
+      var bg = group ? group.bg : "#fff";
+      var color = group ? group.color : "oklch(0.4 0.01 60)";
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      '</div>';
+    }).join("");
+
+  var tableActionBar = isAdmin ? (isEditingThis ?
+    '<div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px;">' +
+      '<button data-action="cancel-edit-plank" style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+      '<button data-action="save-edit-plank" data-id="' + active.id + '" style="min-height:40px; display:inline-flex; align-items:center; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+    '</div>' :
+    '<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">' +
+      '<button data-action="start-edit-plank" data-id="' + active.id + '" style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:none; background:oklch(0.95 0.006 70); border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;">✏️ แก้ไขราคา</button>' +
+    '</div>'
+  ) : "";
+
+  var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:20px;">' +
+    '<div style="min-width:480px;">' + tableHeader + baseRow + discountRows + '</div>' +
+  '</div>';
+
+  var legend = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
+    '<div style="padding:12px 16px; font-weight:700; font-size:14px; border-bottom:1px solid oklch(0.93 0.006 70);">เงื่อนไขกลุ่มส่วนลด</div>' +
+    PLANK_TIER_GROUPS.map(function (g, i) {
+      return '<div style="display:grid; grid-template-columns:minmax(160px,220px) 1fr; ' + (i === 0 ? "" : "border-top:1px solid oklch(0.93 0.006 70);") + '">' +
+        '<div style="padding:10px 14px; background:' + g.bg + '; color:' + g.color + '; font-weight:700; font-size:12.5px; display:flex; align-items:center;">' + esc(g.label) + ' (' + g.percents.join("%, ") + '%)</div>' +
+        '<div style="padding:10px 14px; font-size:12.5px; color:oklch(0.4 0.01 60); display:flex; align-items:center;">' + esc(g.note) + '</div>' +
+      '</div>';
+    }).join("") +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดแผ่นพื้นสำเร็จรูป (กว้าง 35 หนา 5 ซม. มอก.828-2546)</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">เลือกประเภทแผ่นพื้น เพื่อดูราคาตั้งและส่วนลดทุกช่วง 2%-7% (ราคาต่อ ตร.ม.)</div>' +
+    '</div>' +
+    '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทแผ่นพื้น</div>' +
+    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + typeButtons + '</div>' +
     infoCard + tableActionBar + table + legend +
   '</div>';
 };

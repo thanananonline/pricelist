@@ -386,6 +386,73 @@ export default {
       });
     }
 
+    if (path === "/plank-products" && method === "GET") {
+      const [productsRes, discountsRes] = await Promise.all([
+        env.DB.prepare("SELECT * FROM plank_products ORDER BY sort_order ASC").all(),
+        env.DB.prepare("SELECT * FROM plank_discounts ORDER BY percent ASC").all(),
+      ]);
+      const discountsByProduct = {};
+      discountsRes.results.forEach(function (d) {
+        if (!discountsByProduct[d.plank_product_id]) discountsByProduct[d.plank_product_id] = [];
+        discountsByProduct[d.plank_product_id].push({ percent: d.percent, exvat: d.exvat, incvat: d.incvat });
+      });
+      const plankProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          type: p.type,
+          wireCount: p.wire_count,
+          wireSpec: p.wire_spec,
+          lengthRange: p.length_range,
+          listExvat: p.list_exvat,
+          listIncvat: p.list_incvat,
+          discounts: discountsByProduct[p.id] || [],
+        };
+      });
+      return json(plankProducts);
+    }
+
+    const plankIdMatch = path.match(/^\/plank-products\/([^/]+)$/);
+    if (plankIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(plankIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM plank_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const listExvat = body.listExvat !== undefined ? Number(body.listExvat) : existing.list_exvat;
+      const listIncvat = body.listIncvat !== undefined ? Number(body.listIncvat) : existing.list_incvat;
+      if (isNaN(listExvat) || isNaN(listIncvat)) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE plank_products SET list_exvat=?, list_incvat=? WHERE id=?")
+        .bind(listExvat, listIncvat, id).run();
+
+      if (Array.isArray(body.discounts)) {
+        for (const d of body.discounts) {
+          const percent = parseInt(d.percent, 10);
+          const exvat = Number(d.exvat);
+          const incvat = Number(d.incvat);
+          if (isNaN(percent) || isNaN(exvat) || isNaN(incvat)) continue;
+          await env.DB.prepare(
+            "INSERT INTO plank_discounts (plank_product_id, percent, exvat, incvat) VALUES (?, ?, ?, ?) " +
+            "ON CONFLICT (plank_product_id, percent) DO UPDATE SET exvat=excluded.exvat, incvat=excluded.incvat"
+          ).bind(id, percent, exvat, incvat).run();
+        }
+      }
+
+      const discountsRes = await env.DB.prepare("SELECT percent, exvat, incvat FROM plank_discounts WHERE plank_product_id = ? ORDER BY percent ASC").bind(id).all();
+      return json({
+        id: existing.id,
+        type: existing.type,
+        wireCount: existing.wire_count,
+        wireSpec: existing.wire_spec,
+        lengthRange: existing.length_range,
+        listExvat: listExvat,
+        listIncvat: listIncvat,
+        discounts: discountsRes.results,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
