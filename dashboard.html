@@ -215,6 +215,16 @@ function pipeTierGroupFor(percent) {
   return null;
 }
 
+// Single switch for which pipe discount tiers show in the UI (table rows,
+// admin edit rows, and the legend). The pipe_discounts rows for every tier
+// (3%-30%) stay in D1 untouched -- to bring 24/27/30 back on screen, just
+// add them back to this list. The admin PUT endpoint only upserts the rows
+// it's sent, so saving edits while a tier is hidden here never deletes it.
+var PIPE_VISIBLE_PERCENTS = [3, 6, 9, 12, 15, 18, 21];
+function pipeIsVisiblePercent(percent) {
+  return PIPE_VISIBLE_PERCENTS.indexOf(percent) !== -1;
+}
+
 // Discount-tier groups for the solid floor plank price table (from
 // plank_prices.json meta.tier_groups) -- only 2 groups (vs pipe's 3), and
 // the percent ladder itself is different (2%-7% vs pipe's 3%-30%), so this
@@ -661,7 +671,7 @@ Dashboard.prototype.startPipeEdit = function (id) {
     pipeEditingId: id,
     pipeEditListExvat: String(p.listExvat),
     pipeEditListIncvat: String(p.listIncvat),
-    pipeEditRows: p.discounts.map(function (d) {
+    pipeEditRows: p.discounts.filter(function (d) { return pipeIsVisiblePercent(d.percent); }).map(function (d) {
       return { percent: d.percent, exvat: String(d.exvat), incvat: String(d.incvat) };
     }),
   });
@@ -2994,7 +3004,7 @@ Dashboard.prototype.renderPipePage = function () {
         '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("") :
-    active.discounts.map(function (d) {
+    active.discounts.filter(function (d) { return pipeIsVisiblePercent(d.percent); }).map(function (d) {
       var group = pipeTierGroupFor(d.percent);
       var bg = group ? group.bg : "#fff";
       var color = group ? group.color : "oklch(0.4 0.01 60)";
@@ -3022,12 +3032,15 @@ Dashboard.prototype.renderPipePage = function () {
 
   var legend = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
     '<div style="padding:12px 16px; font-weight:700; font-size:14px; border-bottom:1px solid oklch(0.93 0.006 70);">เงื่อนไขกลุ่มส่วนลด</div>' +
-    PIPE_TIER_GROUPS.map(function (g, i) {
-      return '<div style="display:grid; grid-template-columns:minmax(160px,220px) 1fr; ' + (i === 0 ? "" : "border-top:1px solid oklch(0.93 0.006 70);") + '">' +
-        '<div style="padding:10px 14px; background:' + g.bg + '; color:' + g.color + '; font-weight:700; font-size:12.5px; display:flex; align-items:center;">' + esc(g.label) + ' (' + g.percents.join("%, ") + '%)</div>' +
-        '<div style="padding:10px 14px; font-size:12.5px; color:oklch(0.4 0.01 60); display:flex; align-items:center;">' + esc(g.note) + '</div>' +
-      '</div>';
-    }).join("") +
+    PIPE_TIER_GROUPS.map(function (g) { return { g: g, percents: g.percents.filter(pipeIsVisiblePercent) }; })
+      .filter(function (entry) { return entry.percents.length > 0; })
+      .map(function (entry, i) {
+        var g = entry.g;
+        return '<div style="display:grid; grid-template-columns:minmax(160px,220px) 1fr; ' + (i === 0 ? "" : "border-top:1px solid oklch(0.93 0.006 70);") + '">' +
+          '<div style="padding:10px 14px; background:' + g.bg + '; color:' + g.color + '; font-weight:700; font-size:12.5px; display:flex; align-items:center;">' + esc(g.label) + ' (' + entry.percents.join("%, ") + '%)</div>' +
+          '<div style="padding:10px 14px; font-size:12.5px; color:oklch(0.4 0.01 60); display:flex; align-items:center;">' + esc(g.note) + '</div>' +
+        '</div>';
+      }).join("") +
   '</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
