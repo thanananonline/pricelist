@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "category": "รั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)",
+    "brand": "TNN Classic Fence",
+    "unit": "บาท/ท่อน",
+    "vat_rate": 0.07,
+    "price_note": "ราคาไม่รวม VAT 7% • ราคาอาจเปลี่ยนแปลงได้โดยไม่แจ้งล่วงหน้า",
+    "effective_date_th": "1 ก.ค. 2567",
+    "has_discount_tiers": false,
+    "display_hint": "หมวดนี้เป็นรายการราคาเดียว (ไม่มีขั้นส่วนลด) แสดงเป็นตารางราคา+สเปก",
+    "columns": [
+      "ประเภท",
+      "ความยาว",
+      "ราคา/ท่อน (ไม่รวม/รวม VAT)",
+      "น้ำหนัก/ท่อน (kg)",
+      "จำนวนแผ่น (แผ่น/ความยาว)",
+      "ทับหลัง (แผ่น)"
+    ],
+    "source": "แค็ตตาล็อกราคา TNN Classic Fence — บริษัท ธนานันท์ฮาร์ดแวร์ จำกัด"
+  },
+  "products": [
+    {
+      "type": "เสารั้ว 15x15 ซม. (สำหรับรั้วสูง 1.5 ม.)",
+      "length": "1.8 ม.",
+      "price_exvat": 350,
+      "price_incvat": 374.5,
+      "weight_kg_per_piece": 85,
+      "sheets_per_length": 5,
+      "coping_pieces": 1
+    },
+    {
+      "type": "เสารั้ว 15x15 ซม. (สำหรับรั้วสูง 2 ม.)",
+      "length": "2.3 ม.",
+      "price_exvat": 390,
+      "price_incvat": 417.3,
+      "weight_kg_per_piece": 100,
+      "sheets_per_length": 7,
+      "coping_pieces": 1
+    },
+    {
+      "type": "เสารั้ว 15x15 ซม. (สำหรับรั้วสูง 2.5 ม.)",
+      "length": "2.8 ม.",
+      "price_exvat": 440,
+      "price_incvat": 470.8,
+      "weight_kg_per_piece": 115,
+      "sheets_per_length": 9,
+      "coping_pieces": 1
+    },
+    {
+      "type": "เสารั้ว 15x15 ซม. (สำหรับรั้วสูง 3 ม.)",
+      "length": "3.3 ม.",
+      "price_exvat": 530,
+      "price_incvat": 567.1,
+      "weight_kg_per_piece": 145,
+      "sheets_per_length": 11,
+      "coping_pieces": 1
+    },
+    {
+      "type": "แผ่นรั้ว 25x5 ซม.",
+      "length": "2.92 ม.",
+      "price_exvat": 325,
+      "price_incvat": 347.75,
+      "weight_kg_per_piece": 95,
+      "sheets_per_length": null,
+      "coping_pieces": null
+    },
+    {
+      "type": "คานทับหลัง 25x5 ซม.",
+      "length": "2.92 ม.",
+      "price_exvat": 420,
+      "price_incvat": 449.4,
+      "weight_kg_per_piece": 130,
+      "sheets_per_length": null,
+      "coping_pieces": null
+    },
+    {
+      "type": "ฟุตติ้งสำเร็จ 0.56x0.56x0.50 ม. หนา 8 ซม.",
+      "length": null,
+      "price_exvat": 700,
+      "price_incvat": 749.0,
+      "weight_kg_per_piece": 195,
+      "sheets_per_length": null,
+      "coping_pieces": null
+    }
+  ]
+}

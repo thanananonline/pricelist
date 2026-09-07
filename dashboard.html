@@ -496,6 +496,12 @@ function Dashboard(root) {
     plankEditListExvat: "",
     plankEditListIncvat: "",
     plankEditRows: [],
+    fenceProducts: [],
+    fenceProductsLoading: true,
+    fenceProductsError: "",
+    fenceEditingId: null,
+    fenceEditPriceExvat: "",
+    fenceEditPriceIncvat: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -528,6 +534,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadCategories();
   this.loadPipeProducts();
   this.loadPlankProducts();
+  this.loadFenceProducts();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -768,6 +775,49 @@ Dashboard.prototype.savePlankEdit = function (id) {
   });
 };
 
+Dashboard.prototype.loadFenceProducts = function () {
+  var self = this;
+  self.state.fenceProductsLoading = true;
+  apiRequest("/fence-products").then(function (fenceProducts) {
+    self.setState({ fenceProducts: fenceProducts, fenceProductsLoading: false, fenceProductsError: "" });
+  }).catch(function () {
+    self.setState({ fenceProductsLoading: false, fenceProductsError: "โหลดข้อมูลตารางราคารั้วสำเร็จรูป TNN ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startFenceEdit = function (id) {
+  var p = this.state.fenceProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    fenceEditingId: id,
+    fenceEditPriceExvat: String(p.priceExvat),
+    fenceEditPriceIncvat: String(p.priceIncvat),
+  });
+};
+
+Dashboard.prototype.saveFenceEdit = function (id) {
+  var s = this.state;
+  var priceExvat = parseFloat(s.fenceEditPriceExvat);
+  var priceIncvat = parseFloat(s.fenceEditPriceIncvat);
+  if (isNaN(priceExvat) || isNaN(priceIncvat)) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/fence-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { priceExvat: priceExvat, priceIncvat: priceIncvat },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var fenceProducts = s2.fenceProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { fenceProducts: fenceProducts, fenceEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -914,12 +964,16 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-pipe": this.startPipeEdit(d.id); break;
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
-    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null }); break;
+    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null }); break;
     case "plank-set-type": this.setState({ plankSelectedType: d.type, plankEditingId: null }); break;
     case "reload-plank-products": this.loadPlankProducts(); break;
     case "start-edit-plank": this.startPlankEdit(d.id); break;
     case "cancel-edit-plank": this.setState({ plankEditingId: null, plankEditRows: [] }); break;
     case "save-edit-plank": this.savePlankEdit(d.id); break;
+    case "reload-fence-products": this.loadFenceProducts(); break;
+    case "start-edit-fence": this.startFenceEdit(d.id); break;
+    case "cancel-edit-fence": this.setState({ fenceEditingId: null }); break;
+    case "save-edit-fence": this.saveFenceEdit(d.id); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -2434,6 +2488,7 @@ Dashboard.prototype.renderCalcSidebar = function () {
 var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "pipe", label: "ท่อคอนกรีต" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
+  { value: "fence", label: "รั้วสำเร็จรูป TNN" },
 ];
 
 Dashboard.prototype.renderDiscountSidebar = function () {
@@ -3073,10 +3128,13 @@ Dashboard.prototype.renderDiscountPage = function () {
   var tabs = '<div style="padding:28px 32px 0; max-width:980px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
+    tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
   '</div>';
 
   var body = cat === "plank"
     ? '<div id="plank-container">' + this.renderPlankPage() + '</div>'
+    : cat === "fence"
+    ? '<div id="fence-container">' + this.renderFencePage() + '</div>'
     : '<div id="pipe-container">' + this.renderPipePage() + '</div>';
 
   return tabs + body;
@@ -3200,6 +3258,75 @@ Dashboard.prototype.renderPlankPage = function () {
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทแผ่นพื้น</div>' +
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + typeButtons + '</div>' +
     infoCard + tableActionBar + table + legend +
+  '</div>';
+};
+
+// Fence has no discount ladder (see migrations/0008_add_fence_pricing.sql),
+// so unlike renderPipePage/renderPlankPage there is no type/size drill-down
+// selector or discount table -- just one flat price+spec table for all
+// items, with a per-row edit toggle instead of a single active-item editor.
+Dashboard.prototype.renderFencePage = function () {
+  var s = this.state;
+
+  if (s.fenceProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.fenceProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.fenceProductsError) + '</div>' +
+      '<button data-action="reload-fence-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var products = s.fenceProducts;
+  if (!products.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคารั้วสำเร็จรูป TNN</div>';
+  }
+
+  var isAdmin = this.isAdmin();
+  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(220px,2fr) 90px 110px 110px 100px 90px 80px" + (isAdmin ? " 150px" : "");
+
+  var headerCells = '<div>ประเภท</div><div>ความยาว</div><div>ราคา/ท่อน (ไม่รวม VAT)</div><div>ราคา/ท่อน (รวม VAT 7%)</div><div>น้ำหนัก/ท่อน</div><div>จำนวนแผ่น</div><div>ทับหลัง</div>' +
+    (isAdmin ? '<div></div>' : '');
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' + headerCells + '</div>';
+
+  var rows = products.map(function (p) {
+    var isEditingThis = s.fenceEditingId === p.id;
+    var priceExvatCell = isEditingThis
+      ? '<input id="field-fenceEditPriceExvat" type="text" inputmode="decimal" data-bind="fenceEditPriceExvat" value="' + esc(s.fenceEditPriceExvat) + '" style="' + editInputStyle + '" />'
+      : '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(p.priceExvat, 2) + '</div>';
+    var priceIncvatCell = isEditingThis
+      ? '<input id="field-fenceEditPriceIncvat" type="text" inputmode="decimal" data-bind="fenceEditPriceIncvat" value="' + esc(s.fenceEditPriceIncvat) + '" style="' + editInputStyle + '" />'
+      : '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(p.priceIncvat, 2) + '</div>';
+    var actionsCell = !isAdmin ? '' : (isEditingThis
+      ? '<div style="display:flex; gap:6px;">' +
+          '<button data-action="save-edit-fence" data-id="' + esc(p.id) + '" style="min-height:32px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+          '<button data-action="cancel-edit-fence" style="min-height:32px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:6px; padding:6px 10px; font-size:12px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '</div>'
+      : '<button data-action="start-edit-fence" data-id="' + esc(p.id) + '" style="min-height:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px 10px; font-size:12px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>');
+
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:13px; font-weight:600;">' + esc(p.type) + '</div>' +
+      '<div style="font-size:13px;">' + (p.length != null ? esc(p.length) : "-") + '</div>' +
+      priceExvatCell +
+      priceIncvatCell +
+      '<div style="font-size:13px;">' + (p.weightKgPerPiece != null ? fmt(p.weightKgPerPiece) + " กก." : "-") + '</div>' +
+      '<div style="font-size:13px;">' + (p.sheetsPerLength != null ? fmt(p.sheetsPerLength) + " แผ่น" : "-") + '</div>' +
+      '<div style="font-size:13px;">' + (p.copingPieces != null ? fmt(p.copingPieces) + " แผ่น" : "-") + '</div>' +
+      (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
+    '</div>';
+  }).join("");
+
+  var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
+    '<div style="min-width:900px;">' + tableHeader + rows + '</div>' +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคารั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อท่อน ไม่รวม VAT 7% ไม่มีขั้นส่วนลด</div>' +
+    '</div>' +
+    table +
   '</div>';
 };
 

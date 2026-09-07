@@ -95,3 +95,18 @@ CREATE TABLE IF NOT EXISTS plank_discounts (
   incvat REAL NOT NULL,
   PRIMARY KEY (plank_product_id, percent)
 );
+
+-- TNN precast fence price list (see migrations/0008_add_fence_pricing.sql):
+-- no discount ladder at all -- single price per piece -- so unlike
+-- pipe_products/plank_products there is no matching *_discounts table.
+CREATE TABLE IF NOT EXISTS fence_products (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  length TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  price_exvat REAL NOT NULL,
+  price_incvat REAL NOT NULL,
+  weight_kg_per_piece REAL,
+  sheets_per_length INTEGER,
+  coping_pieces INTEGER
+);

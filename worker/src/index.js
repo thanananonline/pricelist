@@ -453,6 +453,51 @@ export default {
       });
     }
 
+    if (path === "/fence-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM fence_products ORDER BY sort_order ASC").all();
+      const fenceProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          type: p.type,
+          length: p.length,
+          priceExvat: p.price_exvat,
+          priceIncvat: p.price_incvat,
+          weightKgPerPiece: p.weight_kg_per_piece,
+          sheetsPerLength: p.sheets_per_length,
+          copingPieces: p.coping_pieces,
+        };
+      });
+      return json(fenceProducts);
+    }
+
+    const fenceIdMatch = path.match(/^\/fence-products\/([^/]+)$/);
+    if (fenceIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(fenceIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM fence_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const priceExvat = body.priceExvat !== undefined ? Number(body.priceExvat) : existing.price_exvat;
+      const priceIncvat = body.priceIncvat !== undefined ? Number(body.priceIncvat) : existing.price_incvat;
+      if (isNaN(priceExvat) || isNaN(priceIncvat)) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE fence_products SET price_exvat=?, price_incvat=? WHERE id=?")
+        .bind(priceExvat, priceIncvat, id).run();
+
+      return json({
+        id: existing.id,
+        type: existing.type,
+        length: existing.length,
+        priceExvat: priceExvat,
+        priceIncvat: priceIncvat,
+        weightKgPerPiece: existing.weight_kg_per_piece,
+        sheetsPerLength: existing.sheets_per_length,
+        copingPieces: existing.coping_pieces,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
