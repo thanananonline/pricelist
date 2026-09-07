@@ -199,6 +199,22 @@ var DISCOUNT_TIERS = [
   { label: "ต้องขออนุมัติ ลด 8-15%", condition: "ต้องเป็นโครงการรัฐบาลหรือเอกชนขนาดใหญ่ หรือมีราคาคู่แข่งมาเปรียบเทียบ", bg: "oklch(0.94 0.03 30)", color: "oklch(0.5 0.15 30)" },
 ];
 
+// Discount-tier groups for the concrete pipe price table (from
+// concrete_pipe_prices.json meta.tier_groups) -- 3%/6% are the base
+// discount anyone can quote; higher tiers need the matching approval level.
+var PIPE_TIER_GROUPS = [
+  { percents: [3, 6], label: "ส่วนลดทั่วไป", note: "ส่วนลดพื้นฐาน เสนอได้ทันทีโดยไม่ต้องขออนุมัติเพิ่ม", bg: "oklch(0.96 0.006 70)", color: "oklch(0.45 0.01 60)" },
+  { percents: [9, 12], label: "ขายปลีก", note: "ปริมาณไม่เกิน 2 เที่ยวขนส่ง / เครดิตนาน / งานโอนสิทธิ์ / ระยะทางไกล", bg: "oklch(0.94 0.05 155)", color: "oklch(0.35 0.09 155)" },
+  { percents: [15, 18], label: "ขายส่ง", note: "ปริมาณมากกว่า 2 เที่ยวขนส่ง / เครดิตดี เงินไว / ระยะทางจากหน่วยงานไม่เกิน 30 กม.", bg: "oklch(0.95 0.04 55)", color: "oklch(0.42 0.1 45)" },
+  { percents: [21, 24, 27, 30], label: "ขออนุมัติพิเศษ", note: "ลดเกิน 18% เฉพาะโครงการรัฐบาล/เอกชนขนาดใหญ่ หรือมีราคาคู่แข่งมาเปรียบเทียบ", bg: "oklch(0.94 0.03 30)", color: "oklch(0.5 0.15 30)" },
+];
+function pipeTierGroupFor(percent) {
+  for (var i = 0; i < PIPE_TIER_GROUPS.length; i++) {
+    if (PIPE_TIER_GROUPS[i].percents.indexOf(percent) !== -1) return PIPE_TIER_GROUPS[i];
+  }
+  return null;
+}
+
 var CALC_PRODUCT_TYPES = [
   { value: "slab", label: "แผ่นพื้นสำเร็จรูป" },
   { value: "steel", label: "เหล็ก" },
@@ -436,6 +452,11 @@ function Dashboard(root) {
     editContactDept: "",
     editContactPhone: "",
     editContactAddress: "",
+    pipeProducts: [],
+    pipeProductsLoading: true,
+    pipeProductsError: "",
+    pipeSelectedType: "",
+    pipeSelectedSize: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -466,6 +487,7 @@ function Dashboard(root) {
 Dashboard.prototype.componentDidMount = function () {
   this.loadProducts();
   this.loadCategories();
+  this.loadPipeProducts();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -589,6 +611,16 @@ Dashboard.prototype.loadProducts = function () {
     self.setState({ products: products, productsLoading: false, productsError: "" });
   }).catch(function () {
     self.setState({ productsLoading: false, productsError: "โหลดข้อมูลสินค้าไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.loadPipeProducts = function () {
+  var self = this;
+  self.state.pipeProductsLoading = true;
+  apiRequest("/pipe-products").then(function (pipeProducts) {
+    self.setState({ pipeProducts: pipeProducts, pipeProductsLoading: false, pipeProductsError: "" });
+  }).catch(function () {
+    self.setState({ pipeProductsLoading: false, pipeProductsError: "โหลดข้อมูลตารางราคาท่อไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
   });
 };
 
@@ -731,6 +763,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
     case "toggle-calc-sidebar": this.setState(function (s2) { return { calcSidebarCollapsed: !s2.calcSidebarCollapsed }; }); break;
     case "calc-set-type": this.setState({ page: "calc", calcProductType: d.type }); break;
+    case "pipe-set-type": this.setState({ pipeSelectedType: d.type, pipeSelectedSize: "" }); break;
+    case "pipe-set-size": this.setState({ pipeSelectedSize: d.size }); break;
+    case "reload-pipe-products": this.loadPipeProducts(); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -1778,6 +1813,7 @@ Dashboard.prototype.renderDashboard = function () {
       '</div>' +
       navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
       (page === "price" ? this.renderCategoryBox() : "") +
+      navItem("ตารางส่วนลดท่อคอนกรีต", "🚰", "pipe", page === "pipe") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("Company Profile", "🏢", "company", page === "company") +
@@ -1804,6 +1840,7 @@ Dashboard.prototype.renderDashboard = function () {
 
   var pageContent;
   if (page === "price") pageContent = this.renderPricePage();
+  else if (page === "pipe") pageContent = this.renderPipePage();
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
@@ -2647,6 +2684,106 @@ Dashboard.prototype.computeTruckPlan = function (totalWeightKg) {
     recommended = rows.filter(function (r) { return r.trips === 1; })[0] || rows[rows.length - 1];
   }
   return { rows: rows, recommended: recommended };
+};
+
+Dashboard.prototype.renderPipePage = function () {
+  var s = this.state;
+
+  if (s.pipeProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.pipeProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.pipeProductsError) + '</div>' +
+      '<button data-action="reload-pipe-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var products = s.pipeProducts;
+  if (!products.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคาท่อคอนกรีต</div>';
+  }
+
+  var types = [];
+  products.forEach(function (p) { if (types.indexOf(p.type) === -1) types.push(p.type); });
+  var activeType = types.indexOf(s.pipeSelectedType) !== -1 ? s.pipeSelectedType : types[0];
+
+  var sizesForType = products.filter(function (p) { return p.type === activeType; }).map(function (p) { return p.sizeCm; });
+  var activeSize = sizesForType.indexOf(s.pipeSelectedSize) !== -1 ? s.pipeSelectedSize : sizesForType[0];
+
+  var active = products.filter(function (p) { return p.type === activeType && p.sizeCm === activeSize; })[0];
+  if (!active) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ไม่พบข้อมูลราคาสำหรับตัวเลือกนี้</div>';
+  }
+
+  var typeButtons = types.map(function (t) {
+    var isActive = t === activeType;
+    return '<button data-action="pipe-set-type" data-type="' + esc(t) + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' + esc(t) + '</button>';
+  }).join("");
+
+  var sizeButtons = sizesForType.map(function (sizeCm) {
+    var isActive = sizeCm === activeSize;
+    var diameter = sizeCm.split("x")[0];
+    return '<button data-action="pipe-set-size" data-size="' + esc(sizeCm) + '" style="min-height:40px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding:8px 16px; border-radius:8px; border:1px solid ' + (isActive ? "oklch(0.62 0.17 45)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.62 0.17 45)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:600; font-size:13px; cursor:pointer; font-family:inherit;">Ø' + esc(diameter) + ' ซม.</button>';
+  }).join("");
+
+  var infoItem = function (label, value) {
+    return '<div><div style="font-size:11.5px; color:oklch(0.55 0.01 60); margin-bottom:4px;">' + label + '</div><div style="font-family:Kanit; font-weight:700; font-size:16px; color:oklch(0.38 0.15 275);">' + value + '</div></div>';
+  };
+  var infoCard = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px;">' +
+    infoItem("ราคาตั้ง (ไม่รวม VAT)", "฿" + fmtN(active.listExvat, 2)) +
+    infoItem("ราคาตั้ง (รวม VAT 7%)", "฿" + fmtN(active.listIncvat, 2)) +
+    infoItem("น้ำหนัก/ท่อน", active.weightKgPerPipe != null ? fmt(active.weightKgPerPipe) + " กก." : "-") +
+    infoItem("บรรทุกได้ (รถ 10 ล้อ)", active.load10wheelPipes != null ? fmt(active.load10wheelPipes) + " ท่อน/เที่ยว" : "-") +
+    infoItem("บรรทุกได้ (เทรลเลอร์)", active.loadTrailerPipes != null ? fmt(active.loadTrailerPipes) + " ท่อน/เที่ยว" : "-") +
+  '</div>';
+
+  var colWidths = "90px 1fr 1fr 1.5fr";
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+    '<div>ส่วนลด</div><div>ราคา/ท่อน (ไม่รวม VAT)</div><div>ราคา/ท่อน (รวม VAT 7%)</div><div>เงื่อนไข</div>' +
+  '</div>';
+
+  var baseRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+    '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+    '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
+    '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+    '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+  '</div>';
+
+  var discountRows = active.discounts.map(function (d) {
+    var group = pipeTierGroupFor(d.percent);
+    var bg = group ? group.bg : "#fff";
+    var color = group ? group.color : "oklch(0.4 0.01 60)";
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+      '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
+      '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+    '</div>';
+  }).join("");
+
+  var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:20px;">' +
+    '<div style="min-width:560px;">' + tableHeader + baseRow + discountRows + '</div>' +
+  '</div>';
+
+  var legend = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
+    '<div style="padding:12px 16px; font-weight:700; font-size:14px; border-bottom:1px solid oklch(0.93 0.006 70);">เงื่อนไขกลุ่มส่วนลด</div>' +
+    PIPE_TIER_GROUPS.map(function (g, i) {
+      return '<div style="display:grid; grid-template-columns:minmax(160px,220px) 1fr; ' + (i === 0 ? "" : "border-top:1px solid oklch(0.93 0.006 70);") + '">' +
+        '<div style="padding:10px 14px; background:' + g.bg + '; color:' + g.color + '; font-weight:700; font-size:12.5px; display:flex; align-items:center;">' + esc(g.label) + ' (' + g.percents.join("%, ") + '%)</div>' +
+        '<div style="padding:10px 14px; font-size:12.5px; color:oklch(0.4 0.01 60); display:flex; align-items:center;">' + esc(g.note) + '</div>' +
+      '</div>';
+    }).join("") +
+  '</div>';
+
+  return '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">เลือกประเภทท่อและขนาด เพื่อดูราคาตั้งและส่วนลดทุกช่วง 3%-30% (ท่อนยาว 1 ม.)</div>' +
+    '</div>' +
+    '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทท่อ</div>' +
+    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">' + typeButtons + '</div>' +
+    '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ขนาด (เส้นผ่านศูนย์กลาง)</div>' +
+    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + sizeButtons + '</div>' +
+    infoCard + table + legend;
 };
 
 Dashboard.prototype.renderSlabCalc = function () {

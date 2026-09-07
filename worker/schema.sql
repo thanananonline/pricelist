@@ -48,3 +48,27 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'viewer'
 );
+
+-- Concrete pipe price lists (see migrations/0004_add_pipe_pricing.sql):
+-- kept separate from `products` because each item carries a full 10-tier
+-- discount ladder (3%-30%, ex-VAT/inc-VAT) plus weight/load specs that don't
+-- fit the generic product form.
+CREATE TABLE IF NOT EXISTS pipe_products (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  size_cm TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  list_exvat REAL NOT NULL,
+  list_incvat REAL NOT NULL,
+  weight_kg_per_pipe REAL,
+  load_10wheel_pipes INTEGER,
+  load_trailer_pipes INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS pipe_discounts (
+  pipe_product_id TEXT NOT NULL REFERENCES pipe_products(id),
+  percent INTEGER NOT NULL,
+  exvat REAL NOT NULL,
+  incvat REAL NOT NULL,
+  PRIMARY KEY (pipe_product_id, percent)
+);

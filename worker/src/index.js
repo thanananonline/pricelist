@@ -317,6 +317,32 @@ export default {
       return json({ ok: true });
     }
 
+    if (path === "/pipe-products" && method === "GET") {
+      const [productsRes, discountsRes] = await Promise.all([
+        env.DB.prepare("SELECT * FROM pipe_products ORDER BY sort_order ASC").all(),
+        env.DB.prepare("SELECT * FROM pipe_discounts ORDER BY percent ASC").all(),
+      ]);
+      const discountsByProduct = {};
+      discountsRes.results.forEach(function (d) {
+        if (!discountsByProduct[d.pipe_product_id]) discountsByProduct[d.pipe_product_id] = [];
+        discountsByProduct[d.pipe_product_id].push({ percent: d.percent, exvat: d.exvat, incvat: d.incvat });
+      });
+      const pipeProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          type: p.type,
+          sizeCm: p.size_cm,
+          listExvat: p.list_exvat,
+          listIncvat: p.list_incvat,
+          weightKgPerPipe: p.weight_kg_per_pipe,
+          load10wheelPipes: p.load_10wheel_pipes,
+          loadTrailerPipes: p.load_trailer_pipes,
+          discounts: discountsByProduct[p.id] || [],
+        };
+      });
+      return json(pipeProducts);
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);

@@ -1,0 +1,2488 @@
+{
+  "meta": {
+    "category": "ท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ",
+    "source_file": "ราคาท่อสำหรับฝ่ายขาย_15-07-69.pdf",
+    "effective_date_th": "15 เม.ย. 2569",
+    "vat_rate": 0.07,
+    "price_note": "ราคาช่องบน=ไม่รวม VAT, ราคาช่องล่าง(incvat)=รวม VAT 7% • ราคาหลังลดปัดเต็มบาท • list_incvat เก็บทศนิยม 2 ตำแหน่ง",
+    "discount_tiers_percent": [
+      3,
+      6,
+      9,
+      12,
+      15,
+      18,
+      21,
+      24,
+      27,
+      30
+    ],
+    "tier_groups": {
+      "ขายปลีก": {
+        "percent": [
+          9,
+          12
+        ],
+        "note": "ปริมาณไม่เกิน 2 เที่ยวขนส่ง / เครดิตนาน / งานโอนสิทธิ์ / ระยะทางไกล"
+      },
+      "ขายส่ง": {
+        "percent": [
+          15,
+          18
+        ],
+        "note": "ปริมาณมากกว่า 2 เที่ยวขนส่ง / เครดิตดี เงินไว / ระยะทางจากหน่วยงานไม่เกิน 30 กม."
+      },
+      "ขออนุมัติพิเศษ": {
+        "percent": [
+          21,
+          24,
+          27,
+          30
+        ],
+        "note": "ลดเกิน 18% เฉพาะโครงการรัฐบาล/เอกชนขนาดใหญ่ หรือมีราคาคู่แข่งมาเปรียบเทียบ"
+      }
+    }
+  },
+  "products": [
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "30x100",
+      "list_exvat": 172.5,
+      "list_incvat": 184.58,
+      "weight_kg_per_pipe": 140,
+      "load_10wheel_pipes": 90,
+      "load_trailer_pipes": 200,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 167,
+          "incvat": 179
+        },
+        {
+          "percent": 6,
+          "exvat": 162,
+          "incvat": 173
+        },
+        {
+          "percent": 9,
+          "exvat": 157,
+          "incvat": 168
+        },
+        {
+          "percent": 12,
+          "exvat": 152,
+          "incvat": 163
+        },
+        {
+          "percent": 15,
+          "exvat": 147,
+          "incvat": 157
+        },
+        {
+          "percent": 18,
+          "exvat": 141,
+          "incvat": 151
+        },
+        {
+          "percent": 21,
+          "exvat": 136,
+          "incvat": 146
+        },
+        {
+          "percent": 24,
+          "exvat": 131,
+          "incvat": 140
+        },
+        {
+          "percent": 27,
+          "exvat": 126,
+          "incvat": 135
+        },
+        {
+          "percent": 30,
+          "exvat": 121,
+          "incvat": 129
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "40x100",
+      "list_exvat": 241.5,
+      "list_incvat": 258.41,
+      "weight_kg_per_pipe": 215,
+      "load_10wheel_pipes": 60,
+      "load_trailer_pipes": 120,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 234,
+          "incvat": 250
+        },
+        {
+          "percent": 6,
+          "exvat": 227,
+          "incvat": 243
+        },
+        {
+          "percent": 9,
+          "exvat": 220,
+          "incvat": 235
+        },
+        {
+          "percent": 12,
+          "exvat": 213,
+          "incvat": 228
+        },
+        {
+          "percent": 15,
+          "exvat": 205,
+          "incvat": 219
+        },
+        {
+          "percent": 18,
+          "exvat": 198,
+          "incvat": 212
+        },
+        {
+          "percent": 21,
+          "exvat": 191,
+          "incvat": 204
+        },
+        {
+          "percent": 24,
+          "exvat": 184,
+          "incvat": 197
+        },
+        {
+          "percent": 27,
+          "exvat": 176,
+          "incvat": 188
+        },
+        {
+          "percent": 30,
+          "exvat": 169,
+          "incvat": 181
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "50x100",
+      "list_exvat": 391.0,
+      "list_incvat": 418.37,
+      "weight_kg_per_pipe": 315,
+      "load_10wheel_pipes": 40,
+      "load_trailer_pipes": 80,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 379,
+          "incvat": 406
+        },
+        {
+          "percent": 6,
+          "exvat": 368,
+          "incvat": 394
+        },
+        {
+          "percent": 9,
+          "exvat": 356,
+          "incvat": 381
+        },
+        {
+          "percent": 12,
+          "exvat": 344,
+          "incvat": 368
+        },
+        {
+          "percent": 15,
+          "exvat": 332,
+          "incvat": 355
+        },
+        {
+          "percent": 18,
+          "exvat": 321,
+          "incvat": 343
+        },
+        {
+          "percent": 21,
+          "exvat": 309,
+          "incvat": 331
+        },
+        {
+          "percent": 24,
+          "exvat": 297,
+          "incvat": 318
+        },
+        {
+          "percent": 27,
+          "exvat": 285,
+          "incvat": 305
+        },
+        {
+          "percent": 30,
+          "exvat": 274,
+          "incvat": 293
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "60x100",
+      "list_exvat": 412.5,
+      "list_incvat": 441.38,
+      "weight_kg_per_pipe": 400,
+      "load_10wheel_pipes": 30,
+      "load_trailer_pipes": 60,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 400,
+          "incvat": 428
+        },
+        {
+          "percent": 6,
+          "exvat": 388,
+          "incvat": 415
+        },
+        {
+          "percent": 9,
+          "exvat": 375,
+          "incvat": 401
+        },
+        {
+          "percent": 12,
+          "exvat": 363,
+          "incvat": 388
+        },
+        {
+          "percent": 15,
+          "exvat": 351,
+          "incvat": 376
+        },
+        {
+          "percent": 18,
+          "exvat": 338,
+          "incvat": 362
+        },
+        {
+          "percent": 21,
+          "exvat": 326,
+          "incvat": 349
+        },
+        {
+          "percent": 24,
+          "exvat": 314,
+          "incvat": 336
+        },
+        {
+          "percent": 27,
+          "exvat": 301,
+          "incvat": 322
+        },
+        {
+          "percent": 30,
+          "exvat": 289,
+          "incvat": 309
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "80x100",
+      "list_exvat": 759.0,
+      "list_incvat": 812.13,
+      "weight_kg_per_pipe": 660,
+      "load_10wheel_pipes": 20,
+      "load_trailer_pipes": 40,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 736,
+          "incvat": 788
+        },
+        {
+          "percent": 6,
+          "exvat": 713,
+          "incvat": 763
+        },
+        {
+          "percent": 9,
+          "exvat": 691,
+          "incvat": 739
+        },
+        {
+          "percent": 12,
+          "exvat": 668,
+          "incvat": 715
+        },
+        {
+          "percent": 15,
+          "exvat": 645,
+          "incvat": 690
+        },
+        {
+          "percent": 18,
+          "exvat": 622,
+          "incvat": 666
+        },
+        {
+          "percent": 21,
+          "exvat": 600,
+          "incvat": 642
+        },
+        {
+          "percent": 24,
+          "exvat": 577,
+          "incvat": 617
+        },
+        {
+          "percent": 27,
+          "exvat": 554,
+          "incvat": 593
+        },
+        {
+          "percent": 30,
+          "exvat": 531,
+          "incvat": 568
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "100x100",
+      "list_exvat": 1023.0,
+      "list_incvat": 1094.61,
+      "weight_kg_per_pipe": 940,
+      "load_10wheel_pipes": 15,
+      "load_trailer_pipes": 32,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 992,
+          "incvat": 1061
+        },
+        {
+          "percent": 6,
+          "exvat": 962,
+          "incvat": 1029
+        },
+        {
+          "percent": 9,
+          "exvat": 931,
+          "incvat": 996
+        },
+        {
+          "percent": 12,
+          "exvat": 900,
+          "incvat": 963
+        },
+        {
+          "percent": 15,
+          "exvat": 870,
+          "incvat": 931
+        },
+        {
+          "percent": 18,
+          "exvat": 839,
+          "incvat": 898
+        },
+        {
+          "percent": 21,
+          "exvat": 808,
+          "incvat": 865
+        },
+        {
+          "percent": 24,
+          "exvat": 777,
+          "incvat": 831
+        },
+        {
+          "percent": 27,
+          "exvat": 747,
+          "incvat": 799
+        },
+        {
+          "percent": 30,
+          "exvat": 716,
+          "incvat": 766
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "120x100",
+      "list_exvat": 1705.0,
+      "list_incvat": 1824.35,
+      "weight_kg_per_pipe": 1430,
+      "load_10wheel_pipes": 10,
+      "load_trailer_pipes": 20,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1654,
+          "incvat": 1770
+        },
+        {
+          "percent": 6,
+          "exvat": 1603,
+          "incvat": 1715
+        },
+        {
+          "percent": 9,
+          "exvat": 1552,
+          "incvat": 1661
+        },
+        {
+          "percent": 12,
+          "exvat": 1500,
+          "incvat": 1605
+        },
+        {
+          "percent": 15,
+          "exvat": 1449,
+          "incvat": 1550
+        },
+        {
+          "percent": 18,
+          "exvat": 1398,
+          "incvat": 1496
+        },
+        {
+          "percent": 21,
+          "exvat": 1347,
+          "incvat": 1441
+        },
+        {
+          "percent": 24,
+          "exvat": 1296,
+          "incvat": 1387
+        },
+        {
+          "percent": 27,
+          "exvat": 1245,
+          "incvat": 1332
+        },
+        {
+          "percent": 30,
+          "exvat": 1194,
+          "incvat": 1278
+        }
+      ]
+    },
+    {
+      "type": "ไม่เสริมเหล็ก",
+      "size_cm": "150x100",
+      "list_exvat": 2640.0,
+      "list_incvat": 2824.8,
+      "weight_kg_per_pipe": 1950,
+      "load_10wheel_pipes": 6,
+      "load_trailer_pipes": 13,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2561,
+          "incvat": 2740
+        },
+        {
+          "percent": 6,
+          "exvat": 2482,
+          "incvat": 2656
+        },
+        {
+          "percent": 9,
+          "exvat": 2402,
+          "incvat": 2570
+        },
+        {
+          "percent": 12,
+          "exvat": 2323,
+          "incvat": 2486
+        },
+        {
+          "percent": 15,
+          "exvat": 2244,
+          "incvat": 2401
+        },
+        {
+          "percent": 18,
+          "exvat": 2165,
+          "incvat": 2317
+        },
+        {
+          "percent": 21,
+          "exvat": 2086,
+          "incvat": 2232
+        },
+        {
+          "percent": 24,
+          "exvat": 2006,
+          "incvat": 2146
+        },
+        {
+          "percent": 27,
+          "exvat": 1927,
+          "incvat": 2062
+        },
+        {
+          "percent": 30,
+          "exvat": 1848,
+          "incvat": 1977
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "30x100",
+      "list_exvat": 184.0,
+      "list_incvat": 196.88,
+      "weight_kg_per_pipe": 140,
+      "load_10wheel_pipes": 90,
+      "load_trailer_pipes": 200,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 178,
+          "incvat": 190
+        },
+        {
+          "percent": 6,
+          "exvat": 173,
+          "incvat": 185
+        },
+        {
+          "percent": 9,
+          "exvat": 167,
+          "incvat": 179
+        },
+        {
+          "percent": 12,
+          "exvat": 162,
+          "incvat": 173
+        },
+        {
+          "percent": 15,
+          "exvat": 156,
+          "incvat": 167
+        },
+        {
+          "percent": 18,
+          "exvat": 151,
+          "incvat": 162
+        },
+        {
+          "percent": 21,
+          "exvat": 145,
+          "incvat": 155
+        },
+        {
+          "percent": 24,
+          "exvat": 140,
+          "incvat": 150
+        },
+        {
+          "percent": 27,
+          "exvat": 134,
+          "incvat": 143
+        },
+        {
+          "percent": 30,
+          "exvat": 129,
+          "incvat": 138
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "40x100",
+      "list_exvat": 276.0,
+      "list_incvat": 295.32,
+      "weight_kg_per_pipe": 215,
+      "load_10wheel_pipes": 60,
+      "load_trailer_pipes": 120,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 268,
+          "incvat": 287
+        },
+        {
+          "percent": 6,
+          "exvat": 259,
+          "incvat": 277
+        },
+        {
+          "percent": 9,
+          "exvat": 251,
+          "incvat": 269
+        },
+        {
+          "percent": 12,
+          "exvat": 243,
+          "incvat": 260
+        },
+        {
+          "percent": 15,
+          "exvat": 235,
+          "incvat": 251
+        },
+        {
+          "percent": 18,
+          "exvat": 226,
+          "incvat": 242
+        },
+        {
+          "percent": 21,
+          "exvat": 218,
+          "incvat": 233
+        },
+        {
+          "percent": 24,
+          "exvat": 210,
+          "incvat": 225
+        },
+        {
+          "percent": 27,
+          "exvat": 201,
+          "incvat": 215
+        },
+        {
+          "percent": 30,
+          "exvat": 193,
+          "incvat": 207
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "50x100",
+      "list_exvat": 425.5,
+      "list_incvat": 455.29,
+      "weight_kg_per_pipe": 315,
+      "load_10wheel_pipes": 40,
+      "load_trailer_pipes": 80,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 413,
+          "incvat": 442
+        },
+        {
+          "percent": 6,
+          "exvat": 400,
+          "incvat": 428
+        },
+        {
+          "percent": 9,
+          "exvat": 387,
+          "incvat": 414
+        },
+        {
+          "percent": 12,
+          "exvat": 374,
+          "incvat": 400
+        },
+        {
+          "percent": 15,
+          "exvat": 362,
+          "incvat": 387
+        },
+        {
+          "percent": 18,
+          "exvat": 349,
+          "incvat": 373
+        },
+        {
+          "percent": 21,
+          "exvat": 336,
+          "incvat": 360
+        },
+        {
+          "percent": 24,
+          "exvat": 323,
+          "incvat": 346
+        },
+        {
+          "percent": 27,
+          "exvat": 311,
+          "incvat": 333
+        },
+        {
+          "percent": 30,
+          "exvat": 298,
+          "incvat": 319
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "60x100",
+      "list_exvat": 451.0,
+      "list_incvat": 482.57,
+      "weight_kg_per_pipe": 400,
+      "load_10wheel_pipes": 30,
+      "load_trailer_pipes": 60,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 437,
+          "incvat": 468
+        },
+        {
+          "percent": 6,
+          "exvat": 424,
+          "incvat": 454
+        },
+        {
+          "percent": 9,
+          "exvat": 410,
+          "incvat": 439
+        },
+        {
+          "percent": 12,
+          "exvat": 397,
+          "incvat": 425
+        },
+        {
+          "percent": 15,
+          "exvat": 383,
+          "incvat": 410
+        },
+        {
+          "percent": 18,
+          "exvat": 370,
+          "incvat": 396
+        },
+        {
+          "percent": 21,
+          "exvat": 356,
+          "incvat": 381
+        },
+        {
+          "percent": 24,
+          "exvat": 343,
+          "incvat": 367
+        },
+        {
+          "percent": 27,
+          "exvat": 329,
+          "incvat": 352
+        },
+        {
+          "percent": 30,
+          "exvat": 316,
+          "incvat": 338
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "80x100",
+      "list_exvat": 792.0,
+      "list_incvat": 847.44,
+      "weight_kg_per_pipe": 660,
+      "load_10wheel_pipes": 20,
+      "load_trailer_pipes": 40,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 768,
+          "incvat": 822
+        },
+        {
+          "percent": 6,
+          "exvat": 744,
+          "incvat": 796
+        },
+        {
+          "percent": 9,
+          "exvat": 721,
+          "incvat": 771
+        },
+        {
+          "percent": 12,
+          "exvat": 697,
+          "incvat": 746
+        },
+        {
+          "percent": 15,
+          "exvat": 673,
+          "incvat": 720
+        },
+        {
+          "percent": 18,
+          "exvat": 649,
+          "incvat": 694
+        },
+        {
+          "percent": 21,
+          "exvat": 626,
+          "incvat": 670
+        },
+        {
+          "percent": 24,
+          "exvat": 602,
+          "incvat": 644
+        },
+        {
+          "percent": 27,
+          "exvat": 578,
+          "incvat": 618
+        },
+        {
+          "percent": 30,
+          "exvat": 554,
+          "incvat": 593
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "100x100",
+      "list_exvat": 1078.0,
+      "list_incvat": 1153.46,
+      "weight_kg_per_pipe": 940,
+      "load_10wheel_pipes": 15,
+      "load_trailer_pipes": 32,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1046,
+          "incvat": 1119
+        },
+        {
+          "percent": 6,
+          "exvat": 1013,
+          "incvat": 1084
+        },
+        {
+          "percent": 9,
+          "exvat": 981,
+          "incvat": 1050
+        },
+        {
+          "percent": 12,
+          "exvat": 949,
+          "incvat": 1015
+        },
+        {
+          "percent": 15,
+          "exvat": 916,
+          "incvat": 980
+        },
+        {
+          "percent": 18,
+          "exvat": 884,
+          "incvat": 946
+        },
+        {
+          "percent": 21,
+          "exvat": 852,
+          "incvat": 912
+        },
+        {
+          "percent": 24,
+          "exvat": 819,
+          "incvat": 876
+        },
+        {
+          "percent": 27,
+          "exvat": 787,
+          "incvat": 842
+        },
+        {
+          "percent": 30,
+          "exvat": 755,
+          "incvat": 808
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "120x100",
+      "list_exvat": 1870.0,
+      "list_incvat": 2000.9,
+      "weight_kg_per_pipe": 1430,
+      "load_10wheel_pipes": 10,
+      "load_trailer_pipes": 20,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1814,
+          "incvat": 1941
+        },
+        {
+          "percent": 6,
+          "exvat": 1758,
+          "incvat": 1881
+        },
+        {
+          "percent": 9,
+          "exvat": 1702,
+          "incvat": 1821
+        },
+        {
+          "percent": 12,
+          "exvat": 1646,
+          "incvat": 1761
+        },
+        {
+          "percent": 15,
+          "exvat": 1590,
+          "incvat": 1701
+        },
+        {
+          "percent": 18,
+          "exvat": 1533,
+          "incvat": 1640
+        },
+        {
+          "percent": 21,
+          "exvat": 1477,
+          "incvat": 1580
+        },
+        {
+          "percent": 24,
+          "exvat": 1421,
+          "incvat": 1520
+        },
+        {
+          "percent": 27,
+          "exvat": 1365,
+          "incvat": 1461
+        },
+        {
+          "percent": 30,
+          "exvat": 1309,
+          "incvat": 1401
+        }
+      ]
+    },
+    {
+      "type": "คสล.(ECO) เหล็ก 3 วง",
+      "size_cm": "150x100",
+      "list_exvat": 2750.0,
+      "list_incvat": 2942.5,
+      "weight_kg_per_pipe": 1950,
+      "load_10wheel_pipes": 6,
+      "load_trailer_pipes": 13,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2668,
+          "incvat": 2855
+        },
+        {
+          "percent": 6,
+          "exvat": 2585,
+          "incvat": 2766
+        },
+        {
+          "percent": 9,
+          "exvat": 2503,
+          "incvat": 2678
+        },
+        {
+          "percent": 12,
+          "exvat": 2420,
+          "incvat": 2589
+        },
+        {
+          "percent": 15,
+          "exvat": 2338,
+          "incvat": 2502
+        },
+        {
+          "percent": 18,
+          "exvat": 2255,
+          "incvat": 2413
+        },
+        {
+          "percent": 21,
+          "exvat": 2173,
+          "incvat": 2325
+        },
+        {
+          "percent": 24,
+          "exvat": 2090,
+          "incvat": 2236
+        },
+        {
+          "percent": 27,
+          "exvat": 2008,
+          "incvat": 2149
+        },
+        {
+          "percent": 30,
+          "exvat": 1925,
+          "incvat": 2060
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "30x100",
+      "list_exvat": 218.5,
+      "list_incvat": 233.8,
+      "weight_kg_per_pipe": 140,
+      "load_10wheel_pipes": 90,
+      "load_trailer_pipes": 200,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 212,
+          "incvat": 227
+        },
+        {
+          "percent": 6,
+          "exvat": 205,
+          "incvat": 219
+        },
+        {
+          "percent": 9,
+          "exvat": 199,
+          "incvat": 213
+        },
+        {
+          "percent": 12,
+          "exvat": 192,
+          "incvat": 205
+        },
+        {
+          "percent": 15,
+          "exvat": 186,
+          "incvat": 199
+        },
+        {
+          "percent": 18,
+          "exvat": 179,
+          "incvat": 192
+        },
+        {
+          "percent": 21,
+          "exvat": 173,
+          "incvat": 185
+        },
+        {
+          "percent": 24,
+          "exvat": 166,
+          "incvat": 178
+        },
+        {
+          "percent": 27,
+          "exvat": 160,
+          "incvat": 171
+        },
+        {
+          "percent": 30,
+          "exvat": 153,
+          "incvat": 164
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "40x100",
+      "list_exvat": 299.0,
+      "list_incvat": 319.93,
+      "weight_kg_per_pipe": 215,
+      "load_10wheel_pipes": 60,
+      "load_trailer_pipes": 120,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 290,
+          "incvat": 310
+        },
+        {
+          "percent": 6,
+          "exvat": 281,
+          "incvat": 301
+        },
+        {
+          "percent": 9,
+          "exvat": 272,
+          "incvat": 291
+        },
+        {
+          "percent": 12,
+          "exvat": 263,
+          "incvat": 281
+        },
+        {
+          "percent": 15,
+          "exvat": 254,
+          "incvat": 272
+        },
+        {
+          "percent": 18,
+          "exvat": 245,
+          "incvat": 262
+        },
+        {
+          "percent": 21,
+          "exvat": 236,
+          "incvat": 253
+        },
+        {
+          "percent": 24,
+          "exvat": 227,
+          "incvat": 243
+        },
+        {
+          "percent": 27,
+          "exvat": 218,
+          "incvat": 233
+        },
+        {
+          "percent": 30,
+          "exvat": 209,
+          "incvat": 224
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "50x100",
+      "list_exvat": 460.0,
+      "list_incvat": 492.2,
+      "weight_kg_per_pipe": 315,
+      "load_10wheel_pipes": 40,
+      "load_trailer_pipes": 80,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 446,
+          "incvat": 477
+        },
+        {
+          "percent": 6,
+          "exvat": 432,
+          "incvat": 462
+        },
+        {
+          "percent": 9,
+          "exvat": 419,
+          "incvat": 448
+        },
+        {
+          "percent": 12,
+          "exvat": 405,
+          "incvat": 433
+        },
+        {
+          "percent": 15,
+          "exvat": 391,
+          "incvat": 418
+        },
+        {
+          "percent": 18,
+          "exvat": 377,
+          "incvat": 403
+        },
+        {
+          "percent": 21,
+          "exvat": 363,
+          "incvat": 388
+        },
+        {
+          "percent": 24,
+          "exvat": 350,
+          "incvat": 375
+        },
+        {
+          "percent": 27,
+          "exvat": 336,
+          "incvat": 360
+        },
+        {
+          "percent": 30,
+          "exvat": 322,
+          "incvat": 345
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "60x100",
+      "list_exvat": 511.5,
+      "list_incvat": 547.31,
+      "weight_kg_per_pipe": 400,
+      "load_10wheel_pipes": 30,
+      "load_trailer_pipes": 60,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 496,
+          "incvat": 531
+        },
+        {
+          "percent": 6,
+          "exvat": 481,
+          "incvat": 515
+        },
+        {
+          "percent": 9,
+          "exvat": 465,
+          "incvat": 498
+        },
+        {
+          "percent": 12,
+          "exvat": 450,
+          "incvat": 482
+        },
+        {
+          "percent": 15,
+          "exvat": 435,
+          "incvat": 465
+        },
+        {
+          "percent": 18,
+          "exvat": 419,
+          "incvat": 448
+        },
+        {
+          "percent": 21,
+          "exvat": 404,
+          "incvat": 432
+        },
+        {
+          "percent": 24,
+          "exvat": 389,
+          "incvat": 416
+        },
+        {
+          "percent": 27,
+          "exvat": 373,
+          "incvat": 399
+        },
+        {
+          "percent": 30,
+          "exvat": 358,
+          "incvat": 383
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "80x100",
+      "list_exvat": 858.0,
+      "list_incvat": 918.06,
+      "weight_kg_per_pipe": 660,
+      "load_10wheel_pipes": 20,
+      "load_trailer_pipes": 40,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 832,
+          "incvat": 890
+        },
+        {
+          "percent": 6,
+          "exvat": 807,
+          "incvat": 863
+        },
+        {
+          "percent": 9,
+          "exvat": 781,
+          "incvat": 836
+        },
+        {
+          "percent": 12,
+          "exvat": 755,
+          "incvat": 808
+        },
+        {
+          "percent": 15,
+          "exvat": 729,
+          "incvat": 780
+        },
+        {
+          "percent": 18,
+          "exvat": 704,
+          "incvat": 753
+        },
+        {
+          "percent": 21,
+          "exvat": 678,
+          "incvat": 725
+        },
+        {
+          "percent": 24,
+          "exvat": 652,
+          "incvat": 698
+        },
+        {
+          "percent": 27,
+          "exvat": 626,
+          "incvat": 670
+        },
+        {
+          "percent": 30,
+          "exvat": 601,
+          "incvat": 643
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "100x100",
+      "list_exvat": 1210.0,
+      "list_incvat": 1294.7,
+      "weight_kg_per_pipe": 940,
+      "load_10wheel_pipes": 15,
+      "load_trailer_pipes": 32,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1174,
+          "incvat": 1256
+        },
+        {
+          "percent": 6,
+          "exvat": 1137,
+          "incvat": 1217
+        },
+        {
+          "percent": 9,
+          "exvat": 1101,
+          "incvat": 1178
+        },
+        {
+          "percent": 12,
+          "exvat": 1065,
+          "incvat": 1140
+        },
+        {
+          "percent": 15,
+          "exvat": 1029,
+          "incvat": 1101
+        },
+        {
+          "percent": 18,
+          "exvat": 992,
+          "incvat": 1061
+        },
+        {
+          "percent": 21,
+          "exvat": 956,
+          "incvat": 1023
+        },
+        {
+          "percent": 24,
+          "exvat": 920,
+          "incvat": 984
+        },
+        {
+          "percent": 27,
+          "exvat": 883,
+          "incvat": 945
+        },
+        {
+          "percent": 30,
+          "exvat": 847,
+          "incvat": 906
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "120x100",
+      "list_exvat": 2035.0,
+      "list_incvat": 2177.45,
+      "weight_kg_per_pipe": 1430,
+      "load_10wheel_pipes": 10,
+      "load_trailer_pipes": 20,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1974,
+          "incvat": 2112
+        },
+        {
+          "percent": 6,
+          "exvat": 1913,
+          "incvat": 2047
+        },
+        {
+          "percent": 9,
+          "exvat": 1852,
+          "incvat": 1982
+        },
+        {
+          "percent": 12,
+          "exvat": 1791,
+          "incvat": 1916
+        },
+        {
+          "percent": 15,
+          "exvat": 1730,
+          "incvat": 1851
+        },
+        {
+          "percent": 18,
+          "exvat": 1669,
+          "incvat": 1786
+        },
+        {
+          "percent": 21,
+          "exvat": 1608,
+          "incvat": 1721
+        },
+        {
+          "percent": 24,
+          "exvat": 1547,
+          "incvat": 1655
+        },
+        {
+          "percent": 27,
+          "exvat": 1486,
+          "incvat": 1590
+        },
+        {
+          "percent": 30,
+          "exvat": 1425,
+          "incvat": 1525
+        }
+      ]
+    },
+    {
+      "type": "คสล.",
+      "size_cm": "150x100",
+      "list_exvat": 2805.0,
+      "list_incvat": 3001.35,
+      "weight_kg_per_pipe": 1950,
+      "load_10wheel_pipes": 6,
+      "load_trailer_pipes": 13,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2721,
+          "incvat": 2911
+        },
+        {
+          "percent": 6,
+          "exvat": 2637,
+          "incvat": 2822
+        },
+        {
+          "percent": 9,
+          "exvat": 2553,
+          "incvat": 2732
+        },
+        {
+          "percent": 12,
+          "exvat": 2468,
+          "incvat": 2641
+        },
+        {
+          "percent": 15,
+          "exvat": 2384,
+          "incvat": 2551
+        },
+        {
+          "percent": 18,
+          "exvat": 2300,
+          "incvat": 2461
+        },
+        {
+          "percent": 21,
+          "exvat": 2216,
+          "incvat": 2371
+        },
+        {
+          "percent": 24,
+          "exvat": 2132,
+          "incvat": 2281
+        },
+        {
+          "percent": 27,
+          "exvat": 2048,
+          "incvat": 2191
+        },
+        {
+          "percent": 30,
+          "exvat": 1964,
+          "incvat": 2101
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "30x100",
+      "list_exvat": 356.5,
+      "list_incvat": 381.46,
+      "weight_kg_per_pipe": 140,
+      "load_10wheel_pipes": 90,
+      "load_trailer_pipes": 200,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 346,
+          "incvat": 370
+        },
+        {
+          "percent": 6,
+          "exvat": 335,
+          "incvat": 358
+        },
+        {
+          "percent": 9,
+          "exvat": 324,
+          "incvat": 347
+        },
+        {
+          "percent": 12,
+          "exvat": 314,
+          "incvat": 336
+        },
+        {
+          "percent": 15,
+          "exvat": 303,
+          "incvat": 324
+        },
+        {
+          "percent": 18,
+          "exvat": 292,
+          "incvat": 312
+        },
+        {
+          "percent": 21,
+          "exvat": 282,
+          "incvat": 302
+        },
+        {
+          "percent": 24,
+          "exvat": 271,
+          "incvat": 290
+        },
+        {
+          "percent": 27,
+          "exvat": 260,
+          "incvat": 278
+        },
+        {
+          "percent": 30,
+          "exvat": 250,
+          "incvat": 268
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "40x100",
+      "list_exvat": 483.0,
+      "list_incvat": 516.81,
+      "weight_kg_per_pipe": 215,
+      "load_10wheel_pipes": 60,
+      "load_trailer_pipes": 120,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 469,
+          "incvat": 502
+        },
+        {
+          "percent": 6,
+          "exvat": 454,
+          "incvat": 486
+        },
+        {
+          "percent": 9,
+          "exvat": 440,
+          "incvat": 471
+        },
+        {
+          "percent": 12,
+          "exvat": 425,
+          "incvat": 455
+        },
+        {
+          "percent": 15,
+          "exvat": 411,
+          "incvat": 440
+        },
+        {
+          "percent": 18,
+          "exvat": 396,
+          "incvat": 424
+        },
+        {
+          "percent": 21,
+          "exvat": 382,
+          "incvat": 409
+        },
+        {
+          "percent": 24,
+          "exvat": 367,
+          "incvat": 393
+        },
+        {
+          "percent": 27,
+          "exvat": 353,
+          "incvat": 378
+        },
+        {
+          "percent": 30,
+          "exvat": 338,
+          "incvat": 362
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "50x100",
+      "list_exvat": 563.5,
+      "list_incvat": 602.95,
+      "weight_kg_per_pipe": 315,
+      "load_10wheel_pipes": 40,
+      "load_trailer_pipes": 80,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 547,
+          "incvat": 585
+        },
+        {
+          "percent": 6,
+          "exvat": 530,
+          "incvat": 567
+        },
+        {
+          "percent": 9,
+          "exvat": 513,
+          "incvat": 549
+        },
+        {
+          "percent": 12,
+          "exvat": 496,
+          "incvat": 531
+        },
+        {
+          "percent": 15,
+          "exvat": 479,
+          "incvat": 513
+        },
+        {
+          "percent": 18,
+          "exvat": 462,
+          "incvat": 494
+        },
+        {
+          "percent": 21,
+          "exvat": 445,
+          "incvat": 476
+        },
+        {
+          "percent": 24,
+          "exvat": 428,
+          "incvat": 458
+        },
+        {
+          "percent": 27,
+          "exvat": 411,
+          "incvat": 440
+        },
+        {
+          "percent": 30,
+          "exvat": 394,
+          "incvat": 422
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "60x100",
+      "list_exvat": 693.0,
+      "list_incvat": 741.51,
+      "weight_kg_per_pipe": 400,
+      "load_10wheel_pipes": 30,
+      "load_trailer_pipes": 60,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 672,
+          "incvat": 719
+        },
+        {
+          "percent": 6,
+          "exvat": 651,
+          "incvat": 697
+        },
+        {
+          "percent": 9,
+          "exvat": 631,
+          "incvat": 675
+        },
+        {
+          "percent": 12,
+          "exvat": 610,
+          "incvat": 653
+        },
+        {
+          "percent": 15,
+          "exvat": 589,
+          "incvat": 630
+        },
+        {
+          "percent": 18,
+          "exvat": 568,
+          "incvat": 608
+        },
+        {
+          "percent": 21,
+          "exvat": 547,
+          "incvat": 585
+        },
+        {
+          "percent": 24,
+          "exvat": 527,
+          "incvat": 564
+        },
+        {
+          "percent": 27,
+          "exvat": 506,
+          "incvat": 541
+        },
+        {
+          "percent": 30,
+          "exvat": 485,
+          "incvat": 519
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "80x100",
+      "list_exvat": 1320.0,
+      "list_incvat": 1412.4,
+      "weight_kg_per_pipe": 660,
+      "load_10wheel_pipes": 20,
+      "load_trailer_pipes": 40,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1280,
+          "incvat": 1370
+        },
+        {
+          "percent": 6,
+          "exvat": 1241,
+          "incvat": 1328
+        },
+        {
+          "percent": 9,
+          "exvat": 1201,
+          "incvat": 1285
+        },
+        {
+          "percent": 12,
+          "exvat": 1162,
+          "incvat": 1243
+        },
+        {
+          "percent": 15,
+          "exvat": 1122,
+          "incvat": 1201
+        },
+        {
+          "percent": 18,
+          "exvat": 1082,
+          "incvat": 1158
+        },
+        {
+          "percent": 21,
+          "exvat": 1043,
+          "incvat": 1116
+        },
+        {
+          "percent": 24,
+          "exvat": 1003,
+          "incvat": 1073
+        },
+        {
+          "percent": 27,
+          "exvat": 964,
+          "incvat": 1031
+        },
+        {
+          "percent": 30,
+          "exvat": 924,
+          "incvat": 989
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "100x100",
+      "list_exvat": 2200.0,
+      "list_incvat": 2354.0,
+      "weight_kg_per_pipe": 940,
+      "load_10wheel_pipes": 15,
+      "load_trailer_pipes": 32,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2134,
+          "incvat": 2283
+        },
+        {
+          "percent": 6,
+          "exvat": 2068,
+          "incvat": 2213
+        },
+        {
+          "percent": 9,
+          "exvat": 2002,
+          "incvat": 2142
+        },
+        {
+          "percent": 12,
+          "exvat": 1936,
+          "incvat": 2072
+        },
+        {
+          "percent": 15,
+          "exvat": 1870,
+          "incvat": 2001
+        },
+        {
+          "percent": 18,
+          "exvat": 1804,
+          "incvat": 1930
+        },
+        {
+          "percent": 21,
+          "exvat": 1738,
+          "incvat": 1860
+        },
+        {
+          "percent": 24,
+          "exvat": 1672,
+          "incvat": 1789
+        },
+        {
+          "percent": 27,
+          "exvat": 1606,
+          "incvat": 1718
+        },
+        {
+          "percent": 30,
+          "exvat": 1540,
+          "incvat": 1648
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "120x100",
+      "list_exvat": 2640.0,
+      "list_incvat": 2824.8,
+      "weight_kg_per_pipe": 1430,
+      "load_10wheel_pipes": 10,
+      "load_trailer_pipes": 20,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2561,
+          "incvat": 2740
+        },
+        {
+          "percent": 6,
+          "exvat": 2482,
+          "incvat": 2656
+        },
+        {
+          "percent": 9,
+          "exvat": 2402,
+          "incvat": 2570
+        },
+        {
+          "percent": 12,
+          "exvat": 2323,
+          "incvat": 2486
+        },
+        {
+          "percent": 15,
+          "exvat": 2244,
+          "incvat": 2401
+        },
+        {
+          "percent": 18,
+          "exvat": 2165,
+          "incvat": 2317
+        },
+        {
+          "percent": 21,
+          "exvat": 2086,
+          "incvat": 2232
+        },
+        {
+          "percent": 24,
+          "exvat": 2006,
+          "incvat": 2146
+        },
+        {
+          "percent": 27,
+          "exvat": 1927,
+          "incvat": 2062
+        },
+        {
+          "percent": 30,
+          "exvat": 1848,
+          "incvat": 1977
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 3",
+      "size_cm": "150x100",
+      "list_exvat": 4180.0,
+      "list_incvat": 4472.6,
+      "weight_kg_per_pipe": 1950,
+      "load_10wheel_pipes": 6,
+      "load_trailer_pipes": 13,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 4055,
+          "incvat": 4339
+        },
+        {
+          "percent": 6,
+          "exvat": 3929,
+          "incvat": 4204
+        },
+        {
+          "percent": 9,
+          "exvat": 3804,
+          "incvat": 4070
+        },
+        {
+          "percent": 12,
+          "exvat": 3678,
+          "incvat": 3935
+        },
+        {
+          "percent": 15,
+          "exvat": 3553,
+          "incvat": 3802
+        },
+        {
+          "percent": 18,
+          "exvat": 3428,
+          "incvat": 3668
+        },
+        {
+          "percent": 21,
+          "exvat": 3302,
+          "incvat": 3533
+        },
+        {
+          "percent": 24,
+          "exvat": 3177,
+          "incvat": 3399
+        },
+        {
+          "percent": 27,
+          "exvat": 3051,
+          "incvat": 3265
+        },
+        {
+          "percent": 30,
+          "exvat": 2926,
+          "incvat": 3131
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "30x100",
+      "list_exvat": 379.5,
+      "list_incvat": 406.07,
+      "weight_kg_per_pipe": 140,
+      "load_10wheel_pipes": 90,
+      "load_trailer_pipes": 200,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 368,
+          "incvat": 394
+        },
+        {
+          "percent": 6,
+          "exvat": 357,
+          "incvat": 382
+        },
+        {
+          "percent": 9,
+          "exvat": 345,
+          "incvat": 369
+        },
+        {
+          "percent": 12,
+          "exvat": 334,
+          "incvat": 357
+        },
+        {
+          "percent": 15,
+          "exvat": 323,
+          "incvat": 346
+        },
+        {
+          "percent": 18,
+          "exvat": 311,
+          "incvat": 333
+        },
+        {
+          "percent": 21,
+          "exvat": 300,
+          "incvat": 321
+        },
+        {
+          "percent": 24,
+          "exvat": 288,
+          "incvat": 308
+        },
+        {
+          "percent": 27,
+          "exvat": 277,
+          "incvat": 296
+        },
+        {
+          "percent": 30,
+          "exvat": 266,
+          "incvat": 285
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "40x100",
+      "list_exvat": 575.0,
+      "list_incvat": 615.25,
+      "weight_kg_per_pipe": 215,
+      "load_10wheel_pipes": 60,
+      "load_trailer_pipes": 120,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 558,
+          "incvat": 597
+        },
+        {
+          "percent": 6,
+          "exvat": 541,
+          "incvat": 579
+        },
+        {
+          "percent": 9,
+          "exvat": 523,
+          "incvat": 560
+        },
+        {
+          "percent": 12,
+          "exvat": 506,
+          "incvat": 541
+        },
+        {
+          "percent": 15,
+          "exvat": 489,
+          "incvat": 523
+        },
+        {
+          "percent": 18,
+          "exvat": 472,
+          "incvat": 505
+        },
+        {
+          "percent": 21,
+          "exvat": 454,
+          "incvat": 486
+        },
+        {
+          "percent": 24,
+          "exvat": 437,
+          "incvat": 468
+        },
+        {
+          "percent": 27,
+          "exvat": 420,
+          "incvat": 449
+        },
+        {
+          "percent": 30,
+          "exvat": 403,
+          "incvat": 431
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "50x100",
+      "list_exvat": 828.0,
+      "list_incvat": 885.96,
+      "weight_kg_per_pipe": 315,
+      "load_10wheel_pipes": 40,
+      "load_trailer_pipes": 80,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 803,
+          "incvat": 859
+        },
+        {
+          "percent": 6,
+          "exvat": 778,
+          "incvat": 832
+        },
+        {
+          "percent": 9,
+          "exvat": 753,
+          "incvat": 806
+        },
+        {
+          "percent": 12,
+          "exvat": 729,
+          "incvat": 780
+        },
+        {
+          "percent": 15,
+          "exvat": 704,
+          "incvat": 753
+        },
+        {
+          "percent": 18,
+          "exvat": 679,
+          "incvat": 727
+        },
+        {
+          "percent": 21,
+          "exvat": 654,
+          "incvat": 700
+        },
+        {
+          "percent": 24,
+          "exvat": 629,
+          "incvat": 673
+        },
+        {
+          "percent": 27,
+          "exvat": 604,
+          "incvat": 646
+        },
+        {
+          "percent": 30,
+          "exvat": 580,
+          "incvat": 621
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "60x100",
+      "list_exvat": 990.0,
+      "list_incvat": 1059.3,
+      "weight_kg_per_pipe": 400,
+      "load_10wheel_pipes": 30,
+      "load_trailer_pipes": 60,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 960,
+          "incvat": 1027
+        },
+        {
+          "percent": 6,
+          "exvat": 931,
+          "incvat": 996
+        },
+        {
+          "percent": 9,
+          "exvat": 901,
+          "incvat": 964
+        },
+        {
+          "percent": 12,
+          "exvat": 871,
+          "incvat": 932
+        },
+        {
+          "percent": 15,
+          "exvat": 842,
+          "incvat": 901
+        },
+        {
+          "percent": 18,
+          "exvat": 812,
+          "incvat": 869
+        },
+        {
+          "percent": 21,
+          "exvat": 782,
+          "incvat": 837
+        },
+        {
+          "percent": 24,
+          "exvat": 752,
+          "incvat": 805
+        },
+        {
+          "percent": 27,
+          "exvat": 723,
+          "incvat": 774
+        },
+        {
+          "percent": 30,
+          "exvat": 693,
+          "incvat": 742
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "80x100",
+      "list_exvat": 2035.0,
+      "list_incvat": 2177.45,
+      "weight_kg_per_pipe": 660,
+      "load_10wheel_pipes": 20,
+      "load_trailer_pipes": 40,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 1974,
+          "incvat": 2112
+        },
+        {
+          "percent": 6,
+          "exvat": 1913,
+          "incvat": 2047
+        },
+        {
+          "percent": 9,
+          "exvat": 1852,
+          "incvat": 1982
+        },
+        {
+          "percent": 12,
+          "exvat": 1791,
+          "incvat": 1916
+        },
+        {
+          "percent": 15,
+          "exvat": 1730,
+          "incvat": 1851
+        },
+        {
+          "percent": 18,
+          "exvat": 1669,
+          "incvat": 1786
+        },
+        {
+          "percent": 21,
+          "exvat": 1608,
+          "incvat": 1721
+        },
+        {
+          "percent": 24,
+          "exvat": 1547,
+          "incvat": 1655
+        },
+        {
+          "percent": 27,
+          "exvat": 1486,
+          "incvat": 1590
+        },
+        {
+          "percent": 30,
+          "exvat": 1425,
+          "incvat": 1525
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "100x100",
+      "list_exvat": 2750.0,
+      "list_incvat": 2942.5,
+      "weight_kg_per_pipe": 940,
+      "load_10wheel_pipes": 15,
+      "load_trailer_pipes": 32,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 2668,
+          "incvat": 2855
+        },
+        {
+          "percent": 6,
+          "exvat": 2585,
+          "incvat": 2766
+        },
+        {
+          "percent": 9,
+          "exvat": 2503,
+          "incvat": 2678
+        },
+        {
+          "percent": 12,
+          "exvat": 2420,
+          "incvat": 2589
+        },
+        {
+          "percent": 15,
+          "exvat": 2338,
+          "incvat": 2502
+        },
+        {
+          "percent": 18,
+          "exvat": 2255,
+          "incvat": 2413
+        },
+        {
+          "percent": 21,
+          "exvat": 2173,
+          "incvat": 2325
+        },
+        {
+          "percent": 24,
+          "exvat": 2090,
+          "incvat": 2236
+        },
+        {
+          "percent": 27,
+          "exvat": 2008,
+          "incvat": 2149
+        },
+        {
+          "percent": 30,
+          "exvat": 1925,
+          "incvat": 2060
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "120x100",
+      "list_exvat": 3850.0,
+      "list_incvat": 4119.5,
+      "weight_kg_per_pipe": 1430,
+      "load_10wheel_pipes": 10,
+      "load_trailer_pipes": 20,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 3735,
+          "incvat": 3996
+        },
+        {
+          "percent": 6,
+          "exvat": 3619,
+          "incvat": 3872
+        },
+        {
+          "percent": 9,
+          "exvat": 3504,
+          "incvat": 3749
+        },
+        {
+          "percent": 12,
+          "exvat": 3388,
+          "incvat": 3625
+        },
+        {
+          "percent": 15,
+          "exvat": 3273,
+          "incvat": 3502
+        },
+        {
+          "percent": 18,
+          "exvat": 3157,
+          "incvat": 3378
+        },
+        {
+          "percent": 21,
+          "exvat": 3042,
+          "incvat": 3255
+        },
+        {
+          "percent": 24,
+          "exvat": 2926,
+          "incvat": 3131
+        },
+        {
+          "percent": 27,
+          "exvat": 2811,
+          "incvat": 3008
+        },
+        {
+          "percent": 30,
+          "exvat": 2695,
+          "incvat": 2884
+        }
+      ]
+    },
+    {
+      "type": "มอก.ชั้น 2",
+      "size_cm": "150x100",
+      "list_exvat": 5610.0,
+      "list_incvat": 6002.7,
+      "weight_kg_per_pipe": 1950,
+      "load_10wheel_pipes": 6,
+      "load_trailer_pipes": 13,
+      "discounts": [
+        {
+          "percent": 3,
+          "exvat": 5442,
+          "incvat": 5823
+        },
+        {
+          "percent": 6,
+          "exvat": 5273,
+          "incvat": 5642
+        },
+        {
+          "percent": 9,
+          "exvat": 5105,
+          "incvat": 5462
+        },
+        {
+          "percent": 12,
+          "exvat": 4937,
+          "incvat": 5283
+        },
+        {
+          "percent": 15,
+          "exvat": 4769,
+          "incvat": 5103
+        },
+        {
+          "percent": 18,
+          "exvat": 4600,
+          "incvat": 4922
+        },
+        {
+          "percent": 21,
+          "exvat": 4432,
+          "incvat": 4742
+        },
+        {
+          "percent": 24,
+          "exvat": 4264,
+          "incvat": 4562
+        },
+        {
+          "percent": 27,
+          "exvat": 4095,
+          "incvat": 4382
+        },
+        {
+          "percent": 30,
+          "exvat": 3927,
+          "incvat": 4202
+        }
+      ]
+    }
+  ]
+}
