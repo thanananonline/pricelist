@@ -2485,6 +2485,33 @@ Dashboard.prototype.renderCalcSidebar = function () {
     '</div>';
 };
 
+// Shared type scale for the three "ผลิตภัณฑ์คอนกรีต" price tables (pipe,
+// plank, fence) so they read as one consistent design instead of three
+// separately-tuned tables. TABLE_FONT_COMPACT is the same scale sized down
+// for the fence table, which has more columns to fit in the same width.
+var TABLE_FONT = {
+  header: "13px",
+  label: "14.5px",
+  note: "13.5px",
+  input: "15.5px",
+  gap: "8px",
+  headerPad: "15px 16px",
+  rowPad: "17px 16px",
+  rowPadEdit: "13px 16px",
+  priceStyle: "font-family:Kanit; font-weight:700; font-size:18px; color:oklch(0.32 0.17 275);",
+};
+var TABLE_FONT_COMPACT = {
+  header: "12.5px",
+  label: "14px",
+  note: "13px",
+  input: "14.5px",
+  gap: "8px",
+  headerPad: "13px 12px",
+  rowPad: "15px 12px",
+  rowPadEdit: "11px 12px",
+  priceStyle: "font-family:Kanit; font-weight:700; font-size:16.5px; color:oklch(0.32 0.17 275);",
+};
+
 var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "pipe", label: "ท่อคอนกรีต" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
@@ -3026,25 +3053,25 @@ Dashboard.prototype.renderPipePage = function () {
 
   var isAdmin = this.isAdmin();
   var isEditingThis = s.pipeEditingId === active.id;
-  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:10px 11px; border-radius:7px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
 
   var colWidths = "100px 1fr 1fr 1fr";
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT.header + '; font-weight:700; color:oklch(0.45 0.01 60);">' +
     '<div>ส่วนลด</div><div>ราคา/ท่อน (ไม่รวม VAT)</div><div>ราคา/ท่อน (รวม VAT 7%)</div><div>เงื่อนไข</div>' +
   '</div>';
 
   var baseRow = isEditingThis ?
-    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPadEdit + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:' + TABLE_FONT.label + ';">ราคาตั้ง</div>' +
       '<input id="field-pipeEditListExvat" type="text" inputmode="decimal" data-bind="pipeEditListExvat" value="' + esc(s.pipeEditListExvat) + '" style="' + editInputStyle + '" />' +
       '<input id="field-pipeEditListIncvat" type="text" inputmode="decimal" data-bind="pipeEditListIncvat" value="' + esc(s.pipeEditListIncvat) + '" style="' + editInputStyle + '" />' +
-      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+      '<div style="font-size:' + TABLE_FONT.note + '; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
     '</div>' :
-    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
-      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:' + TABLE_FONT.label + ';">ราคาตั้ง</div>' +
+      '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-size:' + TABLE_FONT.note + '; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
     '</div>';
 
   var discountRows = isEditingThis ?
@@ -3052,22 +3079,22 @@ Dashboard.prototype.renderPipePage = function () {
       var group = pipeTierGroupFor(r.percent);
       var bg = group ? group.bg : "#fff";
       var color = group ? group.color : "oklch(0.4 0.01 60)";
-      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
-        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + r.percent + '%</div>' +
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPadEdit + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:' + TABLE_FONT.label + '; color:' + color + ';">' + r.percent + '%</div>' +
         '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="pipeEditRows" data-calc-field="exvat" value="' + esc(r.exvat) + '" style="' + editInputStyle + '" />' +
         '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="pipeEditRows" data-calc-field="incvat" value="' + esc(r.incvat) + '" style="' + editInputStyle + '" />' +
-        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+        '<div style="font-size:' + TABLE_FONT.note + '; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("") :
     active.discounts.filter(function (d) { return pipeIsVisiblePercent(d.percent); }).map(function (d) {
       var group = pipeTierGroupFor(d.percent);
       var bg = group ? group.bg : "#fff";
       var color = group ? group.color : "oklch(0.4 0.01 60)";
-      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
-        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
-        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:' + TABLE_FONT.label + '; color:' + color + ';">' + d.percent + '%</div>' +
+        '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-size:' + TABLE_FONT.note + '; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("");
 
@@ -3082,7 +3109,7 @@ Dashboard.prototype.renderPipePage = function () {
   ) : "";
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:20px;">' +
-    '<div style="min-width:480px;">' + tableHeader + baseRow + discountRows + '</div>' +
+    '<div style="min-width:560px;">' + tableHeader + baseRow + discountRows + '</div>' +
   '</div>';
 
   var legend = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
@@ -3181,25 +3208,25 @@ Dashboard.prototype.renderPlankPage = function () {
 
   var isAdmin = this.isAdmin();
   var isEditingThis = s.plankEditingId === active.id;
-  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:10px 11px; border-radius:7px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
 
   var colWidths = "100px 1fr 1fr 1fr";
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT.header + '; font-weight:700; color:oklch(0.45 0.01 60);">' +
     '<div>ส่วนลด</div><div>ราคา/ตร.ม. (ไม่รวม VAT)</div><div>ราคา/ตร.ม. (รวม VAT 7%)</div><div>เงื่อนไข</div>' +
   '</div>';
 
   var baseRow = isEditingThis ?
-    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPadEdit + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:' + TABLE_FONT.label + ';">ราคาตั้ง</div>' +
       '<input id="field-plankEditListExvat" type="text" inputmode="decimal" data-bind="plankEditListExvat" value="' + esc(s.plankEditListExvat) + '" style="' + editInputStyle + '" />' +
       '<input id="field-plankEditListIncvat" type="text" inputmode="decimal" data-bind="plankEditListIncvat" value="' + esc(s.plankEditListIncvat) + '" style="' + editInputStyle + '" />' +
-      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+      '<div style="font-size:' + TABLE_FONT.note + '; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
     '</div>' :
-    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
-      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:' + TABLE_FONT.label + ';">ราคาตั้ง</div>' +
+      '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-size:' + TABLE_FONT.note + '; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
     '</div>';
 
   var discountRows = isEditingThis ?
@@ -3207,22 +3234,22 @@ Dashboard.prototype.renderPlankPage = function () {
       var group = plankTierGroupFor(r.percent);
       var bg = group ? group.bg : "#fff";
       var color = group ? group.color : "oklch(0.4 0.01 60)";
-      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
-        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + r.percent + '%</div>' +
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPadEdit + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:' + TABLE_FONT.label + '; color:' + color + ';">' + r.percent + '%</div>' +
         '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="plankEditRows" data-calc-field="exvat" value="' + esc(r.exvat) + '" style="' + editInputStyle + '" />' +
         '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="plankEditRows" data-calc-field="incvat" value="' + esc(r.incvat) + '" style="' + editInputStyle + '" />' +
-        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+        '<div style="font-size:' + TABLE_FONT.note + '; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("") :
     active.discounts.map(function (d) {
       var group = plankTierGroupFor(d.percent);
       var bg = group ? group.bg : "#fff";
       var color = group ? group.color : "oklch(0.4 0.01 60)";
-      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
-        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
-        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT.gap + '; padding:' + TABLE_FONT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:' + TABLE_FONT.label + '; color:' + color + ';">' + d.percent + '%</div>' +
+        '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="' + TABLE_FONT.priceStyle + '">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-size:' + TABLE_FONT.note + '; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("");
 
@@ -3237,7 +3264,7 @@ Dashboard.prototype.renderPlankPage = function () {
   ) : "";
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:20px;">' +
-    '<div style="min-width:480px;">' + tableHeader + baseRow + discountRows + '</div>' +
+    '<div style="min-width:560px;">' + tableHeader + baseRow + discountRows + '</div>' +
   '</div>';
 
   var legend = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' +
@@ -3283,42 +3310,42 @@ Dashboard.prototype.renderFencePage = function () {
   }
 
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:6px 7px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12.5px; font-family:Kanit; width:100%; box-sizing:border-box;";
-  var colWidths = "minmax(0,1.8fr) 0.7fr 1fr 1fr 0.85fr 0.8fr 0.65fr" + (isAdmin ? " 62px" : "");
+  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(0,1.8fr) 0.7fr 1fr 1fr 0.85fr 0.8fr 0.65fr" + (isAdmin ? " 70px" : "");
 
   var headerCells = '<div>ประเภท</div><div>ความยาว</div><div>ราคา/ท่อน<br>(ไม่รวม VAT)</div><div>ราคา/ท่อน<br>(รวม VAT 7%)</div><div>น้ำหนัก/ท่อน</div><div>จำนวนแผ่น</div><div>ทับหลัง</div>' +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 12px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.fenceEditingId === p.id;
     var priceExvatCell = isEditingThis
       ? '<input id="field-fenceEditPriceExvat" type="text" inputmode="decimal" data-bind="fenceEditPriceExvat" value="' + esc(s.fenceEditPriceExvat) + '" style="' + editInputStyle + '" />'
-      : '<div style="font-family:Kanit; font-weight:700; font-size:13.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(p.priceExvat, 2) + '</div>';
+      : '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmtN(p.priceExvat, 2) + '</div>';
     var priceIncvatCell = isEditingThis
       ? '<input id="field-fenceEditPriceIncvat" type="text" inputmode="decimal" data-bind="fenceEditPriceIncvat" value="' + esc(s.fenceEditPriceIncvat) + '" style="' + editInputStyle + '" />'
-      : '<div style="font-family:Kanit; font-weight:700; font-size:13.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(p.priceIncvat, 2) + '</div>';
+      : '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmtN(p.priceIncvat, 2) + '</div>';
     var actionsCell = !isAdmin ? '' : (isEditingThis
       ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
-          '<button data-action="save-edit-fence" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:26px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:14px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
-          '<button data-action="cancel-edit-fence" title="ยกเลิก" style="min-height:26px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:14px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+          '<button data-action="save-edit-fence" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-fence" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
         '</div>'
-      : '<button data-action="start-edit-fence" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:14px; cursor:pointer; font-family:inherit;">✏️</button>');
+      : '<button data-action="start-edit-fence" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:9px 12px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.type) + '</div>' +
-      '<div style="font-size:12.5px;">' + (p.length != null ? esc(p.length) : "-") + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.type) + '</div>' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.length != null ? esc(p.length) : "-") + '</div>' +
       priceExvatCell +
       priceIncvatCell +
-      '<div style="font-size:13px;">' + (p.weightKgPerPiece != null ? fmt(p.weightKgPerPiece) + " กก." : "-") + '</div>' +
-      '<div style="font-size:13px;">' + (p.sheetsPerLength != null ? fmt(p.sheetsPerLength) + " แผ่น" : "-") + '</div>' +
-      '<div style="font-size:13px;">' + (p.copingPieces != null ? fmt(p.copingPieces) + " แผ่น" : "-") + '</div>' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.weightKgPerPiece != null ? fmt(p.weightKgPerPiece) + " กก." : "-") + '</div>' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.sheetsPerLength != null ? fmt(p.sheetsPerLength) + " แผ่น" : "-") + '</div>' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.copingPieces != null ? fmt(p.copingPieces) + " แผ่น" : "-") + '</div>' +
       (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
-    '<div style="min-width:520px;">' + tableHeader + rows + '</div>' +
+    '<div style="min-width:620px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
