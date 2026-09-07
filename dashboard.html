@@ -457,6 +457,10 @@ function Dashboard(root) {
     pipeProductsError: "",
     pipeSelectedType: "",
     pipeSelectedSize: "",
+    pipeEditingId: null,
+    pipeEditListExvat: "",
+    pipeEditListIncvat: "",
+    pipeEditRows: [],
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -624,6 +628,53 @@ Dashboard.prototype.loadPipeProducts = function () {
   });
 };
 
+Dashboard.prototype.startPipeEdit = function (id) {
+  var p = this.state.pipeProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    pipeEditingId: id,
+    pipeEditListExvat: String(p.listExvat),
+    pipeEditListIncvat: String(p.listIncvat),
+    pipeEditRows: p.discounts.map(function (d) {
+      return { percent: d.percent, exvat: String(d.exvat), incvat: String(d.incvat) };
+    }),
+  });
+};
+
+Dashboard.prototype.savePipeEdit = function (id) {
+  var s = this.state;
+  var listExvat = parseFloat(s.pipeEditListExvat);
+  var listIncvat = parseFloat(s.pipeEditListIncvat);
+  if (isNaN(listExvat) || isNaN(listIncvat)) {
+    this.showToast("กรุณากรอกราคาตั้งให้ถูกต้อง", "error");
+    return;
+  }
+  var discounts = [];
+  for (var i = 0; i < s.pipeEditRows.length; i++) {
+    var r = s.pipeEditRows[i];
+    var exvat = parseFloat(r.exvat);
+    var incvat = parseFloat(r.incvat);
+    if (isNaN(exvat) || isNaN(incvat)) {
+      this.showToast("กรุณากรอกราคาส่วนลดทุกช่องให้ถูกต้อง", "error");
+      return;
+    }
+    discounts.push({ percent: r.percent, exvat: exvat, incvat: incvat });
+  }
+  var self = this;
+  apiRequest("/pipe-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { listExvat: listExvat, listIncvat: listIncvat, discounts: discounts },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var pipeProducts = s2.pipeProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { pipeProducts: pipeProducts, pipeEditingId: null, pipeEditRows: [] };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -763,9 +814,12 @@ Dashboard.prototype.handleClick = function (e) {
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
     case "toggle-calc-sidebar": this.setState(function (s2) { return { calcSidebarCollapsed: !s2.calcSidebarCollapsed }; }); break;
     case "calc-set-type": this.setState({ page: "calc", calcProductType: d.type }); break;
-    case "pipe-set-type": this.setState({ pipeSelectedType: d.type, pipeSelectedSize: "" }); break;
-    case "pipe-set-size": this.setState({ pipeSelectedSize: d.size }); break;
+    case "pipe-set-type": this.setState({ pipeSelectedType: d.type, pipeSelectedSize: "", pipeEditingId: null }); break;
+    case "pipe-set-size": this.setState({ pipeSelectedSize: d.size, pipeEditingId: null }); break;
     case "reload-pipe-products": this.loadPipeProducts(); break;
+    case "start-edit-pipe": this.startPipeEdit(d.id); break;
+    case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
+    case "save-edit-pipe": this.savePipeEdit(d.id); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -879,7 +933,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
     var field = rowEl.dataset.calcField;
     var storeKey = rowEl.dataset.calcStore || "calcRows";
     this.state[storeKey][idx][field] = rowEl.value;
-    this._scheduleRender(this.renderCalcOnly);
+    this._scheduleRender(storeKey === "pipeEditRows" ? this.renderPipeOnly : this.renderCalcOnly);
     return;
   }
   var el = e.target.closest("[data-bind]");
@@ -904,7 +958,8 @@ Dashboard.prototype.handleFieldChange = function (e) {
     return;
   }
   var isCalcField = key.indexOf("calc") === 0;
-  this._scheduleRender(isCalcField ? this.renderCalcOnly : this.render);
+  var isPipeEditField = key.indexOf("pipeEdit") === 0;
+  this._scheduleRender(isCalcField ? this.renderCalcOnly : (isPipeEditField ? this.renderPipeOnly : this.render));
 };
 
 // Field selector shared by every fillable input/select across the app --
@@ -1673,6 +1728,32 @@ Dashboard.prototype.renderCalcOnly = function () {
   window.scrollTo(pageScrollX, pageScrollY);
 };
 
+// Same reasoning as renderCalcOnly: re-rendering the whole dashboard while
+// typing into a discount-tier price field would tear down and recreate the
+// focused input, jumping the cursor mid-keystroke.
+Dashboard.prototype.renderPipeOnly = function () {
+  var container = document.getElementById("pipe-container");
+  if (!container) { this.render(); return; }
+
+  var active = document.activeElement;
+  var focusId = active && active.id ? active.id : null;
+  var focusSelector = (!focusId && active && active.dataset && active.dataset.calcRow != null)
+    ? '[data-calc-row="' + active.dataset.calcRow + '"][data-calc-field="' + active.dataset.calcField + '"][data-calc-store="' + (active.dataset.calcStore || "calcRows") + '"]'
+    : null;
+  var selStart = active && "selectionStart" in active ? active.selectionStart : null;
+  var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
+
+  container.innerHTML = this.renderPipePage();
+
+  var el = focusId ? document.getElementById(focusId) : (focusSelector ? container.querySelector(focusSelector) : null);
+  if (el) {
+    el.focus();
+    if (selStart != null && "setSelectionRange" in el) {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
+    }
+  }
+};
+
 Dashboard.prototype.renderSessionCheck = function () {
   return '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:oklch(0.26 0.13 275); color:#fff; font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; font-size:14px;">กำลังตรวจสอบการเข้าสู่ระบบ...</div>';
 };
@@ -1840,7 +1921,7 @@ Dashboard.prototype.renderDashboard = function () {
 
   var pageContent;
   if (page === "price") pageContent = this.renderPricePage();
-  else if (page === "pipe") pageContent = this.renderPipePage();
+  else if (page === "pipe") pageContent = '<div id="pipe-container">' + this.renderPipePage() + '</div>';
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
@@ -2737,29 +2818,62 @@ Dashboard.prototype.renderPipePage = function () {
     infoItem("บรรทุกได้ (เทรลเลอร์)", active.loadTrailerPipes != null ? fmt(active.loadTrailerPipes) + " ท่อน/เที่ยว" : "-") +
   '</div>';
 
+  var isAdmin = this.isAdmin();
+  var isEditingThis = s.pipeEditingId === active.id;
+  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+
   var colWidths = "100px 1fr 1fr 1fr";
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:oklch(0.96 0.006 70); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
     '<div>ส่วนลด</div><div>ราคา/ท่อน (ไม่รวม VAT)</div><div>ราคา/ท่อน (รวม VAT 7%)</div><div>เงื่อนไข</div>' +
   '</div>';
 
-  var baseRow = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-    '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
-    '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
-    '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
-    '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
-  '</div>';
-
-  var discountRows = active.discounts.map(function (d) {
-    var group = pipeTierGroupFor(d.percent);
-    var bg = group ? group.bg : "#fff";
-    var color = group ? group.color : "oklch(0.4 0.01 60)";
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
-      '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
-      '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+  var baseRow = isEditingThis ?
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+      '<input id="field-pipeEditListExvat" type="text" inputmode="decimal" data-bind="pipeEditListExvat" value="' + esc(s.pipeEditListExvat) + '" style="' + editInputStyle + '" />' +
+      '<input id="field-pipeEditListIncvat" type="text" inputmode="decimal" data-bind="pipeEditListIncvat" value="' + esc(s.pipeEditListIncvat) + '" style="' + editInputStyle + '" />' +
+      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
+    '</div>' :
+    '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-size:12px; color:oklch(0.55 0.01 60);">ราคาก่อนหักส่วนลด</div>' +
     '</div>';
-  }).join("");
+
+  var discountRows = isEditingThis ?
+    s.pipeEditRows.map(function (r, i) {
+      var group = pipeTierGroupFor(r.percent);
+      var bg = group ? group.bg : "#fff";
+      var color = group ? group.color : "oklch(0.4 0.01 60)";
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:8px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + r.percent + '%</div>' +
+        '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="pipeEditRows" data-calc-field="exvat" value="' + esc(r.exvat) + '" style="' + editInputStyle + '" />' +
+        '<input type="text" inputmode="decimal" data-calc-row="' + i + '" data-calc-store="pipeEditRows" data-calc-field="incvat" value="' + esc(r.incvat) + '" style="' + editInputStyle + '" />' +
+        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      '</div>';
+    }).join("") :
+    active.discounts.map(function (d) {
+      var group = pipeTierGroupFor(d.percent);
+      var bg = group ? group.bg : "#fff";
+      var color = group ? group.color : "oklch(0.4 0.01 60)";
+      return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid oklch(0.93 0.006 70); align-items:center; background:' + bg + ';">' +
+        '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:oklch(0.38 0.15 275);">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
+      '</div>';
+    }).join("");
+
+  var tableActionBar = isAdmin ? (isEditingThis ?
+    '<div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px;">' +
+      '<button data-action="cancel-edit-pipe" style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+      '<button data-action="save-edit-pipe" data-id="' + active.id + '" style="min-height:40px; display:inline-flex; align-items:center; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+    '</div>' :
+    '<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">' +
+      '<button data-action="start-edit-pipe" data-id="' + active.id + '" style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:none; background:oklch(0.95 0.006 70); border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit;">✏️ แก้ไขราคา</button>' +
+    '</div>'
+  ) : "";
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto; margin-bottom:20px;">' +
     '<div style="min-width:480px;">' + tableHeader + baseRow + discountRows + '</div>' +
@@ -2784,7 +2898,7 @@ Dashboard.prototype.renderPipePage = function () {
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">' + typeButtons + '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ขนาด (เส้นผ่านศูนย์กลาง)</div>' +
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + sizeButtons + '</div>' +
-    infoCard + table + legend +
+    infoCard + tableActionBar + table + legend +
   '</div>';
 };
 

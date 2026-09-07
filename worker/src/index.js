@@ -343,6 +343,49 @@ export default {
       return json(pipeProducts);
     }
 
+    const pipeIdMatch = path.match(/^\/pipe-products\/([^/]+)$/);
+    if (pipeIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(pipeIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM pipe_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const listExvat = body.listExvat !== undefined ? Number(body.listExvat) : existing.list_exvat;
+      const listIncvat = body.listIncvat !== undefined ? Number(body.listIncvat) : existing.list_incvat;
+      if (isNaN(listExvat) || isNaN(listIncvat)) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE pipe_products SET list_exvat=?, list_incvat=? WHERE id=?")
+        .bind(listExvat, listIncvat, id).run();
+
+      if (Array.isArray(body.discounts)) {
+        for (const d of body.discounts) {
+          const percent = parseInt(d.percent, 10);
+          const exvat = Number(d.exvat);
+          const incvat = Number(d.incvat);
+          if (isNaN(percent) || isNaN(exvat) || isNaN(incvat)) continue;
+          await env.DB.prepare(
+            "INSERT INTO pipe_discounts (pipe_product_id, percent, exvat, incvat) VALUES (?, ?, ?, ?) " +
+            "ON CONFLICT (pipe_product_id, percent) DO UPDATE SET exvat=excluded.exvat, incvat=excluded.incvat"
+          ).bind(id, percent, exvat, incvat).run();
+        }
+      }
+
+      const discountsRes = await env.DB.prepare("SELECT percent, exvat, incvat FROM pipe_discounts WHERE pipe_product_id = ? ORDER BY percent ASC").bind(id).all();
+      return json({
+        id: existing.id,
+        type: existing.type,
+        sizeCm: existing.size_cm,
+        listExvat: listExvat,
+        listIncvat: listIncvat,
+        weightKgPerPipe: existing.weight_kg_per_pipe,
+        load10wheelPipes: existing.load_10wheel_pipes,
+        loadTrailerPipes: existing.load_trailer_pipes,
+        discounts: discountsRes.results,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
