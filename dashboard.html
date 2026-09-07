@@ -399,6 +399,7 @@ function Dashboard(root) {
     editCategoryName: "",
     catSidebarCollapsed: false,
     calcSidebarCollapsed: false,
+    discountSidebarCollapsed: false,
     sortBy: "name",
     view: "grid",
     products: [],
@@ -895,6 +896,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "set-category": this.setState({ category: d.category }); break;
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
     case "toggle-calc-sidebar": this.setState(function (s2) { return { calcSidebarCollapsed: !s2.calcSidebarCollapsed }; }); break;
+    case "toggle-discount-sidebar": this.setState(function (s2) { return { discountSidebarCollapsed: !s2.discountSidebarCollapsed }; }); break;
     case "calc-set-type": this.setState({ page: "calc", calcProductType: d.type }); break;
     case "pipe-set-type": this.setState({ pipeSelectedType: d.type, pipeSelectedSize: "", pipeEditingId: null }); break;
     case "pipe-set-size": this.setState({ pipeSelectedSize: d.size, pipeEditingId: null }); break;
@@ -2007,7 +2009,8 @@ Dashboard.prototype.renderDashboard = function () {
       '</div>' +
       navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
       (page === "price" ? this.renderCategoryBox() : "") +
-      navItem("ตารางราคาคอนกรีต", "🚰", "pipe", page === "pipe") +
+      navItem("ราคาผลิตภัณฑ์คอนกรีต", "🚰", "pipe", page === "pipe") +
+      (page === "pipe" ? this.renderDiscountSidebar() : "") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("Company Profile", "🏢", "company", page === "company") +
@@ -2415,6 +2418,31 @@ Dashboard.prototype.renderCalcSidebar = function () {
         '<span style="font-size:11px; color:rgba(255,255,255,.6); transition:transform .15s; transform:rotate(' + (calcExpanded ? "0deg" : "-90deg") + ');">▾</span>' +
       '</button>' +
       (calcExpanded ? itemsHtml : "") +
+    '</div>';
+};
+
+var DISCOUNT_SIDEBAR_ITEMS = [
+  { value: "pipe", label: "ท่อคอนกรีต" },
+  { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
+];
+
+Dashboard.prototype.renderDiscountSidebar = function () {
+  var s = this.state;
+  var discountExpanded = !s.discountSidebarCollapsed;
+  var cat = s.discountCategory || "pipe";
+  var itemsHtml = DISCOUNT_SIDEBAR_ITEMS.map(function (opt) {
+    var isActive = opt.value === cat;
+    return '<button data-action="discount-set-category" data-category="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
+      '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
+    '</button>';
+  }).join("");
+
+  return '<div class="cat-sidebar" style="width:100%; min-width:0; box-sizing:border-box; background:transparent; border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:1px; margin:2px 0 8px;">' +
+      '<button data-action="toggle-discount-sidebar" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:10px; border:none; border-radius:8px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; background:transparent; color:#fff;">' +
+        '<span style="display:flex; align-items:center; gap:10px;"><span style="font-size:15px;">🚰</span><span>ประเภทสินค้า</span></span>' +
+        '<span style="font-size:11px; color:rgba(255,255,255,.6); transition:transform .15s; transform:rotate(' + (discountExpanded ? "0deg" : "-90deg") + ');">▾</span>' +
+      '</button>' +
+      (discountExpanded ? itemsHtml : "") +
     '</div>';
 };
 
@@ -3016,7 +3044,7 @@ Dashboard.prototype.renderPipePage = function () {
 };
 
 // Wraps the pipe and plank discount tables behind a category switcher, so
-// one page ("ตารางราคาคอนกรีต" in the nav) can hold several product
+// one page ("ราคาผลิตภัณฑ์คอนกรีต" in the nav) can hold several product
 // categories with unrelated discount ladders. renderPipePage/renderPlankPage
 // keep rendering their own full page (title, selector, table, legend) --
 // this just adds the tab strip above whichever one is active.
