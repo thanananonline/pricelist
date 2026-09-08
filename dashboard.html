@@ -3209,7 +3209,13 @@ Dashboard.prototype.renderDiscountPage = function () {
     return '<button data-action="discount-set-category" data-category="' + key + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.26 0.13 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.26 0.13 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">' + icon + ' ' + label + '</button>';
   };
 
-  var tabs = '<div style="padding:28px 32px 0; max-width:980px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
+  // concrete_mix gets the same wide container as the calc page (see
+  // renderCalcPage's max-width:1500px); the other categories keep their
+  // original 980px sizing, so the tab strip's width has to track whichever
+  // category is active or it'll look narrower than the table below it.
+  var tabsMaxWidth = cat === "concrete_mix" ? "1500px" : "980px";
+
+  var tabs = '<div style="padding:28px 32px 0; max-width:' + tabsMaxWidth + '; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
@@ -3506,7 +3512,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     '<div style="min-width:900px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาคอนกรีตผสมเสร็จ</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อลูกบาศก์เมตร ' + (isAdmin ? "&mdash; แก้ไขได้ที่สเปก (Cube/Cylinder/Slump) และราคาฐาน (ปลีก/ส่ง) ราคารวม/ไม่รวม VAT คำนวณให้อัตโนมัติ" : "") + '</div>' +
