@@ -3445,9 +3445,9 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   var isAdmin = this.isAdmin();
   var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
   var previewStyle = "font-size:10.5px; color:oklch(0.55 0.01 60); margin-top:3px;";
-  var colWidths = "minmax(0,1.3fr) 0.7fr 0.6fr 0.6fr 0.9fr 0.85fr 0.85fr 0.85fr 0.85fr" + (isAdmin ? " 70px" : "");
+  var colWidths = "minmax(0,1.3fr) 0.6fr 0.6fr 0.9fr 0.85fr 0.85fr 0.85fr 0.85fr" + (isAdmin ? " 70px" : "");
 
-  var headerCells = '<div>สินค้า</div><div>รหัส</div>' +
+  var headerCells = '<div>สินค้า</div>' +
     '<div>ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
     '<div>ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
     '<div>ค่ายุบตัว (Slump)<br>ซม.</div>' +
@@ -3495,7 +3495,6 @@ Dashboard.prototype.renderConcreteMixPage = function () {
 
     return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
       '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + esc(p.code) + '</div>' +
       cubeCell + cylCell + slumpCell +
       retailVatCell + retailNovatCell + wholesaleVatCell + wholesaleNovatCell +
       (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
