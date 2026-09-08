@@ -507,6 +507,7 @@ export default {
           cube: p.cube,
           cyl: p.cyl,
           code: p.code,
+          slump: p.slump,
           retailBase: p.retail_base,
           wholesaleBase: p.wholesale_base,
         };
@@ -526,16 +527,20 @@ export default {
       const retailBase = body.retailBase !== undefined ? Number(body.retailBase) : existing.retail_base;
       const wholesaleBase = body.wholesaleBase !== undefined ? Number(body.wholesaleBase) : existing.wholesale_base;
       if (isNaN(retailBase) || isNaN(wholesaleBase)) return json({ error: "invalid price" }, 400);
+      const cube = body.cube !== undefined ? String(body.cube) : existing.cube;
+      const cyl = body.cyl !== undefined ? String(body.cyl) : existing.cyl;
+      const slump = body.slump !== undefined ? String(body.slump) : existing.slump;
 
-      await env.DB.prepare("UPDATE concrete_mix_products SET retail_base=?, wholesale_base=? WHERE id=?")
-        .bind(retailBase, wholesaleBase, id).run();
+      await env.DB.prepare("UPDATE concrete_mix_products SET retail_base=?, wholesale_base=?, cube=?, cyl=?, slump=? WHERE id=?")
+        .bind(retailBase, wholesaleBase, cube, cyl, slump, id).run();
 
       return json({
         id: existing.id,
         name: existing.name,
-        cube: existing.cube,
-        cyl: existing.cyl,
+        cube: cube,
+        cyl: cyl,
         code: existing.code,
+        slump: slump,
         retailBase: retailBase,
         wholesaleBase: wholesaleBase,
       });

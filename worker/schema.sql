@@ -115,6 +115,8 @@ CREATE TABLE IF NOT EXISTS fence_products (
 -- migrations/0010_add_concrete_mix_pricing.sql): no discount ladder, and
 -- only the two base prices are stored -- the four VAT/no-VAT prices shown on
 -- screen are always derived from retail_base/wholesale_base at render time.
+-- slump (see migrations/0012_add_concrete_mix_slump.sql) is a free-text spec
+-- field, not involved in any price calculation.
 CREATE TABLE IF NOT EXISTS concrete_mix_products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -123,5 +125,6 @@ CREATE TABLE IF NOT EXISTS concrete_mix_products (
   code TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
   retail_base REAL NOT NULL,
-  wholesale_base REAL NOT NULL
+  wholesale_base REAL NOT NULL,
+  slump TEXT NOT NULL DEFAULT '7.5 +/- 2.5'
 );
