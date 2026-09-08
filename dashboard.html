@@ -2199,7 +2199,7 @@ Dashboard.prototype.renderPricePage = function () {
   var isAdmin = this.isAdmin();
 
   if (s.productsLoading || s.categoriesLoading) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:1360px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+    return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลสินค้า...</div>' +
     '</div>';
   }
@@ -2493,7 +2493,7 @@ Dashboard.prototype.renderPricePage = function () {
       rows + '</div>';
   }
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1360px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
     productsErrorBanner + importBanner + controls + bulkBar + manageCategoriesPanel + addForm + resultCount + body +
@@ -2602,7 +2602,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   var k = this._folderKeys(kind);
 
   if (s[k.loadingKey]) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:1000px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+    return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลโฟลเดอร์...</div>' +
     '</div>';
   }
@@ -2649,7 +2649,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
       '</form>' : '';
 
-    return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+    return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
       '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
       errorBanner + addFolderForm +
       '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px;">' + foldersHtml + '</div>' +
@@ -2758,7 +2758,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '</div>';
   }
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:oklch(0.95 0.006 70); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       folderHeader +
@@ -2776,7 +2776,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
   var k = this._folderKeys(kind);
 
   if (s[k.loadingKey]) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:1000px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+    return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูล...</div>' +
     '</div>';
   }
@@ -2879,7 +2879,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
     }).join("") + '</div>';
   }
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1000px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">Company Profile</div><div style="font-size:13px; color:oklch(0.5 0.01 60); margin-top:2px;">ไฟล์ข้อมูลบริษัท เช่น โบรชัวร์ เอกสารแนะนำบริษัท</div></div>' +
     errorBanner + uploadBox + (files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
@@ -2890,7 +2890,7 @@ Dashboard.prototype.renderUsersPage = function () {
   var isAdmin = this.isAdmin();
 
   if (s.usersLoading) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:700px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+    return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลผู้ใช้...</div>' +
     '</div>';
   }
@@ -2935,7 +2935,7 @@ Dashboard.prototype.renderUsersPage = function () {
     (s.userError ? '<div style="font-size:13px; color:oklch(0.5 0.15 30); background:oklch(0.94 0.03 30); padding:8px 12px; border-radius:8px; margin-bottom:16px;">' + esc(s.userError) + '</div>' : '')
     : '<div style="text-align:center; padding:40px 20px; color:oklch(0.55 0.01 60); font-size:14px;">ต้องเป็นผู้ดูแลระบบเพื่อจัดการผู้ใช้</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
     usersErrorBanner + adminSection +
     '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow:hidden;">' + userRows + '</div>' +
@@ -2947,7 +2947,7 @@ Dashboard.prototype.renderContactPage = function () {
   var isAdmin = this.isAdmin();
 
   if (s.contactsLoading) {
-    return '<div class="page-content" style="padding:60px 32px; max-width:700px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
+    return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:oklch(0.5 0.01 60);">' +
       '<div style="font-size:32px; margin-bottom:10px;">⏳</div><div style="font-size:14.5px;">กำลังโหลดข้อมูลผู้ติดต่อ...</div>' +
     '</div>';
   }
@@ -3010,7 +3010,7 @@ Dashboard.prototype.renderContactPage = function () {
     }).join("") + '</div>';
   }
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:700px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
     '<div style="font-size:13px; color:oklch(0.5 0.01 60); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
     contactsErrorBanner + addForm + body +
@@ -3182,7 +3182,7 @@ Dashboard.prototype.renderPipePage = function () {
       }).join("") +
   '</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">เลือกประเภทท่อและขนาด เพื่อดูราคาตั้งและส่วนลดทุกช่วง 3%-30% (ท่อนยาว 1 ม.)</div>' +
@@ -3209,13 +3209,7 @@ Dashboard.prototype.renderDiscountPage = function () {
     return '<button data-action="discount-set-category" data-category="' + key + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.26 0.13 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.26 0.13 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">' + icon + ' ' + label + '</button>';
   };
 
-  // concrete_mix gets the same wide container as the calc page (see
-  // renderCalcPage's max-width:1500px); the other categories keep their
-  // original 980px sizing, so the tab strip's width has to track whichever
-  // category is active or it'll look narrower than the table below it.
-  var tabsMaxWidth = cat === "concrete_mix" ? "1500px" : "980px";
-
-  var tabs = '<div style="padding:28px 32px 0; max-width:' + tabsMaxWidth + '; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
+  var tabs = '<div style="padding:28px 32px 0; max-width:1500px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
@@ -3343,7 +3337,7 @@ Dashboard.prototype.renderPlankPage = function () {
     }).join("") +
   '</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดแผ่นพื้นสำเร็จรูป (กว้าง 35 หนา 5 ซม. มอก.828-2546)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">เลือกประเภทแผ่นพื้น เพื่อดูราคาตั้งและส่วนลดทุกช่วง 2%-7% (ราคาต่อ ตร.ม.)</div>' +
@@ -3414,7 +3408,7 @@ Dashboard.prototype.renderFencePage = function () {
     '<div style="min-width:620px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคารั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อท่อน ไม่รวม VAT 7% ไม่มีขั้นส่วนลด</div>' +
