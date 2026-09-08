@@ -1,0 +1,139 @@
+{
+  "category": "คอนกรีตผสมเสร็จ (ภาคตะวันตก)",
+  "effective": "2026-05-07",
+  "note": "ราคา = ตาราง×1.07 (รวม VAT) / ไม่รวม VAT = รวมVAT −50",
+  "items": [
+    {
+      "name": "คอนกรีตหยาบ (Lean)",
+      "cube": "-",
+      "cyl": "-",
+      "code": "84071002",
+      "retail_vat": 1887,
+      "retail_novat": 1837,
+      "wholesale_vat": 1834,
+      "wholesale_novat": 1784,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 180",
+      "cube": "180",
+      "cyl": "140",
+      "code": "84181002",
+      "retail_vat": 2000,
+      "retail_novat": 1950,
+      "wholesale_vat": 1943,
+      "wholesale_novat": 1893,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 210",
+      "cube": "210",
+      "cyl": "180",
+      "code": "84211002",
+      "retail_vat": 2045,
+      "retail_novat": 1995,
+      "wholesale_vat": 1986,
+      "wholesale_novat": 1936,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 240",
+      "cube": "240",
+      "cyl": "210",
+      "code": "84241002",
+      "retail_vat": 2090,
+      "retail_novat": 2040,
+      "wholesale_vat": 2030,
+      "wholesale_novat": 1980,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 280",
+      "cube": "280",
+      "cyl": "240",
+      "code": "84281002",
+      "retail_vat": 2135,
+      "retail_novat": 2085,
+      "wholesale_vat": 2074,
+      "wholesale_novat": 2024,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 300",
+      "cube": "300",
+      "cyl": "250",
+      "code": "84301002",
+      "retail_vat": 2180,
+      "retail_novat": 2130,
+      "wholesale_vat": 2118,
+      "wholesale_novat": 2068,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 320",
+      "cube": "320",
+      "cyl": "280",
+      "code": "84321002",
+      "retail_vat": 2240,
+      "retail_novat": 2190,
+      "wholesale_vat": 2175,
+      "wholesale_novat": 2125,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 350",
+      "cube": "350",
+      "cyl": "300",
+      "code": "84351002",
+      "retail_vat": 2299,
+      "retail_novat": 2249,
+      "wholesale_vat": 2234,
+      "wholesale_novat": 2184,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 380",
+      "cube": "380",
+      "cyl": "320",
+      "code": "84381002",
+      "retail_vat": 2359,
+      "retail_novat": 2309,
+      "wholesale_vat": 2292,
+      "wholesale_novat": 2242,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 400",
+      "cube": "400",
+      "cyl": "350",
+      "code": "84401002",
+      "retail_vat": 2434,
+      "retail_novat": 2384,
+      "wholesale_vat": 2365,
+      "wholesale_novat": 2315,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 420",
+      "cube": "420",
+      "cyl": "380",
+      "code": "84421002",
+      "retail_vat": 2509,
+      "retail_novat": 2459,
+      "wholesale_vat": 2437,
+      "wholesale_novat": 2387,
+      "unit": "บาท/ลบ.ม."
+    },
+    {
+      "name": "คอนกรีต 450",
+      "cube": "450",
+      "cyl": "400",
+      "code": "84451002",
+      "retail_vat": 2584,
+      "retail_novat": 2534,
+      "wholesale_vat": 2510,
+      "wholesale_novat": 2460,
+      "unit": "บาท/ลบ.ม."
+    }
+  ]
+}
