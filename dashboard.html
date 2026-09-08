@@ -3289,10 +3289,10 @@ Dashboard.prototype.renderDiscountPage = function () {
 
   var tabButton = function (key, label, icon) {
     var isActive = cat === key;
-    return '<button data-action="discount-set-category" data-category="' + key + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.26 0.13 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.26 0.13 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">' + icon + ' ' + label + '</button>';
+    return '<button data-action="discount-set-category" data-category="' + key + '" style="min-height:40px; box-sizing:border-box; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.26 0.13 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.26 0.13 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:12.5px; white-space:nowrap; cursor:pointer; font-family:inherit;">' + icon + ' ' + label + '</button>';
   };
 
-  var tabs = '<div style="padding:28px 32px 0; max-width:1500px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;">' +
+  var tabs = '<div style="padding:28px 32px 0; max-width:1500px; margin:0 auto; display:flex; gap:8px; flex-wrap:wrap;">' +
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
@@ -3644,50 +3644,56 @@ Dashboard.prototype.renderPilePage = function () {
 
   var products = allProducts.filter(function (p) { return p.group === group; });
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
-  var colWidths = "minmax(0,1.6fr) 0.75fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr" + (isAdmin ? " 70px" : "");
+  // Pile's table has 8 price columns (vs. 2 on the other product tables), so
+  // it gets its own smaller, tighter font/column set here rather than
+  // TABLE_FONT_COMPACT - at that shared size the table forced a fixed
+  // min-width wide enough to need horizontal scrolling on most screens.
+  var pilePriceFont = "13px";
+  var pilePriceStyle = "font-family:Kanit; font-weight:700; font-size:" + pilePriceFont + "; color:oklch(0.32 0.17 275);";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(0,1.3fr) 0.55fr repeat(8, 0.58fr)" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div>รายการ</div><div>พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
     PILE_TIERS.map(function (t) { return '<div>' + t.label + '<br>ไม่รวม VAT</div><div>' + t.label + '<br>รวม VAT</div>'; }).join("") +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.pileEditingId === p.id;
 
     var areaCell = isEditingThis
       ? '<input id="field-pileEditAreaSqcm" type="text" inputmode="decimal" data-bind="pileEditAreaSqcm" value="' + esc(s.pileEditAreaSqcm) + '" style="' + editInputStyle + '" />'
-      : '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
+      : '<div style="font-size:12px;">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
 
     var tierCells = PILE_TIERS.map(function (t) {
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
         var novatCell = '<input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />';
-        var vatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
+        var vatCell = '<div style="' + pilePriceStyle + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
         return novatCell + vatCell;
       }
       var base = p[t.key];
-      return '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(base) + '</div>' +
-        '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(pileVat(base)) + '</div>';
+      return '<div style="' + pilePriceStyle + '">฿' + fmt(base) + '</div>' +
+        '<div style="' + pilePriceStyle + '">฿' + fmt(pileVat(base)) + '</div>';
     }).join("");
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
       ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
-          '<button data-action="save-edit-pile" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
-          '<button data-action="cancel-edit-pile" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+          '<button data-action="save-edit-pile" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:28px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-pile" title="ยกเลิก" style="min-height:28px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
         '</div>'
-      : '<button data-action="start-edit-pile" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
+      : '<button data-action="start-edit-pile" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
       areaCell + tierCells +
       (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
-    '<div style="min-width:1500px;">' + tableHeader + rows + '</div>' +
+    '<div style="min-width:920px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
   var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
