@@ -2634,20 +2634,6 @@ Dashboard.prototype.renderCalcSidebar = function () {
     '</div>';
 };
 
-// Type scale for the fence price table (pipe/plank kept their original
-// sizing -- only fence, the newest and most cramped table, uses this).
-var TABLE_FONT_COMPACT = {
-  header: "12.5px",
-  label: "14px",
-  note: "13px",
-  input: "14.5px",
-  gap: "8px",
-  headerPad: "13px 12px",
-  rowPad: "15px 12px",
-  rowPadEdit: "11px 12px",
-  priceStyle: "font-family:Kanit; font-weight:700; font-size:16.5px; color:oklch(0.32 0.17 275);",
-};
-
 var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "pipe", label: "ท่อคอนกรีต" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
@@ -3458,42 +3444,45 @@ Dashboard.prototype.renderFencePage = function () {
   }
 
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
-  var colWidths = "minmax(0,1.8fr) 0.7fr 1fr 1fr 0.85fr 0.8fr 0.65fr" + (isAdmin ? " 70px" : "");
+  // Compact font/column set so this 7-column table fits typical screens
+  // without horizontal scroll - same reasoning as renderPilePage above.
+  var fencePriceStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:oklch(0.32 0.17 275);";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(0,1.7fr) 0.65fr 0.95fr 0.95fr 0.8fr 0.75fr 0.6fr" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div>ประเภท</div><div>ความยาว</div><div>ราคา/ท่อน<br>(ไม่รวม VAT)</div><div>ราคา/ท่อน<br>(รวม VAT 7%)</div><div>น้ำหนัก/ท่อน</div><div>จำนวนแผ่น</div><div>ทับหลัง</div>' +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.fenceEditingId === p.id;
     var priceExvatCell = isEditingThis
       ? '<input id="field-fenceEditPriceExvat" type="text" inputmode="decimal" data-bind="fenceEditPriceExvat" value="' + esc(s.fenceEditPriceExvat) + '" style="' + editInputStyle + '" />'
-      : '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmtN(p.priceExvat, 2) + '</div>';
+      : '<div style="' + fencePriceStyle + '">฿' + fmtN(p.priceExvat, 2) + '</div>';
     var priceIncvatCell = isEditingThis
       ? '<input id="field-fenceEditPriceIncvat" type="text" inputmode="decimal" data-bind="fenceEditPriceIncvat" value="' + esc(s.fenceEditPriceIncvat) + '" style="' + editInputStyle + '" />'
-      : '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmtN(p.priceIncvat, 2) + '</div>';
+      : '<div style="' + fencePriceStyle + '">฿' + fmtN(p.priceIncvat, 2) + '</div>';
     var actionsCell = !isAdmin ? '' : (isEditingThis
       ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
-          '<button data-action="save-edit-fence" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
-          '<button data-action="cancel-edit-fence" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+          '<button data-action="save-edit-fence" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:28px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-fence" title="ยกเลิก" style="min-height:28px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
         '</div>'
-      : '<button data-action="start-edit-fence" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
+      : '<button data-action="start-edit-fence" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.type) + '</div>' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.length != null ? esc(p.length) : "-") + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.type) + '</div>' +
+      '<div style="font-size:12px;">' + (p.length != null ? esc(p.length) : "-") + '</div>' +
       priceExvatCell +
       priceIncvatCell +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.weightKgPerPiece != null ? fmt(p.weightKgPerPiece) + " กก." : "-") + '</div>' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.sheetsPerLength != null ? fmt(p.sheetsPerLength) + " แผ่น" : "-") + '</div>' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.copingPieces != null ? fmt(p.copingPieces) + " แผ่น" : "-") + '</div>' +
+      '<div style="font-size:12px;">' + (p.weightKgPerPiece != null ? fmt(p.weightKgPerPiece) + " กก." : "-") + '</div>' +
+      '<div style="font-size:12px;">' + (p.sheetsPerLength != null ? fmt(p.sheetsPerLength) + " แผ่น" : "-") + '</div>' +
+      '<div style="font-size:12px;">' + (p.copingPieces != null ? fmt(p.copingPieces) + " แผ่น" : "-") + '</div>' +
       (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
-    '<div style="min-width:620px;">' + tableHeader + rows + '</div>' +
+    '<div style="min-width:540px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
@@ -3531,9 +3520,12 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   }
 
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
-  var previewStyle = "font-size:10.5px; color:oklch(0.55 0.01 60); margin-top:3px;";
-  var colWidths = "minmax(0,1.3fr) 0.6fr 0.6fr 0.9fr 0.85fr 0.85fr 0.85fr 0.85fr" + (isAdmin ? " 70px" : "");
+  // Compact font/column set so this 8-column table fits typical screens
+  // without horizontal scroll - same reasoning as renderPilePage above.
+  var concreteMixPriceStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:oklch(0.32 0.17 275);";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var previewStyle = "font-size:9.5px; color:oklch(0.55 0.01 60); margin-top:2px;";
+  var colWidths = "minmax(0,1.2fr) 0.55fr 0.55fr 0.8fr 0.72fr 0.72fr 0.72fr 0.72fr" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div>สินค้า</div>' +
     '<div>ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
@@ -3541,7 +3533,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     '<div>ค่ายุบตัว (Slump)<br>ซม.</div>' +
     '<div>ปลีก<br>(รวม VAT)</div><div>ปลีก<br>(ไม่รวม VAT)</div><div>ส่ง<br>(รวม VAT)</div><div>ส่ง<br>(ไม่รวม VAT)</div>' +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.concreteMixEditingId === p.id;
@@ -3558,31 +3550,31 @@ Dashboard.prototype.renderConcreteMixPage = function () {
           '<input id="field-concreteMixEditRetailBase" type="text" inputmode="decimal" data-bind="concreteMixEditRetailBase" value="' + esc(s.concreteMixEditRetailBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานปลีก &rarr; ' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixVat(retailBaseInput))) + '</div>' +
         '</div>';
-      retailNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
+      retailNovatCell = '<div style="' + concreteMixPriceStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
       wholesaleVatCell = '<div>' +
           '<input id="field-concreteMixEditWholesaleBase" type="text" inputmode="decimal" data-bind="concreteMixEditWholesaleBase" value="' + esc(s.concreteMixEditWholesaleBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานส่ง &rarr; ' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixVat(wholesaleBaseInput))) + '</div>' +
         '</div>';
-      wholesaleNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
+      wholesaleNovatCell = '<div style="' + concreteMixPriceStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
     } else {
-      cubeCell = '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + esc(p.cube) + '</div>';
-      cylCell = '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + esc(p.cyl) + '</div>';
-      slumpCell = '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + esc(p.slump) + '</div>';
-      retailVatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
-      retailNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
-      wholesaleVatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
-      wholesaleNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
+      cubeCell = '<div style="font-size:12px;">' + esc(p.cube) + '</div>';
+      cylCell = '<div style="font-size:12px;">' + esc(p.cyl) + '</div>';
+      slumpCell = '<div style="font-size:12px;">' + esc(p.slump) + '</div>';
+      retailVatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
+      retailNovatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
+      wholesaleVatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
+      wholesaleNovatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
     }
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
       ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
-          '<button data-action="save-edit-concrete-mix" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
-          '<button data-action="cancel-edit-concrete-mix" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+          '<button data-action="save-edit-concrete-mix" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:28px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-concrete-mix" title="ยกเลิก" style="min-height:28px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
         '</div>'
-      : '<button data-action="start-edit-concrete-mix" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
+      : '<button data-action="start-edit-concrete-mix" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
       cubeCell + cylCell + slumpCell +
       retailVatCell + retailNovatCell + wholesaleVatCell + wholesaleNovatCell +
       (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
@@ -3590,7 +3582,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   }).join("");
 
   var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
-    '<div style="min-width:900px;">' + tableHeader + rows + '</div>' +
+    '<div style="min-width:740px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
@@ -3645,9 +3637,8 @@ Dashboard.prototype.renderPilePage = function () {
   var products = allProducts.filter(function (p) { return p.group === group; });
   var isAdmin = this.isAdmin();
   // Pile's table has 8 price columns (vs. 2 on the other product tables), so
-  // it gets its own smaller, tighter font/column set here rather than
-  // TABLE_FONT_COMPACT - at that shared size the table forced a fixed
-  // min-width wide enough to need horizontal scrolling on most screens.
+  // it gets its own compact font/column set here to fit typical screens
+  // without horizontal scrolling.
   var pilePriceFont = "13px";
   var pilePriceStyle = "font-family:Kanit; font-weight:700; font-size:" + pilePriceFont + "; color:oklch(0.32 0.17 275);";
   var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
