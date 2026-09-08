@@ -514,7 +514,7 @@ function Dashboard(root) {
     pileProducts: [],
     pileProductsLoading: true,
     pileProductsError: "",
-    pileGroup: "SQ",
+    pileGroup: "I",
     pileEditingId: null,
     pileEditAreaSqcm: "",
     pileEditPickup: "",
@@ -1099,7 +1099,13 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-pipe": this.startPipeEdit(d.id); break;
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
-    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null }); break;
+    case "discount-set-category":
+      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null };
+      if (d.category === "pile_i") discountCategoryPatch.pileGroup = "I";
+      else if (d.category === "pile_sq") discountCategoryPatch.pileGroup = "SQ";
+      else if (d.category === "pile_hex") discountCategoryPatch.pileGroup = "HEX";
+      this.setState(discountCategoryPatch);
+      break;
     case "reload-concrete-mix-products": this.loadConcreteMixProducts(); break;
     case "start-edit-concrete-mix": this.startConcreteMixEdit(d.id); break;
     case "cancel-edit-concrete-mix": this.setState({ concreteMixEditingId: null }); break;
@@ -1113,7 +1119,6 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-fence": this.startFenceEdit(d.id); break;
     case "cancel-edit-fence": this.setState({ fenceEditingId: null }); break;
     case "save-edit-fence": this.saveFenceEdit(d.id); break;
-    case "pile-set-group": this.setState({ pileGroup: d.group, pileEditingId: null }); break;
     case "reload-pile-products": this.loadPileProducts(); break;
     case "start-edit-pile": this.startPileEdit(d.id); break;
     case "cancel-edit-pile": this.setState({ pileEditingId: null }); break;
@@ -2219,7 +2224,6 @@ Dashboard.prototype.renderDashboard = function () {
       (page === "price" ? this.renderCategoryBox() : "") +
       navItem("ราคาผลิตภัณฑ์คอนกรีต", "🚰", "pipe", page === "pipe") +
       (page === "pipe" ? this.renderDiscountSidebar() : "") +
-      navItem("ราคาเสาเข็ม", "🏗️", "pile", page === "pile") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("Company Profile", "🏢", "company", page === "company") +
@@ -2247,7 +2251,6 @@ Dashboard.prototype.renderDashboard = function () {
   var pageContent;
   if (page === "price") pageContent = this.renderPricePage();
   else if (page === "pipe") pageContent = this.renderDiscountPage();
-  else if (page === "pile") pageContent = '<div id="pile-container">' + this.renderPilePage() + '</div>';
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
@@ -2650,6 +2653,9 @@ var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
   { value: "fence", label: "รั้วสำเร็จรูป TNN" },
   { value: "concrete_mix", label: "คอนกรีตผสมเสร็จ" },
+  { value: "pile_i", label: "เสาเข็ม I" },
+  { value: "pile_sq", label: "เสาเข็ม SQ" },
+  { value: "pile_hex", label: "เสาเข็มหกเหลี่ยม" },
 ];
 
 Dashboard.prototype.renderDiscountSidebar = function () {
@@ -3291,6 +3297,9 @@ Dashboard.prototype.renderDiscountPage = function () {
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
     tabButton("concrete_mix", "คอนกรีตผสมเสร็จ", "🚚") +
+    tabButton("pile_i", "เสาเข็ม I", "🏗️") +
+    tabButton("pile_sq", "เสาเข็ม SQ", "🏗️") +
+    tabButton("pile_hex", "เสาเข็มหกเหลี่ยม", "🏗️") +
   '</div>';
 
   var body = cat === "plank"
@@ -3299,6 +3308,8 @@ Dashboard.prototype.renderDiscountPage = function () {
     ? '<div id="fence-container">' + this.renderFencePage() + '</div>'
     : cat === "concrete_mix"
     ? '<div id="concrete-mix-container">' + this.renderConcreteMixPage() + '</div>'
+    : cat === "pile_i" || cat === "pile_sq" || cat === "pile_hex"
+    ? '<div id="pile-container">' + this.renderPilePage() + '</div>'
     : '<div id="pipe-container">' + this.renderPipePage() + '</div>';
 
   return tabs + body;
@@ -3600,8 +3611,8 @@ Dashboard.prototype.renderConcreteMixPage = function () {
 function pileVat(base) { return Math.round(base * 1.07); }
 
 var PILE_GROUPS = [
-  { value: "SQ", label: "เสาเข็ม SQ" },
   { value: "I", label: "เสาเข็ม I" },
+  { value: "SQ", label: "เสาเข็ม SQ" },
   { value: "HEX", label: "เสาเข็มหกเหลี่ยม" },
 ];
 var PILE_TIERS = [
@@ -3629,10 +3640,7 @@ Dashboard.prototype.renderPilePage = function () {
   }
 
   var group = PILE_GROUPS.some(function (g) { return g.value === s.pileGroup; }) ? s.pileGroup : PILE_GROUPS[0].value;
-  var groupTabs = PILE_GROUPS.map(function (g) {
-    var isActive = g.value === group;
-    return '<button data-action="pile-set-group" data-group="' + g.value + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' + esc(g.label) + '</button>';
-  }).join("");
+  var groupLabel = PILE_GROUPS.filter(function (g) { return g.value === group; }).map(function (g) { return g.label; })[0] || "";
 
   var products = allProducts.filter(function (p) { return p.group === group; });
   var isAdmin = this.isAdmin();
@@ -3688,10 +3696,9 @@ Dashboard.prototype.renderPilePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาเสาเข็ม (TNN)</div>' +
-      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่พื้นที่หน้าตัดและราคาฐาน 4 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "เลือกกลุ่มเสาเข็ม เพื่อดูราคาต่อเมตรทุกระดับ") + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคา' + esc(groupLabel) + ' (TNN)</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่พื้นที่หน้าตัดและราคาฐาน 4 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาต่อเมตรทุกระดับของ" + groupLabel) + '</div>' +
     '</div>' +
-    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + groupTabs + '</div>' +
     table + note +
   '</div>';
 };
