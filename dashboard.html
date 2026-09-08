@@ -505,6 +505,9 @@ function Dashboard(root) {
     concreteMixProducts: [],
     concreteMixProductsLoading: true,
     concreteMixProductsError: "",
+    concreteMixEditingId: null,
+    concreteMixEditRetailBase: "",
+    concreteMixEditWholesaleBase: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -822,20 +825,52 @@ Dashboard.prototype.saveFenceEdit = function (id) {
   });
 };
 
-// Ready-mixed concrete prices come from a static JSON file checked into this
-// repo (concrete_prices.json) rather than the D1-backed API used by
-// pipe/plank/fence -- there's no admin edit UI for this table, just a
-// read-only display of whatever that file currently says.
+// Ready-mixed concrete prices live in D1 (concrete_mix_products, see
+// migrations/0010_add_concrete_mix_pricing.sql) same as pipe/plank/fence.
+// Only the two base prices are stored server-side -- the four VAT/no-VAT
+// prices shown on screen are derived from them client-side in
+// renderConcreteMixPage with a fixed formula, so there's nothing else to
+// fetch or cache here.
 Dashboard.prototype.loadConcreteMixProducts = function () {
   var self = this;
   self.state.concreteMixProductsLoading = true;
-  fetch("concrete_prices.json").then(function (res) {
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  }).then(function (data) {
-    self.setState({ concreteMixProducts: (data && data.items) || [], concreteMixProductsLoading: false, concreteMixProductsError: "" });
+  apiRequest("/concrete-mix-products").then(function (concreteMixProducts) {
+    self.setState({ concreteMixProducts: concreteMixProducts, concreteMixProductsLoading: false, concreteMixProductsError: "" });
   }).catch(function () {
     self.setState({ concreteMixProductsLoading: false, concreteMixProductsError: "โหลดข้อมูลตารางราคาคอนกรีตผสมเสร็จไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startConcreteMixEdit = function (id) {
+  var p = this.state.concreteMixProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    concreteMixEditingId: id,
+    concreteMixEditRetailBase: String(p.retailBase),
+    concreteMixEditWholesaleBase: String(p.wholesaleBase),
+  });
+};
+
+Dashboard.prototype.saveConcreteMixEdit = function (id) {
+  var s = this.state;
+  var retailBase = parseFloat(s.concreteMixEditRetailBase);
+  var wholesaleBase = parseFloat(s.concreteMixEditWholesaleBase);
+  if (isNaN(retailBase) || isNaN(wholesaleBase)) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/concrete-mix-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { retailBase: retailBase, wholesaleBase: wholesaleBase },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var concreteMixProducts = s2.concreteMixProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { concreteMixProducts: concreteMixProducts, concreteMixEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
   });
 };
 
@@ -985,8 +1020,11 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-pipe": this.startPipeEdit(d.id); break;
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
-    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null }); break;
+    case "discount-set-category": this.setState({ discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null }); break;
     case "reload-concrete-mix-products": this.loadConcreteMixProducts(); break;
+    case "start-edit-concrete-mix": this.startConcreteMixEdit(d.id); break;
+    case "cancel-edit-concrete-mix": this.setState({ concreteMixEditingId: null }); break;
+    case "save-edit-concrete-mix": this.saveConcreteMixEdit(d.id); break;
     case "plank-set-type": this.setState({ plankSelectedType: d.type, plankEditingId: null }); break;
     case "reload-plank-products": this.loadPlankProducts(); break;
     case "start-edit-plank": this.startPlankEdit(d.id); break;
@@ -3370,8 +3408,14 @@ Dashboard.prototype.renderFencePage = function () {
   '</div>';
 };
 
-// Ready-mixed concrete has no admin edit UI (see loadConcreteMixProducts) --
-// just a flat read-only price table sourced from concrete_prices.json.
+// Ready-mixed concrete stores only the two base prices per item
+// (retail_base/wholesale_base); the four VAT/no-VAT prices shown in the
+// table are always derived from those with this fixed formula (see
+// migrations/0010_add_concrete_mix_pricing.sql), so admin editing only ever
+// touches the two bases -- the other two columns update automatically.
+function concreteMixVat(base) { return Math.round(base * 1.07); }
+function concreteMixNovat(base) { return concreteMixVat(base) - 50; }
+
 Dashboard.prototype.renderConcreteMixPage = function () {
   var s = this.state;
 
@@ -3389,19 +3433,51 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคาคอนกรีตผสมเสร็จ</div>';
   }
 
-  var colWidths = "minmax(0,1.6fr) 0.9fr 1fr 1fr 1fr 1fr";
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' +
-    '<div>สินค้า</div><div>รหัส</div><div>ปลีก<br>(รวม VAT)</div><div>ปลีก<br>(ไม่รวม VAT)</div><div>ส่ง<br>(รวม VAT)</div><div>ส่ง<br>(ไม่รวม VAT)</div>' +
-  '</div>';
+  var isAdmin = this.isAdmin();
+  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var previewStyle = "font-size:10.5px; color:oklch(0.55 0.01 60); margin-top:3px;";
+  var colWidths = "minmax(0,1.6fr) 0.9fr 1fr 1fr 1fr 1fr" + (isAdmin ? " 70px" : "");
+
+  var headerCells = '<div>สินค้า</div><div>รหัส</div><div>ปลีก<br>(รวม VAT)</div><div>ปลีก<br>(ไม่รวม VAT)</div><div>ส่ง<br>(รวม VAT)</div><div>ส่ง<br>(ไม่รวม VAT)</div>' +
+    (isAdmin ? '<div></div>' : '');
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
+    var isEditingThis = s.concreteMixEditingId === p.id;
+
+    var retailVatCell, retailNovatCell, wholesaleVatCell, wholesaleNovatCell;
+    if (isEditingThis) {
+      var retailBaseInput = parseFloat(s.concreteMixEditRetailBase);
+      var wholesaleBaseInput = parseFloat(s.concreteMixEditWholesaleBase);
+      retailVatCell = '<div>' +
+          '<input id="field-concreteMixEditRetailBase" type="text" inputmode="decimal" data-bind="concreteMixEditRetailBase" value="' + esc(s.concreteMixEditRetailBase) + '" style="' + editInputStyle + '" />' +
+          '<div style="' + previewStyle + '">ฐานปลีก &rarr; ' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixVat(retailBaseInput))) + '</div>' +
+        '</div>';
+      retailNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
+      wholesaleVatCell = '<div>' +
+          '<input id="field-concreteMixEditWholesaleBase" type="text" inputmode="decimal" data-bind="concreteMixEditWholesaleBase" value="' + esc(s.concreteMixEditWholesaleBase) + '" style="' + editInputStyle + '" />' +
+          '<div style="' + previewStyle + '">ฐานส่ง &rarr; ' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixVat(wholesaleBaseInput))) + '</div>' +
+        '</div>';
+      wholesaleNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
+    } else {
+      retailVatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
+      retailNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
+      wholesaleVatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
+      wholesaleNovatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
+    }
+
+    var actionsCell = !isAdmin ? '' : (isEditingThis
+      ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
+          '<button data-action="save-edit-concrete-mix" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-concrete-mix" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+        '</div>'
+      : '<button data-action="start-edit-concrete-mix" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
+
     return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
       '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
       '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + esc(p.code) + '</div>' +
-      '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(p.retail_vat) + '</div>' +
-      '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(p.retail_novat) + '</div>' +
-      '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(p.wholesale_vat) + '</div>' +
-      '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(p.wholesale_novat) + '</div>' +
+      retailVatCell + retailNovatCell + wholesaleVatCell + wholesaleNovatCell +
+      (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
@@ -3412,7 +3488,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:980px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาคอนกรีตผสมเสร็จ</div>' +
-      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อลูกบาศก์เมตร</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อลูกบาศก์เมตร ' + (isAdmin ? "&mdash; แก้ไขได้แค่ราคาฐาน (ปลีก/ส่ง) ราคารวม/ไม่รวม VAT คำนวณให้อัตโนมัติ" : "") + '</div>' +
     '</div>' +
     table +
   '</div>';

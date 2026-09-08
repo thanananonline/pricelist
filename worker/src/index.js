@@ -498,6 +498,49 @@ export default {
       });
     }
 
+    if (path === "/concrete-mix-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM concrete_mix_products ORDER BY sort_order ASC").all();
+      const concreteMixProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          name: p.name,
+          cube: p.cube,
+          cyl: p.cyl,
+          code: p.code,
+          retailBase: p.retail_base,
+          wholesaleBase: p.wholesale_base,
+        };
+      });
+      return json(concreteMixProducts);
+    }
+
+    const concreteMixIdMatch = path.match(/^\/concrete-mix-products\/([^/]+)$/);
+    if (concreteMixIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(concreteMixIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM concrete_mix_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const retailBase = body.retailBase !== undefined ? Number(body.retailBase) : existing.retail_base;
+      const wholesaleBase = body.wholesaleBase !== undefined ? Number(body.wholesaleBase) : existing.wholesale_base;
+      if (isNaN(retailBase) || isNaN(wholesaleBase)) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE concrete_mix_products SET retail_base=?, wholesale_base=? WHERE id=?")
+        .bind(retailBase, wholesaleBase, id).run();
+
+      return json({
+        id: existing.id,
+        name: existing.name,
+        cube: existing.cube,
+        cyl: existing.cyl,
+        code: existing.code,
+        retailBase: retailBase,
+        wholesaleBase: wholesaleBase,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);

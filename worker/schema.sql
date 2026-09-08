@@ -110,3 +110,18 @@ CREATE TABLE IF NOT EXISTS fence_products (
   sheets_per_length INTEGER,
   coping_pieces INTEGER
 );
+
+-- Ready-mixed concrete price list (see
+-- migrations/0010_add_concrete_mix_pricing.sql): no discount ladder, and
+-- only the two base prices are stored -- the four VAT/no-VAT prices shown on
+-- screen are always derived from retail_base/wholesale_base at render time.
+CREATE TABLE IF NOT EXISTS concrete_mix_products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cube TEXT,
+  cyl TEXT,
+  code TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  retail_base REAL NOT NULL,
+  wholesale_base REAL NOT NULL
+);
