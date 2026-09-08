@@ -511,6 +511,16 @@ function Dashboard(root) {
     concreteMixEditCube: "",
     concreteMixEditCyl: "",
     concreteMixEditSlump: "",
+    pileProducts: [],
+    pileProductsLoading: true,
+    pileProductsError: "",
+    pileGroup: "SQ",
+    pileEditingId: null,
+    pileEditAreaSqcm: "",
+    pileEditPickup: "",
+    pileEditT201500plus: "",
+    pileEditT101201: "",
+    pileEditUnder100: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -545,6 +555,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadPlankProducts();
   this.loadFenceProducts();
   this.loadConcreteMixProducts();
+  this.loadPileProducts();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -883,6 +894,65 @@ Dashboard.prototype.saveConcreteMixEdit = function (id) {
   });
 };
 
+// Pile prices live in D1 (pile_products, see
+// migrations/0013_add_pile_pricing.sql) same as pipe/plank/fence/concrete
+// mix. Only the four base (no-VAT) prices are stored server-side -- the
+// four VAT-inclusive prices shown on screen are derived from them
+// client-side in renderPilePage with a fixed formula (base * 1.07, rounded),
+// so there's nothing else to fetch or cache here.
+Dashboard.prototype.loadPileProducts = function () {
+  var self = this;
+  self.state.pileProductsLoading = true;
+  apiRequest("/pile-products").then(function (pileProducts) {
+    self.setState({ pileProducts: pileProducts, pileProductsLoading: false, pileProductsError: "" });
+  }).catch(function () {
+    self.setState({ pileProductsLoading: false, pileProductsError: "โหลดข้อมูลตารางราคาเสาเข็มไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startPileEdit = function (id) {
+  var p = this.state.pileProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    pileEditingId: id,
+    pileEditAreaSqcm: p.areaSqcm != null ? String(p.areaSqcm) : "",
+    pileEditPickup: String(p.pickup),
+    pileEditT201500plus: String(p.t201_500plus),
+    pileEditT101201: String(p.t101_201),
+    pileEditUnder100: String(p.under_100),
+  });
+};
+
+Dashboard.prototype.savePileEdit = function (id) {
+  var s = this.state;
+  var pickup = parseFloat(s.pileEditPickup);
+  var t500 = parseFloat(s.pileEditT201500plus);
+  var t201 = parseFloat(s.pileEditT101201);
+  var under100 = parseFloat(s.pileEditUnder100);
+  if (isNaN(pickup) || isNaN(t500) || isNaN(t201) || isNaN(under100)) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var areaSqcm = s.pileEditAreaSqcm.trim() === "" ? null : parseFloat(s.pileEditAreaSqcm);
+  if (areaSqcm !== null && isNaN(areaSqcm)) {
+    this.showToast("กรุณากรอกพื้นที่หน้าตัดให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/pile-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { areaSqcm: areaSqcm, pickup: pickup, t201_500plus: t500, t101_201: t201, under_100: under100 },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var pileProducts = s2.pileProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { pileProducts: pileProducts, pileEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -1043,6 +1113,11 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-fence": this.startFenceEdit(d.id); break;
     case "cancel-edit-fence": this.setState({ fenceEditingId: null }); break;
     case "save-edit-fence": this.saveFenceEdit(d.id); break;
+    case "pile-set-group": this.setState({ pileGroup: d.group, pileEditingId: null }); break;
+    case "reload-pile-products": this.loadPileProducts(); break;
+    case "start-edit-pile": this.startPileEdit(d.id); break;
+    case "cancel-edit-pile": this.setState({ pileEditingId: null }); break;
+    case "save-edit-pile": this.savePileEdit(d.id); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -2144,6 +2219,7 @@ Dashboard.prototype.renderDashboard = function () {
       (page === "price" ? this.renderCategoryBox() : "") +
       navItem("ราคาผลิตภัณฑ์คอนกรีต", "🚰", "pipe", page === "pipe") +
       (page === "pipe" ? this.renderDiscountSidebar() : "") +
+      navItem("ราคาเสาเข็ม", "🏗️", "pile", page === "pile") +
       navItem("แบบผลิตภัณฑ์คอนกรีต", "📐", "concrete", page === "concrete") +
       navItem("เอกสาร มอก.", "📜", "tis", page === "tis") +
       navItem("Company Profile", "🏢", "company", page === "company") +
@@ -2171,6 +2247,7 @@ Dashboard.prototype.renderDashboard = function () {
   var pageContent;
   if (page === "price") pageContent = this.renderPricePage();
   else if (page === "pipe") pageContent = this.renderDiscountPage();
+  else if (page === "pile") pageContent = '<div id="pile-container">' + this.renderPilePage() + '</div>';
   else if (page === "concrete") pageContent = this.renderFolderPage("concrete", "แบบผลิตภัณฑ์คอนกรีต", "จัดกลุ่มไฟล์ PDF แบบผลิตภัณฑ์เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "tis") pageContent = this.renderFolderPage("tis", "เอกสาร มอก.", "จัดกลุ่มไฟล์ PDF ใบรับรองมาตรฐาน มอก. เป็นโฟลเดอร์ตามประเภทสินค้า");
   else if (page === "company") pageContent = this.renderCompanyProfilePage();
@@ -3511,6 +3588,111 @@ Dashboard.prototype.renderConcreteMixPage = function () {
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อลูกบาศก์เมตร ' + (isAdmin ? "&mdash; แก้ไขได้ที่สเปก (Cube/Cylinder/Slump) และราคาฐาน (ปลีก/ส่ง) ราคารวม/ไม่รวม VAT คำนวณให้อัตโนมัติ" : "") + '</div>' +
     '</div>' +
     table +
+  '</div>';
+};
+
+// Pile stores only the four base (no-VAT) prices per item (price_pickup,
+// price_201_500plus, price_101_201, price_under_100 -- see
+// migrations/0013_add_pile_pricing.sql); the matching VAT-inclusive prices
+// shown next to each are always derived with this fixed formula, same
+// approach as concreteMixVat above, so admin editing only ever touches the
+// four bases (plus area_sqcm) -- the VAT columns update automatically.
+function pileVat(base) { return Math.round(base * 1.07); }
+
+var PILE_GROUPS = [
+  { value: "SQ", label: "เสาเข็ม SQ" },
+  { value: "I", label: "เสาเข็ม I" },
+  { value: "HEX", label: "เสาเข็มหกเหลี่ยม" },
+];
+var PILE_TIERS = [
+  { key: "pickup", editKey: "pileEditPickup", label: "รับเอง" },
+  { key: "t201_500plus", editKey: "pileEditT201500plus", label: "201-500++ ต้น" },
+  { key: "t101_201", editKey: "pileEditT101201", label: "101-201 ต้น" },
+  { key: "under_100", editKey: "pileEditUnder100", label: "&lt;100 ต้น" },
+];
+
+Dashboard.prototype.renderPilePage = function () {
+  var s = this.state;
+
+  if (s.pileProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.pileProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.pileProductsError) + '</div>' +
+      '<button data-action="reload-pile-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var allProducts = s.pileProducts;
+  if (!allProducts.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคาเสาเข็ม</div>';
+  }
+
+  var group = PILE_GROUPS.some(function (g) { return g.value === s.pileGroup; }) ? s.pileGroup : PILE_GROUPS[0].value;
+  var groupTabs = PILE_GROUPS.map(function (g) {
+    var isActive = g.value === group;
+    return '<button data-action="pile-set-group" data-group="' + g.value + '" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; border:1px solid ' + (isActive ? "oklch(0.38 0.15 275)" : "oklch(0.87 0.008 60)") + '; background:' + (isActive ? "oklch(0.38 0.15 275)" : "#fff") + '; color:' + (isActive ? "#fff" : "oklch(0.4 0.01 60)") + '; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' + esc(g.label) + '</button>';
+  }).join("");
+
+  var products = allProducts.filter(function (p) { return p.group === group; });
+  var isAdmin = this.isAdmin();
+  var editInputStyle = "padding:8px 8px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:" + TABLE_FONT_COMPACT.input + "; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(0,1.6fr) 0.75fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr" + (isAdmin ? " 70px" : "");
+
+  var headerCells = '<div>รายการ</div><div>พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
+    PILE_TIERS.map(function (t) { return '<div>' + t.label + '<br>ไม่รวม VAT</div><div>' + t.label + '<br>รวม VAT</div>'; }).join("") +
+    (isAdmin ? '<div></div>' : '');
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.headerPad + '; background:oklch(0.96 0.006 70); font-size:' + TABLE_FONT_COMPACT.header + '; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.35;">' + headerCells + '</div>';
+
+  var rows = products.map(function (p) {
+    var isEditingThis = s.pileEditingId === p.id;
+
+    var areaCell = isEditingThis
+      ? '<input id="field-pileEditAreaSqcm" type="text" inputmode="decimal" data-bind="pileEditAreaSqcm" value="' + esc(s.pileEditAreaSqcm) + '" style="' + editInputStyle + '" />'
+      : '<div style="font-size:' + TABLE_FONT_COMPACT.note + ';">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
+
+    var tierCells = PILE_TIERS.map(function (t) {
+      if (isEditingThis) {
+        var raw = s[t.editKey];
+        var parsed = parseFloat(raw);
+        var novatCell = '<input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />';
+        var vatCell = '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
+        return novatCell + vatCell;
+      }
+      var base = p[t.key];
+      return '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(base) + '</div>' +
+        '<div style="' + TABLE_FONT_COMPACT.priceStyle + '">฿' + fmt(pileVat(base)) + '</div>';
+    }).join("");
+
+    var actionsCell = !isAdmin ? '' : (isEditingThis
+      ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
+          '<button data-action="save-edit-pile" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:30px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-pile" title="ยกเลิก" style="min-height:30px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:15px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+        '</div>'
+      : '<button data-action="start-edit-pile" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:38px; min-width:38px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:6px; font-size:16px; cursor:pointer; font-family:inherit;">✏️</button>');
+
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:' + TABLE_FONT_COMPACT.gap + '; padding:' + TABLE_FONT_COMPACT.rowPad + '; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
+      '<div style="font-size:' + TABLE_FONT_COMPACT.label + '; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
+      areaCell + tierCells +
+      (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
+    '</div>';
+  }).join("");
+
+  var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
+    '<div style="min-width:1500px;">' + tableHeader + rows + '</div>' +
+  '</div>';
+
+  var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
+    'ราคาต่อเมตร ยังไม่รวม VAT 7%<br>ไม่ใช้กับเสาเข็มเสริมเหล็กพิเศษ<br>เริ่มใช้ 15 เม.ย. 2569' +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาเสาเข็ม (TNN)</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่พื้นที่หน้าตัดและราคาฐาน 4 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "เลือกกลุ่มเสาเข็ม เพื่อดูราคาต่อเมตรทุกระดับ") + '</div>' +
+    '</div>' +
+    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + groupTabs + '</div>' +
+    table + note +
   '</div>';
 };
 

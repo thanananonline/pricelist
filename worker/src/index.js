@@ -546,6 +546,56 @@ export default {
       });
     }
 
+    if (path === "/pile-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM pile_products ORDER BY sort_order ASC").all();
+      const pileProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          group: p.grp,
+          name: p.name,
+          areaSqcm: p.area_sqcm,
+          sortOrder: p.sort_order,
+          pickup: p.price_pickup,
+          t201_500plus: p.price_201_500plus,
+          t101_201: p.price_101_201,
+          under_100: p.price_under_100,
+        };
+      });
+      return json(pileProducts);
+    }
+
+    const pileIdMatch = path.match(/^\/pile-products\/([^/]+)$/);
+    if (pileIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(pileIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM pile_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const pickup = body.pickup !== undefined ? Number(body.pickup) : existing.price_pickup;
+      const t500 = body.t201_500plus !== undefined ? Number(body.t201_500plus) : existing.price_201_500plus;
+      const t201 = body.t101_201 !== undefined ? Number(body.t101_201) : existing.price_101_201;
+      const under100 = body.under_100 !== undefined ? Number(body.under_100) : existing.price_under_100;
+      if ([pickup, t500, t201, under100].some(function (n) { return isNaN(n); })) return json({ error: "invalid price" }, 400);
+      const areaSqcm = body.areaSqcm !== undefined ? nullableNumber(body.areaSqcm) : existing.area_sqcm;
+
+      await env.DB.prepare("UPDATE pile_products SET area_sqcm=?, price_pickup=?, price_201_500plus=?, price_101_201=?, price_under_100=? WHERE id=?")
+        .bind(areaSqcm, pickup, t500, t201, under100, id).run();
+
+      return json({
+        id: existing.id,
+        group: existing.grp,
+        name: existing.name,
+        areaSqcm: areaSqcm,
+        sortOrder: existing.sort_order,
+        pickup: pickup,
+        t201_500plus: t500,
+        t101_201: t201,
+        under_100: under100,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
