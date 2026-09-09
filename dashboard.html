@@ -3522,7 +3522,12 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   var isAdmin = this.isAdmin();
   // Compact font/column set so this 8-column table fits typical screens
   // without horizontal scroll - same reasoning as renderPilePage above.
-  var concreteMixPriceStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:oklch(0.32 0.17 275);";
+  // Retail (ปลีก) and wholesale (ส่ง) each get their own text color, shared
+  // by both their VAT and no-VAT columns, same treatment as the pile tables.
+  var concreteMixRetailColor = "oklch(0.45 0.13 250)";
+  var concreteMixWholesaleColor = "oklch(0.42 0.13 150)";
+  var concreteMixRetailStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:" + concreteMixRetailColor + ";";
+  var concreteMixWholesaleStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:" + concreteMixWholesaleColor + ";";
   var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
   var previewStyle = "font-size:9.5px; color:oklch(0.55 0.01 60); margin-top:2px;";
   var colWidths = "minmax(0,1.2fr) 0.55fr 0.55fr 0.8fr 0.72fr 0.72fr 0.72fr 0.72fr" + (isAdmin ? " 44px" : "");
@@ -3531,7 +3536,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     '<div>ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
     '<div>ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
     '<div>ค่ายุบตัว (Slump)<br>ซม.</div>' +
-    '<div>ปลีก<br>(รวม VAT)</div><div>ปลีก<br>(ไม่รวม VAT)</div><div>ส่ง<br>(รวม VAT)</div><div>ส่ง<br>(ไม่รวม VAT)</div>' +
+    '<div style="color:' + concreteMixRetailColor + ';">ปลีก<br>(รวม VAT)</div><div style="color:' + concreteMixRetailColor + ';">ปลีก<br>(ไม่รวม VAT)</div><div style="color:' + concreteMixWholesaleColor + ';">ส่ง<br>(รวม VAT)</div><div style="color:' + concreteMixWholesaleColor + ';">ส่ง<br>(ไม่รวม VAT)</div>' +
     (isAdmin ? '<div></div>' : '');
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
@@ -3550,20 +3555,20 @@ Dashboard.prototype.renderConcreteMixPage = function () {
           '<input id="field-concreteMixEditRetailBase" type="text" inputmode="decimal" data-bind="concreteMixEditRetailBase" value="' + esc(s.concreteMixEditRetailBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานปลีก &rarr; ' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixVat(retailBaseInput))) + '</div>' +
         '</div>';
-      retailNovatCell = '<div style="' + concreteMixPriceStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
+      retailNovatCell = '<div style="' + concreteMixRetailStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
       wholesaleVatCell = '<div>' +
           '<input id="field-concreteMixEditWholesaleBase" type="text" inputmode="decimal" data-bind="concreteMixEditWholesaleBase" value="' + esc(s.concreteMixEditWholesaleBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานส่ง &rarr; ' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixVat(wholesaleBaseInput))) + '</div>' +
         '</div>';
-      wholesaleNovatCell = '<div style="' + concreteMixPriceStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
+      wholesaleNovatCell = '<div style="' + concreteMixWholesaleStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
     } else {
       cubeCell = '<div style="font-size:12px;">' + esc(p.cube) + '</div>';
       cylCell = '<div style="font-size:12px;">' + esc(p.cyl) + '</div>';
       slumpCell = '<div style="font-size:12px;">' + esc(p.slump) + '</div>';
-      retailVatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
-      retailNovatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
-      wholesaleVatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
-      wholesaleNovatCell = '<div style="' + concreteMixPriceStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
+      retailVatCell = '<div style="' + concreteMixRetailStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
+      retailNovatCell = '<div style="' + concreteMixRetailStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
+      wholesaleVatCell = '<div style="' + concreteMixWholesaleStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
+      wholesaleNovatCell = '<div style="' + concreteMixWholesaleStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
     }
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
