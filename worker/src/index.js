@@ -596,6 +596,53 @@ export default {
       });
     }
 
+    if (path === "/box-culvert-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM box_culvert_products ORDER BY sort_order ASC").all();
+      const boxCulvertProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          size: p.size,
+          widthCm: p.width_cm,
+          heightCm: p.height_cm,
+          thicknessCm: p.thickness_cm,
+          weightKg: p.weight_kg,
+          sortOrder: p.sort_order,
+          priceMok1164: p.price_mok1164,
+          priceMok1166: p.price_mok1166,
+        };
+      });
+      return json(boxCulvertProducts);
+    }
+
+    const boxCulvertIdMatch = path.match(/^\/box-culvert-products\/([^/]+)$/);
+    if (boxCulvertIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(boxCulvertIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM box_culvert_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const mok1164 = body.priceMok1164 !== undefined ? Number(body.priceMok1164) : existing.price_mok1164;
+      const mok1166 = body.priceMok1166 !== undefined ? Number(body.priceMok1166) : existing.price_mok1166;
+      if ([mok1164, mok1166].some(function (n) { return isNaN(n); })) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE box_culvert_products SET price_mok1164=?, price_mok1166=? WHERE id=?")
+        .bind(mok1164, mok1166, id).run();
+
+      return json({
+        id: existing.id,
+        size: existing.size,
+        widthCm: existing.width_cm,
+        heightCm: existing.height_cm,
+        thicknessCm: existing.thickness_cm,
+        weightKg: existing.weight_kg,
+        sortOrder: existing.sort_order,
+        priceMok1164: mok1164,
+        priceMok1166: mok1166,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);

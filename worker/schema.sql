@@ -145,3 +145,21 @@ CREATE TABLE IF NOT EXISTS pile_products (
   price_101_201 REAL NOT NULL,
   price_under_100 REAL NOT NULL
 );
+
+-- Box culvert (ท่อเหลี่ยม) price list (see
+-- migrations/0015_add_box_culvert_pricing.sql): no discount ladder and no
+-- groups (one flat list). Two independent ไม่รวม VAT prices per row --
+-- price_mok1164/price_mok1166, one per มอก. standard -- the matching
+-- VAT-inclusive prices shown on screen are always derived from them at
+-- render time (base * 1.07, rounded), same as pile_products above.
+CREATE TABLE IF NOT EXISTS box_culvert_products (
+  id TEXT PRIMARY KEY,
+  size TEXT NOT NULL,
+  width_cm REAL NOT NULL,
+  height_cm REAL NOT NULL,
+  thickness_cm REAL NOT NULL,
+  weight_kg REAL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  price_mok1164 REAL NOT NULL,
+  price_mok1166 REAL NOT NULL
+);

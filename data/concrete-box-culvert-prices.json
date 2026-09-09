@@ -1,0 +1,74 @@
+{
+  "category": "ราคาผลิตภัณฑ์คอนกรีต",
+  "group": "ท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ (ท่อเหลี่ยม / box culvert)",
+  "unit_length_m": 1.00,
+  "price_includes_vat": false,
+  "vat_percent": 7,
+  "price_standards": {
+    "price_mok1164": "มอก.1164-2559 ชนิดใต้ทางเท้า",
+    "price_mok1166": "มอก.1166-2559 ชนิดใต้ผิวจราจร"
+  },
+  "currency": "THB",
+  "effective_date": "2564-03-01",
+  "notes": [
+    "ราคาไม่รวมภาษีมูลค่าเพิ่ม 7%",
+    "ราคานี้สามารถเปลี่ยนแปลงได้โดยไม่ต้องแจ้งให้ทราบล่วงหน้า",
+    "เริ่มใช้ราคานี้ตั้งแต่ 1 มีนาคม 2564"
+  ],
+  "items": [
+    {
+      "size": "120x120",
+      "width_cm": 120,
+      "height_cm": 120,
+      "thickness_cm": 12.5,
+      "price_mok1164": 4200,
+      "price_mok1166": 4500,
+      "weight_kg": 1750
+    },
+    {
+      "size": "150x150",
+      "width_cm": 150,
+      "height_cm": 150,
+      "thickness_cm": 15,
+      "price_mok1164": 5200,
+      "price_mok1166": 6500,
+      "weight_kg": 2800
+    },
+    {
+      "size": "180x180",
+      "width_cm": 180,
+      "height_cm": 180,
+      "thickness_cm": 17.5,
+      "price_mok1164": 7800,
+      "price_mok1166": 8300,
+      "weight_kg": 3650
+    },
+    {
+      "size": "210x210",
+      "width_cm": 210,
+      "height_cm": 210,
+      "thickness_cm": 20,
+      "price_mok1164": 9900,
+      "price_mok1166": 11500,
+      "weight_kg": 4800
+    },
+    {
+      "size": "210x240",
+      "width_cm": 210,
+      "height_cm": 240,
+      "thickness_cm": 20,
+      "price_mok1164": 11500,
+      "price_mok1166": 13000,
+      "weight_kg": 5500
+    },
+    {
+      "size": "240x240",
+      "width_cm": 240,
+      "height_cm": 240,
+      "thickness_cm": 20,
+      "price_mok1164": 13000,
+      "price_mok1166": 14500,
+      "weight_kg": 6500
+    }
+  ]
+}
