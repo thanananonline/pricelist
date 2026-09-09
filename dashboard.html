@@ -536,6 +536,11 @@ function Dashboard(root) {
     manholeEditPickup: "",
     manholeEditWholesale: "",
     manholeEditRetail: "",
+    pageNotes: {},
+    pageNotesLoading: true,
+    pageNotesError: "",
+    editingPageNoteKey: null,
+    editPageNoteText: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -573,6 +578,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadPileProducts();
   this.loadBoxCulvertProducts();
   this.loadManholeProducts();
+  this.loadPageNotes();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -1070,6 +1076,43 @@ Dashboard.prototype.saveManholeEdit = function (id) {
   });
 };
 
+// Free-text "หมายเหตุ" note shown above the table on each product price
+// page, keyed by page (see PAGE_NOTE_KEYS below and worker/migrations
+// for the page_notes table). Admin-editable via the pencil button
+// rendered by renderPageNoteBlock; viewers just see the text (or nothing,
+// if it's empty).
+Dashboard.prototype.loadPageNotes = function () {
+  var self = this;
+  self.state.pageNotesLoading = true;
+  apiRequest("/page-notes").then(function (pageNotes) {
+    self.setState({ pageNotes: pageNotes, pageNotesLoading: false, pageNotesError: "" });
+  }).catch(function () {
+    self.setState({ pageNotesLoading: false, pageNotesError: "โหลดหมายเหตุไม่สำเร็จ" });
+  });
+};
+
+Dashboard.prototype.startPageNoteEdit = function (key) {
+  this.setState({ editingPageNoteKey: key, editPageNoteText: this.state.pageNotes[key] || "" });
+};
+
+Dashboard.prototype.savePageNoteEdit = function (key) {
+  var note = this.state.editPageNoteText;
+  var self = this;
+  apiRequest("/page-notes/" + encodeURIComponent(key), {
+    method: "PUT", auth: true,
+    body: { note: note },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var pageNotes = Object.assign({}, s2.pageNotes);
+      pageNotes[key] = updated.note;
+      return { pageNotes: pageNotes, editingPageNoteKey: null };
+    });
+    self.showToast("บันทึกหมายเหตุสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -1248,6 +1291,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-manhole": this.startManholeEdit(d.id); break;
     case "cancel-edit-manhole": this.setState({ manholeEditingId: null }); break;
     case "save-edit-manhole": this.saveManholeEdit(d.id); break;
+    case "start-edit-page-note": this.startPageNoteEdit(d.key); break;
+    case "cancel-edit-page-note": this.setState({ editingPageNoteKey: null }); break;
+    case "save-edit-page-note": this.savePageNoteEdit(d.key); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -3332,6 +3378,34 @@ Dashboard.prototype.computeTruckPlan = function (totalWeightKg) {
   return { rows: rows, recommended: recommended };
 };
 
+// Shared "หมายเหตุ" block rendered above the table on every product price
+// page (pipe/plank/fence/concrete mix/pile/box culvert/manhole). Viewers see
+// plain text (or nothing, if empty); admins get an edit pencil that opens a
+// textarea bound to editPageNoteText and saved via PUT /page-notes/:key.
+Dashboard.prototype.renderPageNoteBlock = function (key) {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+  var note = s.pageNotes[key] || "";
+  var isEditing = s.editingPageNoteKey === key;
+
+  if (isEditing) {
+    return '<div style="margin-bottom:14px; background:#fff; border:1px solid oklch(0.6 0.15 275); border-radius:10px; padding:12px 14px;">' +
+      '<textarea id="field-editPageNoteText" data-bind="editPageNoteText" rows="3" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; resize:vertical;">' + esc(s.editPageNoteText) + '</textarea>' +
+      '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">' +
+        '<button data-action="cancel-edit-page-note" style="min-height:34px; padding:7px 14px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button data-action="save-edit-page-note" data-key="' + esc(key) + '" style="min-height:34px; padding:7px 14px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (!note && !isAdmin) return "";
+
+  return '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
+    '<div style="white-space:pre-line;">' + (note ? esc(note) : '<span style="color:oklch(0.7 0.01 60);">ยังไม่มีหมายเหตุ</span>') + '</div>' +
+    (isAdmin ? '<button data-action="start-edit-page-note" data-key="' + esc(key) + '" title="แก้ไขหมายเหตุ" style="flex:0 0 auto; min-height:28px; min-width:28px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:12px; cursor:pointer; font-family:inherit;">✏️</button>' : '') +
+  '</div>';
+};
+
 Dashboard.prototype.renderPipePage = function () {
   var s = this.state;
 
@@ -3466,6 +3540,7 @@ Dashboard.prototype.renderPipePage = function () {
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">' + typeButtons + '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ขนาด (เส้นผ่านศูนย์กลาง)</div>' +
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + sizeButtons + '</div>' +
+    this.renderPageNoteBlock("pipe") +
     infoCard + tableActionBar + table + legend +
   '</div>';
 };
@@ -3630,6 +3705,7 @@ Dashboard.prototype.renderPlankPage = function () {
     '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทแผ่นพื้น</div>' +
     '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">' + typeButtons + '</div>' +
+    this.renderPageNoteBlock("plank") +
     infoCard + tableActionBar + table + legend +
   '</div>';
 };
@@ -3702,7 +3778,7 @@ Dashboard.prototype.renderFencePage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคารั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อท่อน ไม่รวม VAT 7% ไม่มีขั้นส่วนลด</div>' +
     '</div>' +
-    table +
+    this.renderPageNoteBlock("fence") + table +
   '</div>';
 };
 
@@ -3811,7 +3887,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาคอนกรีตผสมเสร็จ</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">ราคาต่อลูกบาศก์เมตร ' + (isAdmin ? "&mdash; แก้ไขได้ที่สเปก (Cube/Cylinder/Slump) และราคาฐาน (ปลีก/ส่ง) ราคารวม/ไม่รวม VAT คำนวณให้อัตโนมัติ" : "") + '</div>' +
     '</div>' +
-    table +
+    this.renderPageNoteBlock("concrete_mix") + table +
   '</div>';
 };
 
@@ -3962,9 +4038,7 @@ Dashboard.prototype.renderPilePage = function () {
     '<div style="min-width:920px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
-    'ราคาต่อเมตร ยังไม่รวม VAT 7%<br>ไม่ใช้กับเสาเข็มเสริมเหล็กพิเศษ<br>เริ่มใช้ 15 เม.ย. 2569' +
-  '</div>';
+  var note = this.renderPageNoteBlock("pile");
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
@@ -4042,9 +4116,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
     '<div style="min-width:760px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
-    'ราคาต่อท่อน (ยาว 1 ม.) ยังไม่รวม VAT 7% ไม่มีขั้นส่วนลด<br>เริ่มใช้ราคานี้ตั้งแต่ 1 มีนาคม 2564' +
-  '</div>';
+  var note = this.renderPageNoteBlock("box_culvert");
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
@@ -4124,12 +4196,7 @@ Dashboard.prototype.renderManholePage = function () {
     '<div style="min-width:1080px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
-    'ราคาที่แสดงเป็นบ่อพักแบบ 2 ทางตรง ยังไม่รวม VAT 7% ไม่มีขั้นส่วนลด<br>' +
-    'สำหรับแบบ 3 ทาง, ฉาก, หรือ 1 ทาง เพิ่มใบละ 100 บาท (ยกเว้นรายการที่ระบุชนิดเป็น 3-way ซึ่งมีราคาเฉพาะอยู่แล้ว)<br>' +
-    'บ่อพักสามารถสั่งผลิตล่วงหน้าได้ ตามความต้องการหรือตามแบบของแต่ละโครงการ<br>' +
-    'เริ่มใช้ราคานี้ตั้งแต่ 8 พฤษภาคม 2569' +
-  '</div>';
+  var note = this.renderPageNoteBlock("manhole");
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +

@@ -695,6 +695,26 @@ export default {
       });
     }
 
+    if (path === "/page-notes" && method === "GET") {
+      const { results } = await env.DB.prepare("SELECT page_key, note FROM page_notes").all();
+      const notes = {};
+      results.forEach(function (r) { notes[r.page_key] = r.note; });
+      return json(notes);
+    }
+
+    const pageNoteMatch = path.match(/^\/page-notes\/([^/]+)$/);
+    if (pageNoteMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const key = decodeURIComponent(pageNoteMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const note = String(body.note || "");
+      await env.DB.prepare(
+        "INSERT INTO page_notes (page_key, note) VALUES (?, ?) ON CONFLICT (page_key) DO UPDATE SET note=excluded.note"
+      ).bind(key, note).run();
+      return json({ pageKey: key, note: note });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
