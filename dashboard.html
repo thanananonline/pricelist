@@ -3752,7 +3752,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     '<div style="padding:10px 8px;">ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
     '<div style="padding:10px 8px;">ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
     '<div style="padding:10px 8px;">ค่ายุบตัว (Slump)<br>ซม.</div>' +
-    '<div style="' + retailHeaderStyle + '">ปลีก<br>(รวม VAT)</div><div style="' + retailHeaderStyle + '">ปลีก<br>(ไม่รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(ไม่รวม VAT)</div>' +
+    '<div style="' + retailHeaderStyle + '">ปลีก<br>(ไม่รวม VAT)</div><div style="' + retailHeaderStyle + '">ปลีก<br>(รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(ไม่รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(รวม VAT)</div>' +
     (isAdmin ? '<div></div>' : '');
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
@@ -3797,7 +3797,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid oklch(0.93 0.006 70); align-items:stretch;">' +
       '<div style="' + groupCellStyle(null, "font-size:12.5px; font-weight:600; line-height:1.3;") + '">' + esc(p.name) + '</div>' +
       cubeCell + cylCell + slumpCell +
-      retailVatCell + retailNovatCell + wholesaleVatCell + wholesaleNovatCell +
+      retailNovatCell + retailVatCell + wholesaleNovatCell + wholesaleVatCell +
       (isAdmin ? '<div style="' + groupCellStyle(null) + '">' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
