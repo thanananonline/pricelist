@@ -1,0 +1,42 @@
+{
+  "category": "ราคาผลิตภัณฑ์คอนกรีต",
+  "group": "บ่อพักสำเร็จรูป (precast manhole)",
+  "manufacturer": "อินทรี Concrete",
+  "price_includes_vat": false,
+  "currency": "THB",
+  "effective_date": "2569-05-08",
+  "base_config": "2 ทางตรง",
+  "surcharge_note": "ราคาที่แสดงเป็นบ่อพักแบบ 2 ทางตรง สำหรับแบบ 3 ทาง, ฉาก, หรือ 1 ทาง เพิ่มใบละ 100 บาท (ยกเว้นรายการที่ระบุ variant เป็น 3-way ซึ่งมีราคาเฉพาะอยู่แล้ว)",
+  "notes": [
+    "บ่อพักสามารถสั่งผลิตล่วงหน้า ตามความต้องการ หรือตามแบบของแต่ละโครงการ",
+    "ราคานี้ไม่รวม VAT และอาจเปลี่ยนแปลงโดยทางบริษัทจะแจ้งให้ทราบล่วงหน้า",
+    "เริ่มใช้ราคานี้ตั้งแต่ 8/5/2569"
+  ],
+  "price_columns": {
+    "price_pickup": "ราคารับเอง",
+    "price_wholesale": "ราคาส่ง",
+    "price_retail": "ราคาปลีก"
+  },
+  "items": [
+    { "group_no": 1, "for_pipe_cm": 30, "manhole_size": "60x60x90",   "wall_thickness_cm": 6,  "rebar": "6mm",  "variant": "standard",   "price_pickup": 950,   "price_wholesale": 1100,  "price_retail": 1200 },
+    { "group_no": 1, "for_pipe_cm": 30, "manhole_size": "70x70x90",   "wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 1550,  "price_wholesale": 1700,  "price_retail": 1800 },
+    { "group_no": 2, "for_pipe_cm": 40, "manhole_size": "70x75x90",   "wall_thickness_cm": 8,  "rebar": "9mm",  "variant": "standard",   "price_pickup": 1500,  "price_wholesale": 1650,  "price_retail": 1750 },
+    { "group_no": 2, "for_pipe_cm": 40, "manhole_size": "70x75x90",   "wall_thickness_cm": 8,  "rebar": "6mm",  "variant": "ECO",        "price_pickup": 1350,  "price_wholesale": 1550,  "price_retail": 1650 },
+    { "group_no": 2, "for_pipe_cm": 40, "manhole_size": "80x80x100",  "wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 1800,  "price_wholesale": 1950,  "price_retail": 2050 },
+    { "group_no": 3, "for_pipe_cm": 50, "manhole_size": "90x90x100",  "wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 2000,  "price_wholesale": 2200,  "price_retail": 2300 },
+    { "group_no": 4, "for_pipe_cm": 60, "manhole_size": "100x100x110","wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 2500,  "price_wholesale": 2700,  "price_retail": 2800 },
+    { "group_no": 4, "for_pipe_cm": 60, "manhole_size": "100x100x110","wall_thickness_cm": 10, "rebar": "6mm",  "variant": "ECO",        "price_pickup": 2400,  "price_wholesale": 2550,  "price_retail": 2650 },
+    { "group_no": 5, "for_pipe_cm": 80, "manhole_size": "120x120x150","wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 3300,  "price_wholesale": 3600,  "price_retail": 3700 },
+    { "group_no": 5, "for_pipe_cm": 80, "manhole_size": "120x120x150","wall_thickness_cm": 10, "rebar": "6mm",  "variant": "ECO",        "price_pickup": 2900,  "price_wholesale": 3200,  "price_retail": 3300 },
+    { "group_no": 6, "for_pipe_cm": 100,"manhole_size": "130x150x170","wall_thickness_cm": 15, "rebar": "12mm", "variant": "standard",   "price_pickup": 5900,  "price_wholesale": 6400,  "price_retail": 6800 },
+    { "group_no": 6, "for_pipe_cm": 100,"manhole_size": "150x150x170","wall_thickness_cm": 15, "rebar": "12mm", "variant": "3-way",      "price_pickup": 6400,  "price_wholesale": 7200,  "price_retail": 7600 },
+    { "group_no": 6, "for_pipe_cm": 100,"manhole_size": "130x150x170","wall_thickness_cm": 15, "rebar": "9mm",  "variant": "ECO",        "price_pickup": 5500,  "price_wholesale": 6000,  "price_retail": 6400 },
+    { "group_no": 6, "for_pipe_cm": 100,"manhole_size": "150x150x170","wall_thickness_cm": 15, "rebar": "9mm",  "variant": "ECO 3-way",  "price_pickup": 6000,  "price_wholesale": 6500,  "price_retail": 7000 },
+    { "group_no": 7, "for_pipe_cm": 120,"manhole_size": "180x120x210","wall_thickness_cm": 15, "rebar": "12mm", "variant": "standard",   "price_pickup": 7500,  "price_wholesale": 9000,  "price_retail": 9500 },
+    { "group_no": 7, "for_pipe_cm": 120,"manhole_size": "180x180x210","wall_thickness_cm": 15, "rebar": "12mm", "variant": "3-way",      "price_pickup": 8500,  "price_wholesale": 10000, "price_retail": 10500 },
+    { "group_no": 7, "for_pipe_cm": 120,"manhole_size": "180x120x210","wall_thickness_cm": 15, "rebar": "9mm",  "variant": "ECO",        "price_pickup": 7000,  "price_wholesale": 8500,  "price_retail": 9000 },
+    { "group_no": 7, "for_pipe_cm": 120,"manhole_size": "180x180x210","wall_thickness_cm": 15, "rebar": "9mm",  "variant": "ECO 3-way",  "price_pickup": 8100,  "price_wholesale": 9600,  "price_retail": 10000 },
+    { "group_no": 8, "for_pipe_cm": 150,"manhole_size": "230x120x240","wall_thickness_cm": 15, "rebar": "12mm", "variant": "standard",   "price_pickup": 12000, "price_wholesale": 16000, "price_retail": 20000 },
+    { "group_no": 8, "for_pipe_cm": 150,"manhole_size": "230x230x240","wall_thickness_cm": 15, "rebar": "12mm", "variant": "3-way",      "price_pickup": 14000, "price_wholesale": 18000, "price_retail": 22000 }
+  ]
+}

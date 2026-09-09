@@ -163,3 +163,25 @@ CREATE TABLE IF NOT EXISTS box_culvert_products (
   price_mok1164 REAL NOT NULL,
   price_mok1166 REAL NOT NULL
 );
+
+-- Precast manhole (บ่อพักสำเร็จรูป) price list (see
+-- migrations/0017_add_manhole_pricing.sql): no discount ladder, three
+-- independent ไม่รวม VAT prices per row (price_pickup/price_wholesale/
+-- price_retail) instead of box_culvert_products' two -- the matching
+-- VAT-inclusive prices shown on screen are always derived from them at
+-- render time (base * 1.07, rounded), same as box_culvert_products above.
+-- variant distinguishes multiple product types at the same manhole_size
+-- (standard/ECO/3-way/ECO 3-way).
+CREATE TABLE IF NOT EXISTS manhole_products (
+  id TEXT PRIMARY KEY,
+  group_no INTEGER NOT NULL,
+  for_pipe_cm REAL NOT NULL,
+  manhole_size TEXT NOT NULL,
+  wall_thickness_cm REAL,
+  rebar TEXT,
+  variant TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  price_pickup REAL NOT NULL,
+  price_wholesale REAL NOT NULL,
+  price_retail REAL NOT NULL
+);

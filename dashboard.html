@@ -529,6 +529,13 @@ function Dashboard(root) {
     boxCulvertEditingId: null,
     boxCulvertEditMok1164: "",
     boxCulvertEditMok1166: "",
+    manholeProducts: [],
+    manholeProductsLoading: true,
+    manholeProductsError: "",
+    manholeEditingId: null,
+    manholeEditPickup: "",
+    manholeEditWholesale: "",
+    manholeEditRetail: "",
     calcProductType: "slab",
     calcPlateWidth: "0.35",
     calcWeightPerSqm: "120",
@@ -565,6 +572,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadConcreteMixProducts();
   this.loadPileProducts();
   this.loadBoxCulvertProducts();
+  this.loadManholeProducts();
   this.loadFolders("concrete");
   this.loadFolders("tis");
   this.loadFolders("company");
@@ -1011,6 +1019,57 @@ Dashboard.prototype.saveBoxCulvertEdit = function (id) {
   });
 };
 
+// Precast manhole (บ่อพักสำเร็จรูป) prices live in D1 (manhole_products, see
+// migrations/0017_add_manhole_pricing.sql) same as box culvert. Only the
+// three base (no-VAT) prices are stored -- the VAT-inclusive prices shown
+// on screen are derived from them client-side in renderManholePage with a
+// fixed formula (base * 1.07, rounded), so there's nothing else to fetch or
+// cache here.
+Dashboard.prototype.loadManholeProducts = function () {
+  var self = this;
+  self.state.manholeProductsLoading = true;
+  apiRequest("/manhole-products").then(function (manholeProducts) {
+    self.setState({ manholeProducts: manholeProducts, manholeProductsLoading: false, manholeProductsError: "" });
+  }).catch(function () {
+    self.setState({ manholeProductsLoading: false, manholeProductsError: "โหลดข้อมูลตารางราคาบ่อพักไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startManholeEdit = function (id) {
+  var p = this.state.manholeProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  this.setState({
+    manholeEditingId: id,
+    manholeEditPickup: String(p.pricePickup),
+    manholeEditWholesale: String(p.priceWholesale),
+    manholeEditRetail: String(p.priceRetail),
+  });
+};
+
+Dashboard.prototype.saveManholeEdit = function (id) {
+  var s = this.state;
+  var pickup = parseFloat(s.manholeEditPickup);
+  var wholesale = parseFloat(s.manholeEditWholesale);
+  var retail = parseFloat(s.manholeEditRetail);
+  if (isNaN(pickup) || isNaN(wholesale) || isNaN(retail)) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/manhole-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: { pricePickup: pickup, priceWholesale: wholesale, priceRetail: retail },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var manholeProducts = s2.manholeProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { manholeProducts: manholeProducts, manholeEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
 Dashboard.prototype.loadCategories = function () {
   var self = this;
   self.state.categoriesLoading = true;
@@ -1158,7 +1217,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
     case "discount-set-category":
-      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null };
+      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null, manholeEditingId: null };
       if (d.category === "pile_i") discountCategoryPatch.pileGroup = "I";
       else if (d.category === "pile_sq") discountCategoryPatch.pileGroup = "SQ";
       else if (d.category === "pile_hex") discountCategoryPatch.pileGroup = "HEX";
@@ -1185,6 +1244,10 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-box-culvert": this.startBoxCulvertEdit(d.id); break;
     case "cancel-edit-box-culvert": this.setState({ boxCulvertEditingId: null }); break;
     case "save-edit-box-culvert": this.saveBoxCulvertEdit(d.id); break;
+    case "reload-manhole-products": this.loadManholeProducts(); break;
+    case "start-edit-manhole": this.startManholeEdit(d.id); break;
+    case "cancel-edit-manhole": this.setState({ manholeEditingId: null }); break;
+    case "save-edit-manhole": this.saveManholeEdit(d.id); break;
     case "toggle-add-form": this.onToggleAddForm(); break;
     case "start-edit": this.startEdit(d.id); break;
     case "save-edit": this.saveEdit(d.id); break;
@@ -2778,6 +2841,7 @@ Dashboard.prototype.renderCalcSidebar = function () {
 var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "pipe", label: "ท่อคอนกรีต" },
   { value: "box_culvert", label: "ท่อเหลี่ยม (Box Culvert)" },
+  { value: "manhole", label: "บ่อพักสำเร็จรูป" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
   { value: "fence", label: "รั้วสำเร็จรูป TNN" },
   { value: "concrete_mix", label: "คอนกรีตผสมเสร็จ" },
@@ -3423,6 +3487,7 @@ Dashboard.prototype.renderDiscountPage = function () {
   var tabs = '<div style="padding:28px 32px 0; max-width:1500px; margin:0 auto; display:flex; gap:8px; flex-wrap:wrap;">' +
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("box_culvert", "ท่อเหลี่ยม", "🟦") +
+    tabButton("manhole", "บ่อพักสำเร็จรูป", "🕳️") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
     tabButton("concrete_mix", "คอนกรีตผสมเสร็จ", "🚚") +
@@ -3433,6 +3498,8 @@ Dashboard.prototype.renderDiscountPage = function () {
 
   var body = cat === "box_culvert"
     ? '<div id="box-culvert-container">' + this.renderBoxCulvertPage() + '</div>'
+    : cat === "manhole"
+    ? '<div id="manhole-container">' + this.renderManholePage() + '</div>'
     : cat === "plank"
     ? '<div id="plank-container">' + this.renderPlankPage() + '</div>'
     : cat === "fence"
@@ -3798,6 +3865,26 @@ var BOX_CULVERT_TIERS = [
   { key: "priceMok1166", editKey: "boxCulvertEditMok1166", label: "มอก.1166-2559", sublabel: "ใต้ผิวจราจร", headerBg: "#97C459", headerText: "#173404", novatBg: "#F5F9EF", vatBg: "#EAF3DE" },
 ];
 
+// Precast manhole stores only the three base (ยังไม่รวม VAT) prices per row
+// (price_pickup/price_wholesale/price_retail); the VAT-inclusive prices
+// shown in the table are always derived from those with this fixed formula
+// (see migrations/0017_add_manhole_pricing.sql), same as boxCulvertVat
+// above. This is its own function (not a shared helper) so each category's
+// VAT rule stays independently editable, same reasoning as pileVat/
+// boxCulvertVat/concreteMixVat all being separate functions despite sharing
+// the same formula today.
+function manholeVat(base) { return Math.round(base * 1.07); }
+
+// Same "design B" tier styling as BOX_CULVERT_TIERS above, but three tiers
+// (รับเอง/ส่ง/ปลีก) instead of two -- MANHOLE_TIERS is its own constant
+// (not shared with BOX_CULVERT_TIERS) so the two categories' tier
+// definitions can change independently.
+var MANHOLE_TIERS = [
+  { key: "pricePickup", editKey: "manholeEditPickup", label: "ราคารับเอง", headerBg: "#85B7EB", headerText: "#042C53", novatBg: "#F4F9FE", vatBg: "#E6F1FB" },
+  { key: "priceWholesale", editKey: "manholeEditWholesale", label: "ราคาส่ง", headerBg: "#97C459", headerText: "#173404", novatBg: "#F5F9EF", vatBg: "#EAF3DE" },
+  { key: "priceRetail", editKey: "manholeEditRetail", label: "ราคาปลีก", headerBg: "#EF9F27", headerText: "#412402", novatBg: "#FDF8EF", vatBg: "#FAEEDA" },
+];
+
 Dashboard.prototype.renderPilePage = function () {
   var s = this.state;
 
@@ -3963,6 +4050,91 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
     '<div style="margin-bottom:20px;">' +
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ (ท่อเหลี่ยม)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 2 มาตรฐาน (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาตามมาตรฐาน มอก.1164-2559 (ใต้ทางเท้า) และ มอก.1166-2559 (ใต้ผิวจราจร)") + '</div>' +
+    '</div>' +
+    table + note +
+  '</div>';
+};
+
+Dashboard.prototype.renderManholePage = function () {
+  var s = this.state;
+
+  if (s.manholeProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.manholeProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.manholeProductsError) + '</div>' +
+      '<button data-action="reload-manhole-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var products = s.manholeProducts;
+  if (!products.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:oklch(0.55 0.01 60);">ยังไม่มีข้อมูลราคาบ่อพักสำเร็จรูป</div>';
+  }
+
+  var isAdmin = this.isAdmin();
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var colWidths = "minmax(0,0.9fr) 0.55fr 0.5fr 0.6fr 0.65fr repeat(6, 0.58fr)" + (isAdmin ? " 44px" : "");
+
+  var headerCells = '<div style="padding:10px 8px;">ขนาดบ่อ (ก.xย.xส. ซม.)</div><div style="padding:10px 8px;">ใช้กับท่อ<br>(ซม.)</div><div style="padding:10px 8px;">หนา<br>(ซม.)</div><div style="padding:10px 8px;">เหล็กเสริม</div><div style="padding:10px 8px;">ชนิด</div>' +
+    MANHOLE_TIERS.map(function (t) {
+      var headerStyle = "background-color:" + t.headerBg + "; color:" + t.headerText + "; padding:10px 8px; box-sizing:border-box;";
+      return '<div style="' + headerStyle + '">' + t.label + '<br>ไม่รวม VAT</div>' +
+        '<div style="' + headerStyle + '">' + t.label + '<br>รวม VAT</div>';
+    }).join("") +
+    (isAdmin ? '<div></div>' : '');
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
+
+  var rows = products.map(function (p) {
+    var isEditingThis = s.manholeEditingId === p.id;
+
+    var tierCells = MANHOLE_TIERS.map(function (t) {
+      var fontStyle = "font-family:Kanit; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
+      if (isEditingThis) {
+        var raw = s[t.editKey];
+        var parsed = parseFloat(raw);
+        var novatCell = '<div style="' + groupCellStyle(t.novatBg) + '"><input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" /></div>';
+        var vatCell = '<div style="' + groupCellStyle(t.vatBg, fontStyle) + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(manholeVat(parsed))) + '</div>';
+        return novatCell + vatCell;
+      }
+      var base = p[t.key];
+      return '<div style="' + groupCellStyle(t.novatBg, fontStyle) + '">฿' + fmt(base) + '</div>' +
+        '<div style="' + groupCellStyle(t.vatBg, fontStyle) + '">฿' + fmt(manholeVat(base)) + '</div>';
+    }).join("");
+
+    var actionsCell = !isAdmin ? '' : (isEditingThis
+      ? '<div style="display:flex; flex-direction:column; gap:4px;">' +
+          '<button data-action="save-edit-manhole" data-id="' + esc(p.id) + '" title="บันทึก" style="min-height:28px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✓</button>' +
+          '<button data-action="cancel-edit-manhole" title="ยกเลิก" style="min-height:28px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:5px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit; line-height:1;">✕</button>' +
+        '</div>'
+      : '<button data-action="start-edit-manhole" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
+
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid oklch(0.93 0.006 70); align-items:stretch;">' +
+      '<div style="' + groupCellStyle(null, "font-size:12.5px; font-weight:600; line-height:1.3;") + '">' + esc(p.manholeSize) + '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + fmt(p.forPipeCm) + '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + (p.wallThicknessCm != null ? fmt(p.wallThicknessCm) : "-") + '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + (p.rebar ? esc(p.rebar) : "-") + '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px; font-weight:600;") + '">' + esc(p.variant) + '</div>' +
+      tierCells +
+      (isAdmin ? '<div style="' + groupCellStyle(null) + '">' + actionsCell + '</div>' : '') +
+    '</div>';
+  }).join("");
+
+  var table = '<div style="background:#fff; border:1px solid oklch(0.9 0.008 60); border-radius:14px; overflow-x:auto;">' +
+    '<div style="min-width:1080px;">' + tableHeader + rows + '</div>' +
+  '</div>';
+
+  var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
+    'ราคาที่แสดงเป็นบ่อพักแบบ 2 ทางตรง ยังไม่รวม VAT 7% ไม่มีขั้นส่วนลด<br>' +
+    'สำหรับแบบ 3 ทาง, ฉาก, หรือ 1 ทาง เพิ่มใบละ 100 บาท (ยกเว้นรายการที่ระบุชนิดเป็น 3-way ซึ่งมีราคาเฉพาะอยู่แล้ว)<br>' +
+    'บ่อพักสามารถสั่งผลิตล่วงหน้าได้ ตามความต้องการหรือตามแบบของแต่ละโครงการ<br>' +
+    'เริ่มใช้ราคานี้ตั้งแต่ 8 พฤษภาคม 2569' +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพักสำเร็จรูป (precast manhole)</div>' +
+      '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 3 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคารับเอง/ส่ง/ปลีก ต่อใบ (บ่อพักแบบ 2 ทางตรง)") + '</div>' +
     '</div>' +
     table + note +
   '</div>';

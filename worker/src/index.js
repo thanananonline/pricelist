@@ -643,6 +643,58 @@ export default {
       });
     }
 
+    if (path === "/manhole-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM manhole_products ORDER BY sort_order ASC").all();
+      const manholeProducts = productsRes.results.map(function (p) {
+        return {
+          id: p.id,
+          groupNo: p.group_no,
+          forPipeCm: p.for_pipe_cm,
+          manholeSize: p.manhole_size,
+          wallThicknessCm: p.wall_thickness_cm,
+          rebar: p.rebar,
+          variant: p.variant,
+          sortOrder: p.sort_order,
+          pricePickup: p.price_pickup,
+          priceWholesale: p.price_wholesale,
+          priceRetail: p.price_retail,
+        };
+      });
+      return json(manholeProducts);
+    }
+
+    const manholeIdMatch = path.match(/^\/manhole-products\/([^/]+)$/);
+    if (manholeIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(manholeIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM manhole_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const pickup = body.pricePickup !== undefined ? Number(body.pricePickup) : existing.price_pickup;
+      const wholesale = body.priceWholesale !== undefined ? Number(body.priceWholesale) : existing.price_wholesale;
+      const retail = body.priceRetail !== undefined ? Number(body.priceRetail) : existing.price_retail;
+      if ([pickup, wholesale, retail].some(function (n) { return isNaN(n); })) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE manhole_products SET price_pickup=?, price_wholesale=?, price_retail=? WHERE id=?")
+        .bind(pickup, wholesale, retail, id).run();
+
+      return json({
+        id: existing.id,
+        groupNo: existing.group_no,
+        forPipeCm: existing.for_pipe_cm,
+        manholeSize: existing.manhole_size,
+        wallThicknessCm: existing.wall_thickness_cm,
+        rebar: existing.rebar,
+        variant: existing.variant,
+        sortOrder: existing.sort_order,
+        pricePickup: pickup,
+        priceWholesale: wholesale,
+        priceRetail: retail,
+      });
+    }
+
     if (path === "/categories" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT value, label FROM categories ORDER BY sort_order ASC").all();
       return json(results);
