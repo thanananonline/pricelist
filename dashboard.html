@@ -404,6 +404,8 @@ function Dashboard(root) {
     showManageCategories: false,
     newCategoryName: "",
     categoryError: "",
+    showDownloadModal: false,
+    downloadCategory: "all",
     categoryDeleteConfirm: null,
     editingCategoryValue: null,
     editCategoryName: "",
@@ -1186,6 +1188,9 @@ Dashboard.prototype.handleClick = function (e) {
     case "save-edit-contact": this.saveEditContact(d.id); break;
     case "download-import-template": this.downloadImportTemplate(); break;
     case "dismiss-import-msg": this.setState({ importMsg: "", importMsgType: "", importErrors: [] }); break;
+    case "open-download-modal": this.setState({ showDownloadModal: true, downloadCategory: "all" }); break;
+    case "close-download-modal": this.setState({ showDownloadModal: false }); break;
+    case "confirm-download-products": this.downloadProductsExcel(); this.setState({ showDownloadModal: false }); break;
     case "toggle-manage-categories": this.setState(function (s2) { return { showManageCategories: !s2.showManageCategories, categoryError: "" }; }); break;
     case "request-remove-category": this.setState({ categoryDeleteConfirm: { value: d.value, label: d.label || "" } }); break;
     case "cancel-remove-category": this.setState({ categoryDeleteConfirm: null }); break;
@@ -1567,6 +1572,81 @@ Dashboard.prototype.downloadImportTemplate = function () {
     var a = document.createElement("a");
     a.href = url;
     a.download = "เทมเพลตนำเข้าสินค้า.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+};
+
+// Filenames can't contain / \ : * ? " < > | -- strip them from a category
+// label before splicing it into a download filename.
+function sanitizeFilenamePart(s) {
+  return String(s).replace(/[\\/:*?"<>|]/g, "").trim();
+}
+
+function formatDateYMD(d) {
+  var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+Dashboard.prototype.renderDownloadModal = function () {
+  var s = this.state;
+  if (!s.showDownloadModal) return "";
+  var catOpts = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
+    return '<option value="' + esc(opt.value) + '"' + (opt.value === s.downloadCategory ? " selected" : "") + '>' + esc(opt.label) + '</option>';
+  }).join("");
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.92 0.05 275); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">⬇️</div>' +
+        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">ดาวน์โหลดรายการสินค้า</div>' +
+      '</div>' +
+      '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:oklch(0.4 0.01 60);">หมวดหมู่' +
+        '<select id="field-downloadCategory" data-bind="downloadCategory" style="padding:10px 12px; border-radius:9px; border:1px solid oklch(0.87 0.008 60); font-size:14px; font-family:inherit; background:#fff;">' + catOpts + '</select>' +
+      '</label>' +
+      '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+        '<button type="button" data-action="close-download-modal" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:oklch(0.4 0.01 60); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button type="button" data-action="confirm-download-products" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:oklch(0.38 0.15 275); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">ดาวน์โหลด</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
+Dashboard.prototype.downloadProductsExcel = function () {
+  var self = this;
+  var s = this.state;
+  var catValue = s.downloadCategory || "all";
+  var products = s.products.filter(function (p) {
+    return catValue === "all" || p.cat === catValue;
+  });
+
+  var wb = new ExcelJS.Workbook();
+  var ws = wb.addWorksheet("สินค้า");
+  ws.addRow(IMPORT_HEADERS);
+  products.forEach(function (p) {
+    ws.addRow([
+      p.name,
+      self.catLabel(p.cat),
+      p.price,
+      p.price2 != null ? p.price2 : "",
+      p.price3 != null ? p.price3 : "",
+      p.unit,
+      p.vat === "novat" ? "NOVAT" : "VAT",
+      p.stock != null ? p.stock : 0,
+    ]);
+  });
+  ws.columns.forEach(function (col) { col.width = 20; });
+
+  var catLabelForName = catValue === "all" ? "ทั้งหมด" : self.catLabel(catValue);
+  var filename = "สินค้า_" + sanitizeFilenamePart(catLabelForName) + "_" + formatDateYMD(new Date()) + ".xlsx";
+
+  wb.xlsx.writeBuffer().then(function (buffer) {
+    var blob = new Blob([buffer], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2265,7 +2345,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderImagePreviewModal() + this.renderToast() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImagePreviewModal() + this.renderToast() +
     '</div>'
   );
 };
@@ -2332,6 +2412,7 @@ Dashboard.prototype.renderPricePage = function () {
       '<div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-top:1px solid oklch(0.93 0.006 70); padding-top:14px; margin-top:14px;">' +
         '<label style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:transparent; border:1px solid oklch(0.87 0.008 60); color:oklch(0.5 0.01 60); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' +
         '<button type="button" data-action="download-import-template" style="' + utilityBtn + '">📄 เทมเพลต</button>' +
+        '<button type="button" data-action="open-download-modal" style="' + utilityBtn + '">⬇️ ดาวน์โหลด</button>' +
         '<button type="button" data-action="toggle-manage-categories" style="' + utilityBtn + '">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' +
         (!s.selectMode ? '<button type="button" data-action="toggle-select-mode" style="' + utilityBtn + '">☑️ เลือกหลายรายการ</button>' : '') +
         '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center; margin-left:auto; padding:11px 18px; border:none; border-radius:10px; background:oklch(0.38 0.15 275); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' +
