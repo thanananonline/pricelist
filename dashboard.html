@@ -3522,21 +3522,25 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   var isAdmin = this.isAdmin();
   // Compact font/column set so this 8-column table fits typical screens
   // without horizontal scroll - same reasoning as renderPilePage above.
-  // Retail (ปลีก) and wholesale (ส่ง) each get their own text color, shared
-  // by both their VAT and no-VAT columns, same treatment as the pile tables.
-  var concreteMixRetailColor = "oklch(0.45 0.13 250)";
-  var concreteMixWholesaleColor = "oklch(0.42 0.13 150)";
-  var concreteMixRetailStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:" + concreteMixRetailColor + ";";
-  var concreteMixWholesaleStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:" + concreteMixWholesaleColor + ";";
+  // Retail (ปลีก) and wholesale (ส่ง) each get "design B" treatment: a dark
+  // header color, very light cell tints (vat a touch richer than novat),
+  // and plain dark price text (GROUP_CELL_TEXT_STYLE) -- same as pile tables.
+  var CONCRETE_MIX_GROUPS = {
+    retail: { headerBg: "#97C459", headerText: "#173404", novatBg: "#F5F9EF", vatBg: "#EAF3DE" },
+    wholesale: { headerBg: "#85B7EB", headerText: "#042C53", novatBg: "#F4F9FE", vatBg: "#E6F1FB" },
+  };
+  var concreteMixFontStyle = "font-family:Kanit; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
   var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
   var previewStyle = "font-size:9.5px; color:oklch(0.55 0.01 60); margin-top:2px;";
   var colWidths = "minmax(0,1.2fr) 0.55fr 0.55fr 0.8fr 0.72fr 0.72fr 0.72fr 0.72fr" + (isAdmin ? " 44px" : "");
 
+  var retailHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.retail.headerBg + "; color:" + CONCRETE_MIX_GROUPS.retail.headerText + ";";
+  var wholesaleHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.wholesale.headerBg + "; color:" + CONCRETE_MIX_GROUPS.wholesale.headerText + ";";
   var headerCells = '<div>สินค้า</div>' +
     '<div>ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
     '<div>ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
     '<div>ค่ายุบตัว (Slump)<br>ซม.</div>' +
-    '<div style="color:' + concreteMixRetailColor + ';">ปลีก<br>(รวม VAT)</div><div style="color:' + concreteMixRetailColor + ';">ปลีก<br>(ไม่รวม VAT)</div><div style="color:' + concreteMixWholesaleColor + ';">ส่ง<br>(รวม VAT)</div><div style="color:' + concreteMixWholesaleColor + ';">ส่ง<br>(ไม่รวม VAT)</div>' +
+    '<div style="' + retailHeaderStyle + '">ปลีก<br>(รวม VAT)</div><div style="' + retailHeaderStyle + '">ปลีก<br>(ไม่รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(ไม่รวม VAT)</div>' +
     (isAdmin ? '<div></div>' : '');
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
@@ -3551,24 +3555,24 @@ Dashboard.prototype.renderConcreteMixPage = function () {
 
       var retailBaseInput = parseFloat(s.concreteMixEditRetailBase);
       var wholesaleBaseInput = parseFloat(s.concreteMixEditWholesaleBase);
-      retailVatCell = '<div>' +
+      retailVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.vatBg) + '">' +
           '<input id="field-concreteMixEditRetailBase" type="text" inputmode="decimal" data-bind="concreteMixEditRetailBase" value="' + esc(s.concreteMixEditRetailBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานปลีก &rarr; ' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixVat(retailBaseInput))) + '</div>' +
         '</div>';
-      retailNovatCell = '<div style="' + concreteMixRetailStyle + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
-      wholesaleVatCell = '<div>' +
+      retailNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
+      wholesaleVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg) + '">' +
           '<input id="field-concreteMixEditWholesaleBase" type="text" inputmode="decimal" data-bind="concreteMixEditWholesaleBase" value="' + esc(s.concreteMixEditWholesaleBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานส่ง &rarr; ' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixVat(wholesaleBaseInput))) + '</div>' +
         '</div>';
-      wholesaleNovatCell = '<div style="' + concreteMixWholesaleStyle + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
+      wholesaleNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
     } else {
       cubeCell = '<div style="font-size:12px;">' + esc(p.cube) + '</div>';
       cylCell = '<div style="font-size:12px;">' + esc(p.cyl) + '</div>';
       slumpCell = '<div style="font-size:12px;">' + esc(p.slump) + '</div>';
-      retailVatCell = '<div style="' + concreteMixRetailStyle + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
-      retailNovatCell = '<div style="' + concreteMixRetailStyle + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
-      wholesaleVatCell = '<div style="' + concreteMixWholesaleStyle + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
-      wholesaleNovatCell = '<div style="' + concreteMixWholesaleStyle + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
+      retailVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
+      retailNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
+      wholesaleVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
+      wholesaleNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
     }
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
@@ -3612,15 +3616,29 @@ var PILE_GROUPS = [
   { value: "SQ", label: "เสาเข็ม SQ" },
   { value: "HEX", label: "เสาเข็มหกเหลี่ยม" },
 ];
-// Each price tier gets its own text color, shared by both its no-VAT and
-// VAT-inclusive columns -- no background fill, just color-coded numbers so
-// the four tiers read as distinct groups down the whole table.
+// Each price tier gets a dark header color pair (bg + readable text) and a
+// pair of very light cell tints (novatBg/vatBg, vatBg a touch richer) --
+// "design B": color lives on the header and the cell background, while the
+// price numbers themselves stay plain dark text (see GROUP_CELL_TEXT_STYLE).
 var PILE_TIERS = [
-  { key: "pickup", editKey: "pileEditPickup", label: "รับเอง", color: "oklch(0.45 0.13 250)" },
-  { key: "t201_500plus", editKey: "pileEditT201500plus", label: "201-500++ ต้น", color: "oklch(0.42 0.13 150)" },
-  { key: "t101_201", editKey: "pileEditT101201", label: "101-201 ต้น", color: "oklch(0.46 0.16 60)" },
-  { key: "under_100", editKey: "pileEditUnder100", label: "&lt;100 ต้น", color: "oklch(0.44 0.18 20)" },
+  { key: "pickup", editKey: "pileEditPickup", label: "รับเอง", headerBg: "#85B7EB", headerText: "#042C53", novatBg: "#F4F9FE", vatBg: "#E6F1FB" },
+  { key: "t201_500plus", editKey: "pileEditT201500plus", label: "201-500++ ต้น", headerBg: "#97C459", headerText: "#173404", novatBg: "#F5F9EF", vatBg: "#EAF3DE" },
+  { key: "t101_201", editKey: "pileEditT101201", label: "101-201 ต้น", headerBg: "#EF9F27", headerText: "#412402", novatBg: "#FDF8EF", vatBg: "#FAEEDA" },
+  { key: "under_100", editKey: "pileEditUnder100", label: "&lt;100 ต้น", headerBg: "#F09595", headerText: "#501313", novatBg: "#FEF6F6", vatBg: "#FCEBEB" },
 ];
+// Shared "design B" treatment: color lives on the header and the cell
+// background, while the price numbers themselves stay plain dark text --
+// used by both the pile tables above and renderConcreteMixPage below.
+var GROUP_CELL_TEXT_STYLE = "color:#111111; font-weight:500;";
+// Header cells stretch to fill their row automatically (grid default), so a
+// plain background-color fills them edge-to-edge. Data-row cells sit in a
+// row with align-items:center though, so a plain background would only wrap
+// the text tightly; the negative-margin/padding pair below cancels itself
+// out for sizing/centering purposes while letting the paint bleed to the
+// row's own padding edges, so the tint runs continuously down each column.
+function groupCellBgStyle(bg, extra) {
+  return "background-color:" + bg + "; margin:-10px 0; padding:10px 0; box-sizing:border-box;" + (extra || "");
+}
 
 Dashboard.prototype.renderPilePage = function () {
   var s = this.state;
@@ -3653,8 +3671,9 @@ Dashboard.prototype.renderPilePage = function () {
 
   var headerCells = '<div>รายการ</div><div>พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
     PILE_TIERS.map(function (t) {
-      return '<div style="color:' + t.color + ';">' + t.label + '<br>ไม่รวม VAT</div>' +
-        '<div style="color:' + t.color + ';">' + t.label + '<br>รวม VAT</div>';
+      var headerStyle = "background-color:" + t.headerBg + "; color:" + t.headerText + ";";
+      return '<div style="' + headerStyle + '">' + t.label + '<br>ไม่รวม VAT</div>' +
+        '<div style="' + headerStyle + '">' + t.label + '<br>รวม VAT</div>';
     }).join("") +
     (isAdmin ? '<div></div>' : '');
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
@@ -3667,17 +3686,17 @@ Dashboard.prototype.renderPilePage = function () {
       : '<div style="font-size:12px;">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
 
     var tierCells = PILE_TIERS.map(function (t) {
-      var tierStyle = "font-family:Kanit; font-weight:700; font-size:" + pilePriceFont + "; color:" + t.color + ";";
+      var fontStyle = "font-family:Kanit; font-size:" + pilePriceFont + ";" + GROUP_CELL_TEXT_STYLE;
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
-        var novatCell = '<input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />';
-        var vatCell = '<div style="' + tierStyle + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
+        var novatCell = '<div style="' + groupCellBgStyle(t.novatBg) + '"><input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" /></div>';
+        var vatCell = '<div style="' + groupCellBgStyle(t.vatBg, fontStyle) + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
         return novatCell + vatCell;
       }
       var base = p[t.key];
-      return '<div style="' + tierStyle + '">฿' + fmt(base) + '</div>' +
-        '<div style="' + tierStyle + '">฿' + fmt(pileVat(base)) + '</div>';
+      return '<div style="' + groupCellBgStyle(t.novatBg, fontStyle) + '">฿' + fmt(base) + '</div>' +
+        '<div style="' + groupCellBgStyle(t.vatBg, fontStyle) + '">฿' + fmt(pileVat(base)) + '</div>';
     }).join("");
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
