@@ -3534,45 +3534,45 @@ Dashboard.prototype.renderConcreteMixPage = function () {
   var previewStyle = "font-size:9.5px; color:oklch(0.55 0.01 60); margin-top:2px;";
   var colWidths = "minmax(0,1.2fr) 0.55fr 0.55fr 0.8fr 0.72fr 0.72fr 0.72fr 0.72fr" + (isAdmin ? " 44px" : "");
 
-  var retailHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.retail.headerBg + "; color:" + CONCRETE_MIX_GROUPS.retail.headerText + ";";
-  var wholesaleHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.wholesale.headerBg + "; color:" + CONCRETE_MIX_GROUPS.wholesale.headerText + ";";
-  var headerCells = '<div>สินค้า</div>' +
-    '<div>ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
-    '<div>ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
-    '<div>ค่ายุบตัว (Slump)<br>ซม.</div>' +
+  var retailHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.retail.headerBg + "; color:" + CONCRETE_MIX_GROUPS.retail.headerText + "; padding:10px 8px; box-sizing:border-box;";
+  var wholesaleHeaderStyle = "background-color:" + CONCRETE_MIX_GROUPS.wholesale.headerBg + "; color:" + CONCRETE_MIX_GROUPS.wholesale.headerText + "; padding:10px 8px; box-sizing:border-box;";
+  var headerCells = '<div style="padding:10px 8px;">สินค้า</div>' +
+    '<div style="padding:10px 8px;">ทรงลูกบาศก์ (Cube)<br>15x15x15 ซม.</div>' +
+    '<div style="padding:10px 8px;">ทรงกระบอก (Cylinder)<br>15x30 ซม.</div>' +
+    '<div style="padding:10px 8px;">ค่ายุบตัว (Slump)<br>ซม.</div>' +
     '<div style="' + retailHeaderStyle + '">ปลีก<br>(รวม VAT)</div><div style="' + retailHeaderStyle + '">ปลีก<br>(ไม่รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(รวม VAT)</div><div style="' + wholesaleHeaderStyle + '">ส่ง<br>(ไม่รวม VAT)</div>' +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.concreteMixEditingId === p.id;
 
     var cubeCell, cylCell, slumpCell, retailVatCell, retailNovatCell, wholesaleVatCell, wholesaleNovatCell;
     if (isEditingThis) {
-      cubeCell = '<input id="field-concreteMixEditCube" type="text" data-bind="concreteMixEditCube" value="' + esc(s.concreteMixEditCube) + '" style="' + editInputStyle + '" />';
-      cylCell = '<input id="field-concreteMixEditCyl" type="text" data-bind="concreteMixEditCyl" value="' + esc(s.concreteMixEditCyl) + '" style="' + editInputStyle + '" />';
-      slumpCell = '<input id="field-concreteMixEditSlump" type="text" data-bind="concreteMixEditSlump" value="' + esc(s.concreteMixEditSlump) + '" style="' + editInputStyle + '" />';
+      cubeCell = '<div style="' + groupCellStyle(null) + '"><input id="field-concreteMixEditCube" type="text" data-bind="concreteMixEditCube" value="' + esc(s.concreteMixEditCube) + '" style="' + editInputStyle + '" /></div>';
+      cylCell = '<div style="' + groupCellStyle(null) + '"><input id="field-concreteMixEditCyl" type="text" data-bind="concreteMixEditCyl" value="' + esc(s.concreteMixEditCyl) + '" style="' + editInputStyle + '" /></div>';
+      slumpCell = '<div style="' + groupCellStyle(null) + '"><input id="field-concreteMixEditSlump" type="text" data-bind="concreteMixEditSlump" value="' + esc(s.concreteMixEditSlump) + '" style="' + editInputStyle + '" /></div>';
 
       var retailBaseInput = parseFloat(s.concreteMixEditRetailBase);
       var wholesaleBaseInput = parseFloat(s.concreteMixEditWholesaleBase);
-      retailVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.vatBg) + '">' +
+      retailVatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.retail.vatBg) + '">' +
           '<input id="field-concreteMixEditRetailBase" type="text" inputmode="decimal" data-bind="concreteMixEditRetailBase" value="' + esc(s.concreteMixEditRetailBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานปลีก &rarr; ' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixVat(retailBaseInput))) + '</div>' +
         '</div>';
-      retailNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
-      wholesaleVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg) + '">' +
+      retailNovatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">' + (isNaN(retailBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(retailBaseInput))) + '</div>';
+      wholesaleVatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg) + '">' +
           '<input id="field-concreteMixEditWholesaleBase" type="text" inputmode="decimal" data-bind="concreteMixEditWholesaleBase" value="' + esc(s.concreteMixEditWholesaleBase) + '" style="' + editInputStyle + '" />' +
           '<div style="' + previewStyle + '">ฐานส่ง &rarr; ' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixVat(wholesaleBaseInput))) + '</div>' +
         '</div>';
-      wholesaleNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
+      wholesaleNovatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">' + (isNaN(wholesaleBaseInput) ? "-" : "฿" + fmt(concreteMixNovat(wholesaleBaseInput))) + '</div>';
     } else {
-      cubeCell = '<div style="font-size:12px;">' + esc(p.cube) + '</div>';
-      cylCell = '<div style="font-size:12px;">' + esc(p.cyl) + '</div>';
-      slumpCell = '<div style="font-size:12px;">' + esc(p.slump) + '</div>';
-      retailVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
-      retailNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
-      wholesaleVatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
-      wholesaleNovatCell = '<div style="' + groupCellBgStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
+      cubeCell = '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + esc(p.cube) + '</div>';
+      cylCell = '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + esc(p.cyl) + '</div>';
+      slumpCell = '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + esc(p.slump) + '</div>';
+      retailVatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.retail.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.retailBase)) + '</div>';
+      retailNovatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.retail.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.retailBase)) + '</div>';
+      wholesaleVatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.wholesale.vatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixVat(p.wholesaleBase)) + '</div>';
+      wholesaleNovatCell = '<div style="' + groupCellStyle(CONCRETE_MIX_GROUPS.wholesale.novatBg, concreteMixFontStyle) + '">฿' + fmt(concreteMixNovat(p.wholesaleBase)) + '</div>';
     }
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
@@ -3582,11 +3582,11 @@ Dashboard.prototype.renderConcreteMixPage = function () {
         '</div>'
       : '<button data-action="start-edit-concrete-mix" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid oklch(0.93 0.006 70); align-items:stretch;">' +
+      '<div style="' + groupCellStyle(null, "font-size:12.5px; font-weight:600; line-height:1.3;") + '">' + esc(p.name) + '</div>' +
       cubeCell + cylCell + slumpCell +
       retailVatCell + retailNovatCell + wholesaleVatCell + wholesaleNovatCell +
-      (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
+      (isAdmin ? '<div style="' + groupCellStyle(null) + '">' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
@@ -3630,14 +3630,13 @@ var PILE_TIERS = [
 // background, while the price numbers themselves stay plain dark text --
 // used by both the pile tables above and renderConcreteMixPage below.
 var GROUP_CELL_TEXT_STYLE = "color:#111111; font-weight:500;";
-// Header cells stretch to fill their row automatically (grid default), so a
-// plain background-color fills them edge-to-edge. Data-row cells sit in a
-// row with align-items:center though, so a plain background would only wrap
-// the text tightly; the negative-margin/padding pair below cancels itself
-// out for sizing/centering purposes while letting the paint bleed to the
-// row's own padding edges, so the tint runs continuously down each column.
-function groupCellBgStyle(bg, extra) {
-  return "background-color:" + bg + "; margin:-10px 0; padding:10px 0; box-sizing:border-box;" + (extra || "");
+// Grid rows use gap:0 and align-items:stretch (not the grid default center)
+// with padding baked into every cell div (colored or not) instead of on the
+// row container -- that way each cell's own background paints edge-to-edge
+// against its neighbors with no gap, and stays full-height even when a
+// sibling cell (e.g. a wrapping product name) makes the row taller.
+function groupCellStyle(bg, extra) {
+  return (bg ? "background-color:" + bg + "; " : "") + "padding:10px 8px; box-sizing:border-box;" + (extra || "");
 }
 
 Dashboard.prototype.renderPilePage = function () {
@@ -3669,34 +3668,34 @@ Dashboard.prototype.renderPilePage = function () {
   var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid oklch(0.6 0.15 275); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
   var colWidths = "minmax(0,1.3fr) 0.55fr repeat(8, 0.58fr)" + (isAdmin ? " 44px" : "");
 
-  var headerCells = '<div>รายการ</div><div>พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
+  var headerCells = '<div style="padding:10px 8px;">รายการ</div><div style="padding:10px 8px;">พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
     PILE_TIERS.map(function (t) {
-      var headerStyle = "background-color:" + t.headerBg + "; color:" + t.headerText + ";";
+      var headerStyle = "background-color:" + t.headerBg + "; color:" + t.headerText + "; padding:10px 8px; box-sizing:border-box;";
       return '<div style="' + headerStyle + '">' + t.label + '<br>ไม่รวม VAT</div>' +
         '<div style="' + headerStyle + '">' + t.label + '<br>รวม VAT</div>';
     }).join("") +
     (isAdmin ? '<div></div>' : '');
-  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:oklch(0.96 0.006 70); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' + headerCells + '</div>';
 
   var rows = products.map(function (p) {
     var isEditingThis = s.pileEditingId === p.id;
 
     var areaCell = isEditingThis
-      ? '<input id="field-pileEditAreaSqcm" type="text" inputmode="decimal" data-bind="pileEditAreaSqcm" value="' + esc(s.pileEditAreaSqcm) + '" style="' + editInputStyle + '" />'
-      : '<div style="font-size:12px;">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
+      ? '<div style="' + groupCellStyle(null) + '"><input id="field-pileEditAreaSqcm" type="text" inputmode="decimal" data-bind="pileEditAreaSqcm" value="' + esc(s.pileEditAreaSqcm) + '" style="' + editInputStyle + '" /></div>'
+      : '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
 
     var tierCells = PILE_TIERS.map(function (t) {
       var fontStyle = "font-family:Kanit; font-size:" + pilePriceFont + ";" + GROUP_CELL_TEXT_STYLE;
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
-        var novatCell = '<div style="' + groupCellBgStyle(t.novatBg) + '"><input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" /></div>';
-        var vatCell = '<div style="' + groupCellBgStyle(t.vatBg, fontStyle) + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
+        var novatCell = '<div style="' + groupCellStyle(t.novatBg) + '"><input id="field-' + t.editKey + '" type="text" inputmode="decimal" data-bind="' + t.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" /></div>';
+        var vatCell = '<div style="' + groupCellStyle(t.vatBg, fontStyle) + '">' + (isNaN(parsed) ? "-" : "฿" + fmt(pileVat(parsed))) + '</div>';
         return novatCell + vatCell;
       }
       var base = p[t.key];
-      return '<div style="' + groupCellBgStyle(t.novatBg, fontStyle) + '">฿' + fmt(base) + '</div>' +
-        '<div style="' + groupCellBgStyle(t.vatBg, fontStyle) + '">฿' + fmt(pileVat(base)) + '</div>';
+      return '<div style="' + groupCellStyle(t.novatBg, fontStyle) + '">฿' + fmt(base) + '</div>' +
+        '<div style="' + groupCellStyle(t.vatBg, fontStyle) + '">฿' + fmt(pileVat(base)) + '</div>';
     }).join("");
 
     var actionsCell = !isAdmin ? '' : (isEditingThis
@@ -3706,10 +3705,10 @@ Dashboard.prototype.renderPilePage = function () {
         '</div>'
       : '<button data-action="start-edit-pile" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="min-height:32px; min-width:32px; border:none; background:oklch(0.95 0.006 70); border-radius:6px; padding:4px; font-size:13px; cursor:pointer; font-family:inherit;">✏️</button>');
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:6px; padding:10px 8px; border-top:1px solid oklch(0.93 0.006 70); align-items:center;">' +
-      '<div style="font-size:12.5px; font-weight:600; line-height:1.3;">' + esc(p.name) + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid oklch(0.93 0.006 70); align-items:stretch;">' +
+      '<div style="' + groupCellStyle(null, "font-size:12.5px; font-weight:600; line-height:1.3;") + '">' + esc(p.name) + '</div>' +
       areaCell + tierCells +
-      (isAdmin ? '<div>' + actionsCell + '</div>' : '') +
+      (isAdmin ? '<div style="' + groupCellStyle(null) + '">' + actionsCell + '</div>' : '') +
     '</div>';
   }).join("");
 
