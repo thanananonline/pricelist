@@ -3962,7 +3962,7 @@ Dashboard.prototype.renderPilePage = function () {
     '<div style="min-width:920px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
+  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
     'ราคาต่อเมตร ยังไม่รวม VAT 7%<br>ไม่ใช้กับเสาเข็มเสริมเหล็กพิเศษ<br>เริ่มใช้ 15 เม.ย. 2569' +
   '</div>';
 
@@ -3971,7 +3971,7 @@ Dashboard.prototype.renderPilePage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคา' + esc(groupLabel) + ' (TNN)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่พื้นที่หน้าตัดและราคาฐาน 4 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาต่อเมตรทุกระดับของ" + groupLabel) + '</div>' +
     '</div>' +
-    table + note +
+    note + table +
   '</div>';
 };
 
@@ -4042,7 +4042,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
     '<div style="min-width:760px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
+  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
     'ราคาต่อท่อน (ยาว 1 ม.) ยังไม่รวม VAT 7% ไม่มีขั้นส่วนลด<br>เริ่มใช้ราคานี้ตั้งแต่ 1 มีนาคม 2564' +
   '</div>';
 
@@ -4051,7 +4051,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ (ท่อเหลี่ยม)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 2 มาตรฐาน (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาตามมาตรฐาน มอก.1164-2559 (ใต้ทางเท้า) และ มอก.1166-2559 (ใต้ผิวจราจร)") + '</div>' +
     '</div>' +
-    table + note +
+    note + table +
   '</div>';
 };
 
@@ -4124,7 +4124,7 @@ Dashboard.prototype.renderManholePage = function () {
     '<div style="min-width:1080px;">' + tableHeader + rows + '</div>' +
   '</div>';
 
-  var note = '<div style="margin-top:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
+  var note = '<div style="margin-bottom:14px; font-size:12.5px; color:oklch(0.5 0.01 60); line-height:1.7;">' +
     'ราคาที่แสดงเป็นบ่อพักแบบ 2 ทางตรง ยังไม่รวม VAT 7% ไม่มีขั้นส่วนลด<br>' +
     'สำหรับแบบ 3 ทาง, ฉาก, หรือ 1 ทาง เพิ่มใบละ 100 บาท (ยกเว้นรายการที่ระบุชนิดเป็น 3-way ซึ่งมีราคาเฉพาะอยู่แล้ว)<br>' +
     'บ่อพักสามารถสั่งผลิตล่วงหน้าได้ ตามความต้องการหรือตามแบบของแต่ละโครงการ<br>' +
@@ -4136,7 +4136,7 @@ Dashboard.prototype.renderManholePage = function () {
       '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพักสำเร็จรูป (precast manhole)</div>' +
       '<div style="font-size:13px; color:oklch(0.5 0.01 60);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 3 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคารับเอง/ส่ง/ปลีก ต่อใบ (บ่อพักแบบ 2 ทางตรง)") + '</div>' +
     '</div>' +
-    table + note +
+    note + table +
   '</div>';
 };
 
