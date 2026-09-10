@@ -76,6 +76,22 @@
     form[data-form="add-folder"] { flex-wrap: wrap !important; }
   }
 
+  /* PDF file cards (folder + Company Profile list view): 4 action buttons
+     (เปิดดู/ดาวน์โหลด/แก้ไข/ลบ) crowd a single row on narrow phones, so
+     switch them to an even 2x2 grid below 640px. Desktop keeps the single
+     row untouched. */
+  @media (max-width: 640px) {
+    .pdf-file-actions {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px !important;
+    }
+    .pdf-file-actions button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   /* touch devices (phones + iPads, any width/orientation): iOS/Android zoom
      the page on focusing any input under 16px, which makes typing feel like
      it's jumping around. Bump inputs to 16px and widen the calculator's
@@ -3109,7 +3125,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
           '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '</div>' +
-        '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+        '<div class="pdf-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
@@ -3245,7 +3261,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
           '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
           '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '</div>' +
-        '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+        '<div class="pdf-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
