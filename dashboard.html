@@ -1723,6 +1723,11 @@ function fetchFileBlob(fileId) {
 Dashboard.prototype.downloadFile = function (fileId, fileName) {
   var self = this;
   var name = fileName || "document.pdf";
+  // Some share targets (LINE included) decide whether they can accept a
+  // shared file by its extension rather than its declared MIME type - a
+  // renamed file that lost its ".pdf" suffix silently drops out of their
+  // share sheet even though the bytes are still a valid PDF.
+  if (!/\.pdf$/i.test(name)) name += ".pdf";
   fetchFileBlob(fileId)
     .then(function (blob) {
       var file = new File([blob], name, { type: "application/pdf" });
@@ -2040,6 +2045,9 @@ Dashboard.prototype.cancelEditFile = function () {
 Dashboard.prototype.saveEditFile = function (kind, folderId, fileId) {
   var name = this.state.editFileName.trim();
   if (!name) { this.setState({ fileEditError: "กรุณากรอกชื่อไฟล์" }); return; }
+  // Keep the ".pdf" suffix even if the admin typed it away while renaming -
+  // some share targets (LINE included) filter by file extension.
+  if (!/\.pdf$/i.test(name)) name += ".pdf";
   var k = this._folderKeys(kind);
   var self = this;
   apiRequest("/files/" + encodeURIComponent(fileId), { method: "PUT", auth: true, body: { name: name } })
