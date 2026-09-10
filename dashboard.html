@@ -78,10 +78,10 @@
 
   /* PDF file cards, list view (folder pages: BOQ/pricelist/etc. + Company
      Profile — both share this markup via .pdf-file-row/.pdf-file-meta/
-     .pdf-file-actions). Desktop: name+size left, the 4 action buttons
-     (เปิดดู/ดาวน์โหลด/แก้ไข/ลบ) right, same row. Phones (<=640px): buttons
-     drop below the name into an even 2x2 grid so they don't crowd a single
-     row. */
+     .pdf-file-actions). Desktop: name+size left, the action buttons
+     (เปิดดู/ดาวน์โหลด/แชร์/แก้ไข/ลบ) right, same row. Phones (<=640px):
+     buttons drop below the name into an even 2x2 grid so they don't crowd
+     a single row. */
   .pdf-file-row {
     flex-direction: row !important;
     align-items: center !important;
@@ -113,6 +113,12 @@
     .pdf-file-actions button {
       width: 100%;
       justify-content: center;
+    }
+    /* odd button count (e.g. 3 for a non-admin, 5 with share+edit+delete for
+       an admin) - let the trailing lone button span the full row instead of
+       sitting half-width with an empty cell next to it. */
+    .pdf-file-actions button:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
     }
   }
 
@@ -1386,6 +1392,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "save-edit-file": this.saveEditFile(d.kind, d.folderId, d.fileId); break;
     case "view-file": this.viewFile(d.fileId); break;
     case "download-file": this.downloadFile(d.fileId, d.name || ""); break;
+    case "share-file": this.shareFile(d.fileId, d.name || ""); break;
     case "request-remove-user": this.setState({ userDeleteConfirm: { username: d.username } }); break;
     case "cancel-remove-user": this.setState({ userDeleteConfirm: null }); break;
     case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
@@ -1792,6 +1799,45 @@ Dashboard.prototype.downloadFile = function (fileId, fileName) {
       // Fall back to a plain navigation so the file is at least viewable.
       window.open(API_BASE + "/files/" + encodeURIComponent(fileId) + "?dl=1", "_blank");
       self.showToast("ดาวน์โหลดไม่สำเร็จ กำลังเปิดไฟล์แทน", "error");
+    });
+};
+
+// A separate, explicit "แชร์" action (distinct from the always-download
+// button above): fetches the PDF bytes into a real File and hands it to
+// navigator.share as `files` only - no url/text/title - so the OS share
+// sheet attaches the actual PDF instead of a page link, and the shared
+// filename is the real one instead of "Unknown.pdf". Falls back to a plain
+// download when the browser can't share files at all (most desktops).
+Dashboard.prototype.shareFile = function (fileId, fileName) {
+  var self = this;
+  var name = fileName || "document.pdf";
+  if (!/\.pdf$/i.test(name)) name += ".pdf";
+
+  fetchFileBlob(fileId)
+    .then(function (blob) {
+      var file = new File([blob], name, { type: "application/pdf" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file] }).catch(function (err) {
+          if (err && err.name === "AbortError") return; // user closed the share sheet
+          self.showToast("แชร์ไฟล์ไม่สำเร็จ", "error");
+        });
+      }
+
+      // No file-sharing support - download it instead so the button still
+      // does something useful, and say so since the user asked to share.
+      var blobUrl = URL.createObjectURL(file);
+      var a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 10000);
+      self.showToast("เบราว์เซอร์นี้ไม่รองรับการแชร์ไฟล์ ดาวน์โหลดไฟล์ให้แทนแล้ว");
+    })
+    .catch(function () {
+      self.showToast("แชร์ไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง", "error");
     });
 };
 
@@ -3130,6 +3176,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; justify-content:center;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' +
         '</div>' +
       '</div>';
     }).join("") + '</div>';
@@ -3152,6 +3199,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div class="pdf-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
           (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
         '</div>' +
@@ -3266,6 +3314,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
         '<div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; justify-content:center;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' +
         '</div>' +
       '</div>';
     }).join("") + '</div>';
@@ -3288,6 +3337,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
         '<div class="pdf-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
           (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
         '</div>' +
