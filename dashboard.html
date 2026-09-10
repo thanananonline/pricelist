@@ -1748,7 +1748,9 @@ Dashboard.prototype.shareFile = function (fileId, fileName) {
     .then(function (blob) {
       var file = new File([blob], name, { type: "application/pdf" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        return navigator.share({ files: [file], title: name });
+        // No title/text: some share targets (e.g. LINE) send those as a
+        // separate chat bubble alongside the file, which we don't want.
+        return navigator.share({ files: [file] });
       }
       // No file-sharing support (most desktop browsers) - fall back to a
       // normal download so the user still gets the actual PDF.
