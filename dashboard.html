@@ -1345,6 +1345,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-file": this.cancelEditFile(); break;
     case "save-edit-file": this.saveEditFile(d.kind, d.folderId, d.fileId); break;
     case "download-file": this.downloadFile(d.fileId, d.name || ""); break;
+    case "share-file": this.shareFile(d.fileId, d.name || ""); break;
     case "request-remove-user": this.setState({ userDeleteConfirm: { username: d.username } }); break;
     case "cancel-remove-user": this.setState({ userDeleteConfirm: null }); break;
     case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
@@ -1704,6 +1705,14 @@ Dashboard.prototype.removeProducts = function (ids) {
     });
 };
 
+function fetchFileBlob(fileId) {
+  var url = API_BASE + "/files/" + encodeURIComponent(fileId) + "?dl=1";
+  return fetch(url).then(function (res) {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.blob();
+  });
+}
+
 // Mobile browsers (iOS Safari especially) often ignore the server's
 // Content-Disposition: attachment header for a cross-origin PDF link and
 // just open it inline instead of downloading it. Fetching the bytes
@@ -1711,12 +1720,7 @@ Dashboard.prototype.removeProducts = function (ids) {
 // attribute reliable everywhere.
 Dashboard.prototype.downloadFile = function (fileId, fileName) {
   var self = this;
-  var url = API_BASE + "/files/" + encodeURIComponent(fileId) + "?dl=1";
-  fetch(url)
-    .then(function (res) {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.blob();
-    })
+  fetchFileBlob(fileId)
     .then(function (blob) {
       var blobUrl = URL.createObjectURL(blob);
       var a = document.createElement("a");
@@ -1729,8 +1733,30 @@ Dashboard.prototype.downloadFile = function (fileId, fileName) {
     })
     .catch(function () {
       // Fall back to a plain navigation so the file is at least viewable.
-      window.open(url, "_blank");
+      window.open(API_BASE + "/files/" + encodeURIComponent(fileId) + "?dl=1", "_blank");
       self.showToast("ดาวน์โหลดไม่สำเร็จ กำลังเปิดไฟล์แทน", "error");
+    });
+};
+
+// The OS share sheet only attaches the actual PDF (instead of just a link
+// to it) when it's handed a real File object, so this fetches the bytes
+// itself rather than relying on navigator.share's url option.
+Dashboard.prototype.shareFile = function (fileId, fileName) {
+  var self = this;
+  var name = fileName || "document.pdf";
+  fetchFileBlob(fileId)
+    .then(function (blob) {
+      var file = new File([blob], name, { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: name });
+      }
+      // No file-sharing support (most desktop browsers) - fall back to a
+      // normal download so the user still gets the actual PDF.
+      self.downloadFile(fileId, fileName);
+    })
+    .catch(function (err) {
+      if (err && err.name === "AbortError") return; // user cancelled the share sheet
+      self.showToast("แชร์ไฟล์ไม่สำเร็จ", "error");
     });
 };
 
@@ -3067,6 +3093,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="display:flex; gap:6px; margin-top:4px;">' +
           '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          (typeof navigator !== "undefined" && navigator.share ? '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' : '') +
         '</div>' +
       '</div>';
     }).join("") + '</div>';
@@ -3087,6 +3114,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+        (typeof navigator !== "undefined" && navigator.share ? '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' : '') +
         (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
         (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
@@ -3201,6 +3229,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
         '<div style="display:flex; gap:6px; margin-top:4px;">' +
           '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+          (typeof navigator !== "undefined" && navigator.share ? '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:7px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' : '') +
         '</div>' +
       '</div>';
     }).join("") + '</div>';
@@ -3221,6 +3250,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
         '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '<a href="' + viewUrl + '" target="_blank" rel="noopener" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); text-decoration:none;">👁️ เปิดดู</a>' +
         '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
+        (typeof navigator !== "undefined" && navigator.share ? '<button type="button" data-action="share-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">📤 แชร์</button>' : '') +
         (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
         (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.5 0.15 30); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
       '</div>';
