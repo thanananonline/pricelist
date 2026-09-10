@@ -1713,27 +1713,13 @@ function fetchFileBlob(fileId) {
   });
 }
 
-// Opening the file's remote URL directly (the old behavior) makes mobile
-// browsers' own bottom-bar share button share just the page link instead of
-// the PDF - because the browser never actually holds the file, only a
-// remote address. Loading it into a blob URL first makes the viewer treat
-// it like a real local document, so its native share button attaches the
-// actual PDF. The tab is opened synchronously (before the fetch) so it
-// still counts as a direct result of the click and isn't popup-blocked.
+// The server already serves this URL with Content-Type: application/pdf and
+// Content-Disposition: inline, so opening it directly shows the real PDF at
+// its own address (dashboard.html:104 API_BASE) - no need to fetch it into a
+// blob: URL first, which just replaces that address with a temporary
+// "blob:..." one in the tab.
 Dashboard.prototype.viewFile = function (fileId) {
-  var win = window.open("", "_blank");
-  var url = API_BASE + "/files/" + encodeURIComponent(fileId);
-  fetchFileBlob(fileId)
-    .then(function (blob) {
-      var blobUrl = URL.createObjectURL(blob);
-      if (win) win.location.href = blobUrl;
-      else window.open(blobUrl, "_blank");
-      setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 5 * 60 * 1000);
-    })
-    .catch(function () {
-      if (win) win.location.href = url;
-      else window.open(url, "_blank");
-    });
+  window.open(API_BASE + "/files/" + encodeURIComponent(fileId), "_blank");
 };
 
 // Mobile browsers (iOS Safari especially) often ignore the server's
