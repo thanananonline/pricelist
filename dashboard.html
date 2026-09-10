@@ -92,6 +92,44 @@
     }
   }
 
+  /* Company Profile file cards only (cp-file-* — not reused elsewhere): on
+     desktop the name/size sit left and the 4 action buttons move to the
+     right of the same row; on phones the buttons drop below into a 2x2
+     grid, same as the shared .pdf-file-actions treatment above. */
+  .cp-file-row {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+  }
+  .cp-file-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .cp-file-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap !important;
+  }
+  @media (max-width: 640px) {
+    .cp-file-row {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .cp-file-meta {
+      width: 100%;
+    }
+    .cp-file-actions {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px !important;
+      width: 100%;
+    }
+    .cp-file-actions button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   /* touch devices (phones + iPads, any width/orientation): iOS/Android zoom
      the page on focusing any input under 16px, which makes typing feel like
      it's jumping around. Bump inputs to 16px and widen the calculator's
@@ -3256,12 +3294,12 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
           (s.fileEditError ? '<div style="width:100%; font-size:11.5px; color:oklch(0.5 0.15 30);">' + esc(s.fileEditError) + '</div>' : '') +
         '</div>';
       }
-      return '<div style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
-        '<div style="display:flex; align-items:center; gap:14px;">' +
+      return '<div class="cp-file-row" style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid oklch(0.93 0.006 70);">' +
+        '<div class="cp-file-meta" style="display:flex; align-items:center; gap:14px;">' +
           '<div style="width:38px; height:38px; border-radius:8px; background:oklch(0.94 0.03 30); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
           '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:oklch(0.55 0.01 60);">' + esc(f.sizeLabel) + '</div></div>' +
         '</div>' +
-        '<div class="pdf-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+        '<div class="cp-file-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
           '<button type="button" data-action="view-file" data-file-id="' + f.id + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.92 0.05 275); color:oklch(0.32 0.14 275); cursor:pointer; font-family:inherit;">👁️ เปิดดู</button>' +
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:oklch(0.95 0.006 70); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:oklch(0.38 0.15 275); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
