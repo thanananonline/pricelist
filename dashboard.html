@@ -51,6 +51,21 @@
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
+  /* icon-only แก้ไข/ลบ ในแถวตารางสินค้า: พื้นโปร่งใส เส้นขอบบาง, ปุ่มลบ
+     เปลี่ยนเป็นสีแดง (--danger-red) เฉพาะตอน hover เท่านั้น */
+  .row-icon-btn {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0; border-radius: 8px;
+    border: 1px solid var(--border-input);
+    background: transparent;
+    color: var(--text-body);
+    font-size: 15px; line-height: 1;
+    cursor: pointer; font-family: inherit;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+  }
+  .row-icon-btn:hover { background: var(--bg-subtle); }
+  .row-icon-btn--danger:hover { background: var(--danger-red-bg); border-color: var(--danger-red); color: var(--danger-red); }
   .mobile-cat-bar { display: none; margin-bottom: 16px; }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
   .pdf-share-spinner {
@@ -2972,8 +2987,8 @@ Dashboard.prototype.renderPricePage = function () {
           '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
             (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
-              '<button data-action="start-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:var(--bg-subtle); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">แก้ไข</button>' +
-              '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:var(--danger-red-bg); color:var(--danger-red); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">ลบ</button>' +
+              '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' +
+              '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" aria-label="ลบ">🗑️</button>' +
             '</div>' : '') +
           '</div>' +
         '</div>';
@@ -3011,8 +3026,8 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' :
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
-          (isAdmin ? '<button data-action="start-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:var(--bg-subtle); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">✏️ แก้ไข</button>' : '') +
-          (isAdmin ? '<button data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 13px; border:none; background:var(--danger-red-bg); color:var(--danger-red); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">🗑️ ลบ</button>' : '') +
+          (isAdmin ? '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' : '') +
+          (isAdmin ? '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" aria-label="ลบ">🗑️</button>' : '') +
         '</div>';
       var listMediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
