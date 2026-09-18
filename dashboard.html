@@ -6,7 +6,7 @@
 <title>แดชบอร์ดราคาสินค้า - ธนานันท์ฮาร์ดแวร์</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
@@ -43,7 +43,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans Thai', 'Kanit', sans-serif; }
+  body { font-family: 'IBM Plex Sans Thai', sans-serif; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
   a { color: #2E2E86; }
@@ -310,7 +310,7 @@ function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
   return '<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px;">' +
     rows.map(function (r) {
-      return '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:11px; color:var(--text-faint); width:42px; flex:none;">' + r[0] + '</span><span style="font-family:Kanit; font-weight:700; font-size:15px; color:var(--navy-action);">' + (r[1] ? "฿" + r[1] : "-") + '</span></div>';
+      return '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:11px; color:var(--text-faint); width:42px; flex:none;">' + r[0] + '</span><span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15px; color:var(--navy-action);">' + (r[1] ? "฿" + r[1] : "-") + '</span></div>';
     }).join("") +
   '</div>';
 }
@@ -321,7 +321,7 @@ function priceTiersHtmlCompact(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]].filter(function (r) { return r[1]; });
   return '<div style="display:flex; flex-direction:column; gap:1px; align-items:flex-end;">' +
     rows.map(function (r) {
-      return '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-size:10.5px; color:var(--text-faint); flex:none;">' + r[0] + '</span><span style="font-family:Kanit; font-weight:700; font-size:13.5px; color:var(--navy-action); text-align:right;">฿' + r[1] + '</span></div>';
+      return '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-size:10.5px; color:var(--text-faint); flex:none;">' + r[0] + '</span><span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:13.5px; color:var(--navy-action); text-align:right;">฿' + r[1] + '</span></div>';
     }).join("") +
   '</div>';
 }
@@ -2031,7 +2031,7 @@ Dashboard.prototype.renderDownloadModal = function () {
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">⬇️</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">ดาวน์โหลดรายการสินค้า</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">ดาวน์โหลดรายการสินค้า</div>' +
       '</div>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--text-body);">หมวดหมู่' +
         '<select id="field-downloadCategory" data-bind="downloadCategory" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; background:#fff;">' + catOpts + '</select>' +
@@ -2597,7 +2597,7 @@ Dashboard.prototype.renderPlankOnly = function () {
 };
 
 Dashboard.prototype.renderSessionCheck = function () {
-  return '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--navy-topbar); color:#fff; font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; font-size:14px;">กำลังตรวจสอบการเข้าสู่ระบบ...</div>';
+  return '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--navy-topbar); color:#fff; font-family:\'IBM Plex Sans Thai\',sans-serif; font-size:14px;">กำลังตรวจสอบการเข้าสู่ระบบ...</div>';
 };
 
 Dashboard.prototype.renderLogin = function () {
@@ -2605,12 +2605,12 @@ Dashboard.prototype.renderLogin = function () {
   var subtitle = "เข้าสู่ระบบแดชบอร์ดรายการราคาสินค้า";
 
   return (
-    '<div style="min-height:100vh; background:var(--bg-page); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:var(--text-strong);">' +
+    '<div style="min-height:100vh; background:var(--bg-page); font-family:\'IBM Plex Sans Thai\',sans-serif; color:var(--text-strong);">' +
     '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--navy-topbar); padding:20px;">' +
     '<form data-form="auth" style="background:#fff; width:100%; max-width:380px; border-radius:16px; padding:36px 32px; display:flex; flex-direction:column; gap:18px; box-shadow:0 20px 50px rgba(0,0,0,.3);">' +
       '<div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:6px;">' +
         '<div style="width:52px; height:52px; border-radius:12px; background:#fff; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden; padding:5px;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:19px;">ธนานันท์ฮาร์ดแวร์</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px;">ธนานันท์ฮาร์ดแวร์</div>' +
         '<div style="font-size:12.5px; color:var(--text-muted);">' + esc(subtitle) + '</div>' +
       '</div>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--text-body);">ชื่อผู้ใช้' +
@@ -2660,7 +2660,7 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">' + title + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">' + title + '</div>' +
       '</div>' +
       '<div style="font-size:13.5px; color:var(--text-body); line-height:1.6;">' + message + '</div>' +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
@@ -2680,7 +2680,7 @@ Dashboard.prototype.renderChangePasswordModal = function () {
     '<form data-form="change-password" style="display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🔑</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:17px;">เปลี่ยนรหัสผ่าน: ' + esc(t.username) + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">เปลี่ยนรหัสผ่าน: ' + esc(t.username) + '</div>' +
       '</div>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">รหัสผ่านใหม่' +
         '<input id="field-passwordChangeValue" type="password" autocomplete="new-password" data-bind="passwordChangeValue" data-clear="passwordChangeError" value="' + esc(s.passwordChangeValue) + '" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
@@ -2732,7 +2732,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div class="sidebar' + (s.sidebarOpen ? " sidebar-open" : " sidebar-closed") + '" style="width:220px; flex:none; background:var(--navy); color:#fff; padding:24px 16px; display:flex; flex-direction:column; gap:4px;">' +
       '<div class="sidebar-brand" style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">' +
         '<div style="width:36px; height:36px; border-radius:9px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:15px;">ธนานันท์</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15px;">ธนานันท์</div>' +
       '</div>' +
       navItem("รายการราคาสินค้า", "📋", "price", page === "price") +
       (page === "price" ? this.renderCategoryBox() : "") +
@@ -2754,7 +2754,7 @@ Dashboard.prototype.renderDashboard = function () {
       '<div style="display:flex; align-items:center; gap:14px;">' +
         '<button data-action="toggle-sidebar" aria-label="เปิด/ปิดเมนู" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:18px; cursor:pointer; font-family:inherit; flex:none;">☰</button>' +
         '<div style="width:44px; height:44px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex:none;"><img src="uploads/logo.png" alt="Thananan Group" style="width:100%; height:100%; object-fit:contain;" /></div>' +
-        '<div><div style="font-family:Kanit; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div><div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div></div>' +
+        '<div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; letter-spacing:.2px;">ธนานันท์ฮาร์ดแวร์</div><div style="font-size:12.5px; opacity:.65; margin-top:1px;">แดชบอร์ดรายการราคาสินค้า</div></div>' +
       '</div>' +
       '<div style="display:flex; align-items:center; gap:16px;">' +
         '<span style="font-size:13px; opacity:.85;">👤 ' + esc(s.username) + '</span>' +
@@ -2775,7 +2775,7 @@ Dashboard.prototype.renderDashboard = function () {
   else pageContent = this.renderContactPage();
 
   return (
-    '<div style="min-height:100vh; background:var(--bg-page); font-family:\'Noto Sans Thai\',\'Kanit\',sans-serif; color:var(--text-strong);">' +
+    '<div style="min-height:100vh; background:var(--bg-page); font-family:\'IBM Plex Sans Thai\',sans-serif; color:var(--text-strong);">' +
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
@@ -2811,7 +2811,7 @@ Dashboard.prototype.renderPricePage = function () {
   var statCardsHtml = statCards.map(function (stat) {
     return '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:7px;">' +
       '<div style="font-size:12.5px; color:var(--text-muted); font-weight:600;">' + esc(stat.label) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:30px; line-height:1.1; letter-spacing:-.01em; color:' + stat.color + ';">' + stat.value + '</div></div>';
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:30px; line-height:1.1; letter-spacing:-.01em; color:' + stat.color + ';">' + stat.value + '</div></div>';
   }).join("");
 
   var sortOptions = [
@@ -2965,7 +2965,7 @@ Dashboard.prototype.renderPricePage = function () {
     }).join("");
     manageCategoriesPanel =
       '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; margin-bottom:22px; overflow:hidden;">' +
-        '<div style="padding:16px 20px 0;"><div style="font-family:Kanit; font-weight:700; font-size:15.5px;">จัดการหมวดหมู่สินค้า</div></div>' +
+        '<div style="padding:16px 20px 0;"><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15.5px;">จัดการหมวดหมู่สินค้า</div></div>' +
         '<form data-form="add-category" style="display:flex; gap:10px; padding:14px 20px;">' +
           '<input id="field-newCategoryName" type="text" placeholder="ชื่อหมวดหมู่ใหม่..." data-bind="newCategoryName" data-clear="categoryError" value="' + esc(s.newCategoryName) + '" style="flex:1; padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; outline:none;" />' +
           '<button type="submit" style="padding:10px 18px; border:none; border-radius:9px; background:var(--navy-action); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มหมวดหมู่</button>' +
@@ -3014,7 +3014,7 @@ Dashboard.prototype.renderPricePage = function () {
           '</div>' +
           (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
-            '<span style="font-family:Kanit; font-weight:700; font-size:19px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' +
+            '<span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' +
             (p.hasDiscount ? '<span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') +
             '<span style="font-size:11.5px; color:var(--text-faint);">/' + esc(p.unit) + '</span>' +
           '</div>') +
@@ -3076,7 +3076,7 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + '</span></div>' +
         '<div style="text-align:right;">' + (p.hasMultiPrice ? priceTiersHtmlCompact(p) :
-          '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
+          '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
         ) + '</div>' +
         '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
@@ -3235,7 +3235,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       '</form>' : '';
 
     return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-      '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
+      '<div style="margin-bottom:20px;"><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:22px;">' + esc(title) + '</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">' + esc(subtitle) + '</div></div>' +
       errorBanner + addFolderForm +
       '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px;">' + foldersHtml + '</div>' +
     '</div>';
@@ -3340,7 +3340,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '</div>';
   } else {
     folderHeader = '<div style="flex:1; display:flex; align-items:center; gap:8px;">' +
-      '<div><div style="font-family:Kanit; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:var(--text-muted);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
+      '<div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:var(--text-muted);">ไฟล์ PDF ในโฟลเดอร์นี้</div></div>' +
       (isAdmin ? '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
     '</div>';
   }
@@ -3469,7 +3469,7 @@ Dashboard.prototype.renderCompanyProfilePage = function () {
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">Company Profile</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">ไฟล์ข้อมูลบริษัท เช่น โบรชัวร์ เอกสารแนะนำบริษัท</div></div>' +
+    '<div style="margin-bottom:20px;"><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:22px;">Company Profile</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">ไฟล์ข้อมูลบริษัท เช่น โบรชัวร์ เอกสารแนะนำบริษัท</div></div>' +
     errorBanner + uploadBox + (files.length > 0 ? searchBox : "") + filesBody +
   '</div>';
 };
@@ -3525,7 +3525,7 @@ Dashboard.prototype.renderUsersPage = function () {
     : '<div style="text-align:center; padding:40px 20px; color:var(--text-faint); font-size:14px;">ต้องเป็นผู้ดูแลระบบเพื่อจัดการผู้ใช้</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
+    '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:22px; margin-bottom:20px;">จัดการผู้ใช้</div>' +
     usersErrorBanner + adminSection +
     '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' + userRows + '</div>' +
   '</div>';
@@ -3600,7 +3600,7 @@ Dashboard.prototype.renderContactPage = function () {
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="font-family:Kanit; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
+    '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:22px; margin-bottom:6px;">ติดต่อเรา</div>' +
     '<div style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">รายชื่อผู้ติดต่อที่จะแสดงผลที่หน้าร้านของลูกค้า</div>' +
     contactsErrorBanner + addForm + body +
   '</div>';
@@ -3715,7 +3715,7 @@ Dashboard.prototype.renderPipePage = function () {
   }).join("");
 
   var infoItem = function (label, value) {
-    return '<div><div style="font-size:11.5px; color:var(--text-faint); margin-bottom:4px;">' + label + '</div><div style="font-family:Kanit; font-weight:700; font-size:16px; color:var(--navy-action);">' + value + '</div></div>';
+    return '<div><div style="font-size:11.5px; color:var(--text-faint); margin-bottom:4px;">' + label + '</div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:16px; color:var(--navy-action);">' + value + '</div></div>';
   };
   var infoCard = '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px;">' +
     infoItem("ราคาตั้ง (ไม่รวม VAT)", "฿" + fmtN(active.listExvat, 2)) +
@@ -3727,7 +3727,7 @@ Dashboard.prototype.renderPipePage = function () {
 
   var isAdmin = this.isAdmin();
   var isEditingThis = s.pipeEditingId === active.id;
-  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid var(--navy-border); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid var(--navy-border); font-size:13px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
 
   var colWidths = "100px 1fr 1fr 1fr";
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:var(--bg-subtle-2); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
@@ -3743,8 +3743,8 @@ Dashboard.prototype.renderPipePage = function () {
     '</div>' :
     '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid var(--border-light); align-items:center;">' +
       '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
       '<div style="font-size:12px; color:var(--text-faint);">ราคาก่อนหักส่วนลด</div>' +
     '</div>';
 
@@ -3766,8 +3766,8 @@ Dashboard.prototype.renderPipePage = function () {
       var color = group ? group.color : "var(--text-body)";
       return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid var(--border-light); align-items:center; background:' + bg + ';">' +
         '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.exvat, 2) + '</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.incvat, 2) + '</div>' +
         '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("");
@@ -3801,7 +3801,7 @@ Dashboard.prototype.renderPipePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">เลือกประเภทท่อและขนาด เพื่อดูราคาตั้งและส่วนลดทุกช่วง 3%-30% (ท่อนยาว 1 ม.)</div>' +
     '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทท่อ</div>' +
@@ -3886,7 +3886,7 @@ Dashboard.prototype.renderPlankPage = function () {
   }).join("");
 
   var infoItem = function (label, value) {
-    return '<div><div style="font-size:11.5px; color:var(--text-faint); margin-bottom:4px;">' + label + '</div><div style="font-family:Kanit; font-weight:700; font-size:16px; color:var(--navy-action);">' + value + '</div></div>';
+    return '<div><div style="font-size:11.5px; color:var(--text-faint); margin-bottom:4px;">' + label + '</div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:16px; color:var(--navy-action);">' + value + '</div></div>';
   };
   var infoCard = '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px;">' +
     infoItem("ราคาตั้ง (ไม่รวม VAT)", "฿" + fmtN(active.listExvat, 2) + "/ตร.ม.") +
@@ -3897,7 +3897,7 @@ Dashboard.prototype.renderPlankPage = function () {
 
   var isAdmin = this.isAdmin();
   var isEditingThis = s.plankEditingId === active.id;
-  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid var(--navy-border); font-size:13px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:7px 9px; border-radius:6px; border:1px solid var(--navy-border); font-size:13px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
 
   var colWidths = "100px 1fr 1fr 1fr";
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:12px 16px; background:var(--bg-subtle-2); font-size:11.5px; font-weight:700; color:oklch(0.45 0.01 60);">' +
@@ -3913,8 +3913,8 @@ Dashboard.prototype.renderPlankPage = function () {
     '</div>' :
     '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid var(--border-light); align-items:center;">' +
       '<div style="font-weight:700; font-size:13px;">ราคาตั้ง</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listExvat, 2) + '</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px;">฿' + fmtN(active.listIncvat, 2) + '</div>' +
       '<div style="font-size:12px; color:var(--text-faint);">ราคาก่อนหักส่วนลด</div>' +
     '</div>';
 
@@ -3936,8 +3936,8 @@ Dashboard.prototype.renderPlankPage = function () {
       var color = group ? group.color : "var(--text-body)";
       return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:8px; padding:11px 16px; border-top:1px solid var(--border-light); align-items:center; background:' + bg + ';">' +
         '<div style="font-weight:700; font-size:13.5px; color:' + color + ';">' + d.percent + '%</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.exvat, 2) + '</div>' +
-        '<div style="font-family:Kanit; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.incvat, 2) + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.exvat, 2) + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:14.5px; color:var(--navy-action);">฿' + fmtN(d.incvat, 2) + '</div>' +
         '<div style="font-size:12px; color:' + color + ';">' + (group ? esc(group.label) : "") + '</div>' +
       '</div>';
     }).join("");
@@ -3968,7 +3968,7 @@ Dashboard.prototype.renderPlankPage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดแผ่นพื้นสำเร็จรูป (กว้าง 35 หนา 5 ซม. มอก.828-2546)</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางส่วนลดแผ่นพื้นสำเร็จรูป (กว้าง 35 หนา 5 ซม. มอก.828-2546)</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">เลือกประเภทแผ่นพื้น เพื่อดูราคาตั้งและส่วนลดทุกช่วง 2%-7% (ราคาต่อ ตร.ม.)</div>' +
     '</div>' +
     '<div style="margin-bottom:10px; font-size:12.5px; font-weight:700; color:oklch(0.45 0.01 60);">ประเภทแผ่นพื้น</div>' +
@@ -4002,8 +4002,8 @@ Dashboard.prototype.renderFencePage = function () {
   var isAdmin = this.isAdmin();
   // Compact font/column set so this 7-column table fits typical screens
   // without horizontal scroll - same reasoning as renderPilePage above.
-  var fencePriceStyle = "font-family:Kanit; font-weight:700; font-size:13px; color:oklch(0.32 0.17 275);";
-  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var fencePriceStyle = "font-family:'IBM Plex Sans Thai'; font-weight:700; font-size:13px; color:oklch(0.32 0.17 275);";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
   var colWidths = "minmax(0,1.7fr) 0.65fr 0.95fr 0.95fr 0.8fr 0.75fr 0.6fr" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div>ประเภท</div><div>ความยาว</div><div>ราคา/ท่อน<br>(ไม่รวม VAT)</div><div>ราคา/ท่อน<br>(รวม VAT 7%)</div><div>น้ำหนัก/ท่อน</div><div>จำนวนแผ่น</div><div>ทับหลัง</div>' +
@@ -4043,7 +4043,7 @@ Dashboard.prototype.renderFencePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคารั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคารั้วสำเร็จรูป TNN (คอนกรีตเสริมเหล็กอัดแรง)</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">ราคาต่อท่อน ไม่รวม VAT 7% ไม่มีขั้นส่วนลด</div>' +
     '</div>' +
     this.renderPageNoteBlock("fence") + table +
@@ -4085,8 +4085,8 @@ Dashboard.prototype.renderConcreteMixPage = function () {
     retail: { headerBg: "#97C459", headerText: "#173404", novatBg: "#F5F9EF", vatBg: "#EAF3DE" },
     wholesale: { headerBg: "#85B7EB", headerText: "#042C53", novatBg: "#F4F9FE", vatBg: "#E6F1FB" },
   };
-  var concreteMixFontStyle = "font-family:Kanit; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
-  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var concreteMixFontStyle = "font-family:'IBM Plex Sans Thai'; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
   var previewStyle = "font-size:9.5px; color:var(--text-faint); margin-top:2px;";
   var colWidths = "minmax(0,1.2fr) 0.55fr 0.55fr 0.8fr 0.72fr 0.72fr 0.72fr 0.72fr" + (isAdmin ? " 44px" : "");
 
@@ -4152,7 +4152,7 @@ Dashboard.prototype.renderConcreteMixPage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาคอนกรีตผสมเสร็จ</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาคอนกรีตผสมเสร็จ</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">ราคาต่อลูกบาศก์เมตร ' + (isAdmin ? "&mdash; แก้ไขได้ที่สเปก (Cube/Cylinder/Slump) และราคาฐาน (ปลีก/ส่ง) ราคารวม/ไม่รวม VAT คำนวณให้อัตโนมัติ" : "") + '</div>' +
     '</div>' +
     this.renderPageNoteBlock("concrete_mix") + table +
@@ -4255,7 +4255,7 @@ Dashboard.prototype.renderPilePage = function () {
   // it gets its own compact font/column set here to fit typical screens
   // without horizontal scrolling.
   var pilePriceFont = "13px";
-  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
   var colWidths = "minmax(0,1.3fr) 0.55fr repeat(8, 0.58fr)" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div style="padding:10px 8px;">รายการ</div><div style="padding:10px 8px;">พื้นที่หน้าตัด<br>(ตร.ซม.)</div>' +
@@ -4275,7 +4275,7 @@ Dashboard.prototype.renderPilePage = function () {
       : '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + (p.areaSqcm != null ? fmt(p.areaSqcm) : "-") + '</div>';
 
     var tierCells = PILE_TIERS.map(function (t) {
-      var fontStyle = "font-family:Kanit; font-size:" + pilePriceFont + ";" + GROUP_CELL_TEXT_STYLE;
+      var fontStyle = "font-family:'IBM Plex Sans Thai'; font-size:" + pilePriceFont + ";" + GROUP_CELL_TEXT_STYLE;
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
@@ -4310,7 +4310,7 @@ Dashboard.prototype.renderPilePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคา' + esc(groupLabel) + ' (TNN)</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคา' + esc(groupLabel) + ' (TNN)</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่พื้นที่หน้าตัดและราคาฐาน 4 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาต่อเมตรทุกระดับของ" + groupLabel) + '</div>' +
     '</div>' +
     note + table +
@@ -4335,7 +4335,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
   }
 
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
   var colWidths = "minmax(0,0.85fr) 0.6fr 0.75fr repeat(4, 0.62fr)" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div style="padding:10px 8px;">ขนาด (ก.xส. ซม.)</div><div style="padding:10px 8px;">หนา<br>(ซม.)</div><div style="padding:10px 8px;">น้ำหนัก<br>(กก.)</div>' +
@@ -4351,7 +4351,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
     var isEditingThis = s.boxCulvertEditingId === p.id;
 
     var tierCells = BOX_CULVERT_TIERS.map(function (t) {
-      var fontStyle = "font-family:Kanit; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
+      var fontStyle = "font-family:'IBM Plex Sans Thai'; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
@@ -4388,7 +4388,7 @@ Dashboard.prototype.renderBoxCulvertPage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ (ท่อเหลี่ยม)</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาท่อคอนกรีตเสริมเหล็กอัดแรงสำหรับงานระบายน้ำ (ท่อเหลี่ยม)</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 2 มาตรฐาน (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคาตามมาตรฐาน มอก.1164-2559 (ใต้ทางเท้า) และ มอก.1166-2559 (ใต้ผิวจราจร)") + '</div>' +
     '</div>' +
     note + table +
@@ -4413,7 +4413,7 @@ Dashboard.prototype.renderManholePage = function () {
   }
 
   var isAdmin = this.isAdmin();
-  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:Kanit; width:100%; box-sizing:border-box;";
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
   var colWidths = "minmax(0,0.9fr) 0.55fr 0.5fr 0.6fr 0.65fr repeat(6, 0.58fr)" + (isAdmin ? " 44px" : "");
 
   var headerCells = '<div style="padding:10px 8px;">ขนาดบ่อ (ก.xย.xส. ซม.)</div><div style="padding:10px 8px;">ใช้กับท่อ<br>(ซม.)</div><div style="padding:10px 8px;">หนา<br>(ซม.)</div><div style="padding:10px 8px;">เหล็กเสริม</div><div style="padding:10px 8px;">ชนิด</div>' +
@@ -4429,7 +4429,7 @@ Dashboard.prototype.renderManholePage = function () {
     var isEditingThis = s.manholeEditingId === p.id;
 
     var tierCells = MANHOLE_TIERS.map(function (t) {
-      var fontStyle = "font-family:Kanit; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
+      var fontStyle = "font-family:'IBM Plex Sans Thai'; font-size:13px;" + GROUP_CELL_TEXT_STYLE;
       if (isEditingThis) {
         var raw = s[t.editKey];
         var parsed = parseFloat(raw);
@@ -4468,7 +4468,7 @@ Dashboard.prototype.renderManholePage = function () {
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="margin-bottom:20px;">' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพักสำเร็จรูป (precast manhole)</div>' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพักสำเร็จรูป (precast manhole)</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 3 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคารับเอง/ส่ง/ปลีก ต่อใบ (บ่อพักแบบ 2 ทางตรง)") + '</div>' +
     '</div>' +
     note + table +
@@ -4767,7 +4767,7 @@ Dashboard.prototype.renderCalcPage = function () {
     '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:48px 20px; text-align:center; color:var(--text-faint); font-size:14px;">ยังไม่มีเครื่องคำนวณสำหรับ "' + esc(typeConfig ? typeConfig.label : s.calcProductType) + '"</div>';
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="margin-bottom:20px;"><div style="font-family:Kanit; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">เลือกประเภทสินค้าที่ต้องการคำนวณราคา</div></div>' +
+    '<div style="margin-bottom:20px;"><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:22px;">คำนวณราคาสินค้า</div><div style="font-size:13px; color:var(--text-muted); margin-top:2px;">เลือกประเภทสินค้าที่ต้องการคำนวณราคา</div></div>' +
     typeSelector + body +
   '</div>';
 };
