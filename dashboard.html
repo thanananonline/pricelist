@@ -67,6 +67,21 @@
   }
   .row-icon-btn:hover { background: var(--bg-subtle); }
   .row-icon-btn--danger:hover { background: var(--danger-red-bg); border-color: var(--danger-red); color: var(--danger-red); }
+  /* แถวปุ่มเครื่องมือ (นำเข้า Excel / เทมเพลต / ดาวน์โหลด / จัดการหมวดหมู่ /
+     เลือกหลายรายการ): ขนาด เส้นขอบ มุมโค้ง ระยะห่างไอคอน-ข้อความ เท่ากันหมด */
+  .toolbar-btn {
+    min-height: 44px; box-sizing: border-box;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 16px;
+    border: 1px solid var(--border-input);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .toolbar-btn:hover { background: var(--bg-subtle); border-color: var(--border); }
   /* แถวสลับสีอ่อนมากๆ ในตารางรายการสินค้า (ไม่รวมแถวหัวตาราง) */
   .list-grid-row:not(.list-header):nth-child(even) { background: var(--bg-zebra); }
   .mobile-cat-bar { display: none; margin-bottom: 16px; }
@@ -2826,14 +2841,13 @@ Dashboard.prototype.renderPricePage = function () {
 
   var adminActionsRow = "";
   if (isAdmin) {
-    var utilityBtn = "min-height:44px; display:inline-flex; align-items:center; padding:11px 16px; border:1px solid var(--border-input); border-radius:10px; background:transparent; color:var(--text-muted); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;";
     adminActionsRow =
       '<div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-top:1px solid var(--border-light); padding-top:14px; margin-top:14px;">' +
-        '<label style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; padding:11px 16px; border-radius:10px; background:transparent; border:1px solid var(--border-input); color:var(--text-muted); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">📥 นำเข้า Excel<input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' +
-        '<button type="button" data-action="download-import-template" style="' + utilityBtn + '">📄 เทมเพลต</button>' +
-        '<button type="button" data-action="open-download-modal" style="' + utilityBtn + '">⬇️ ดาวน์โหลด</button>' +
-        '<button type="button" data-action="toggle-manage-categories" style="' + utilityBtn + '">' + (s.showManageCategories ? "✕ ปิดหมวดหมู่" : "🏷️ จัดการหมวดหมู่") + '</button>' +
-        (!s.selectMode ? '<button type="button" data-action="toggle-select-mode" style="' + utilityBtn + '">☑️ เลือกหลายรายการ</button>' : '') +
+        '<label class="toolbar-btn">📥 <span>นำเข้า Excel</span><input type="file" accept=".xlsx,.xls,.csv" data-action="import-excel" style="display:none;" /></label>' +
+        '<button type="button" class="toolbar-btn" data-action="download-import-template">📄 <span>เทมเพลต</span></button>' +
+        '<button type="button" class="toolbar-btn" data-action="open-download-modal">⬇️ <span>ดาวน์โหลด</span></button>' +
+        '<button type="button" class="toolbar-btn" data-action="toggle-manage-categories">' + (s.showManageCategories ? "✕ <span>ปิดหมวดหมู่</span>" : "🏷️ <span>จัดการหมวดหมู่</span>") + '</button>' +
+        (!s.selectMode ? '<button type="button" class="toolbar-btn" data-action="toggle-select-mode">☑️ <span>เลือกหลายรายการ</span></button>' : '') +
         '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center; margin-left:auto; padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' +
       '</div>';
   }
