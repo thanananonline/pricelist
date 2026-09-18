@@ -284,6 +284,12 @@ function img(cat) {
 
 /* ---------- helpers ---------- */
 
+// flat gray "no image yet" box icon, used in place of the old diagonal-stripe
+// placeholder for products without a photo (grid card media + list thumbnail).
+function noImageIconSvg(px) {
+  return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5-9 5-9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg>';
+}
+
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
 function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
@@ -2962,8 +2968,8 @@ Dashboard.prototype.renderPricePage = function () {
     body = '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
   } else if (gridActive) {
     body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(function (p) {
-      var mediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
-      var mediaSvg = p.image ? "" : '<svg width="100%" height="100%" viewBox="0 0 230 130" preserveAspectRatio="none" style="position:absolute; inset:0;"><defs><pattern id="stripe-' + p.id + '" width="14" height="14" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="' + p.imgBg + '"></rect><rect width="7" height="14" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="230" height="130" fill="url(#stripe-' + p.id + ')"></rect></svg>';
+      var mediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
+      var mediaSvg = p.image ? "" : noImageIconSvg(40);
       var cardBody = p.isEditing ?
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
@@ -3043,8 +3049,8 @@ Dashboard.prototype.renderPricePage = function () {
           (isAdmin ? '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' : '') +
           (isAdmin ? '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" aria-label="ลบ">🗑️</button>' : '') +
         '</div>';
-      var listMediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
-      var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
+      var listMediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
+      var listMediaSvg = p.image ? "" : noImageIconSvg(20);
       return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; align-items:center; padding:9px 20px; border-top:1px solid var(--border-light);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           (isAdmin && s.selectMode && !p.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; flex:none; margin:0;" />' : '') +
