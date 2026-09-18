@@ -39,6 +39,7 @@
     --bg-input: oklch(0.98 0.004 70);
     --bg-subtle: oklch(0.95 0.006 70);
     --bg-subtle-2: oklch(0.96 0.006 70);
+    --bg-zebra: oklch(0.985 0.003 70);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -66,6 +67,8 @@
   }
   .row-icon-btn:hover { background: var(--bg-subtle); }
   .row-icon-btn--danger:hover { background: var(--danger-red-bg); border-color: var(--danger-red); color: var(--danger-red); }
+  /* แถวสลับสีอ่อนมากๆ ในตารางรายการสินค้า (ไม่รวมแถวหัวตาราง) */
+  .list-grid-row:not(.list-header):nth-child(even) { background: var(--bg-zebra); }
   .mobile-cat-bar { display: none; margin-bottom: 16px; }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
   .pdf-share-spinner {
@@ -287,6 +290,17 @@ function priceTiersHtml(p) {
   return '<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px;">' +
     rows.map(function (r) {
       return '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:11px; color:var(--text-faint); width:42px; flex:none;">' + r[0] + '</span><span style="font-family:Kanit; font-weight:700; font-size:15px; color:var(--navy-action);">' + (r[1] ? "฿" + r[1] : "-") + '</span></div>';
+    }).join("") +
+  '</div>';
+}
+// compact right-aligned variant for the price-list table row: skips empty
+// tiers (instead of showing a "-" placeholder) and tightens line spacing so
+// a 2-3 tier price doesn't blow out the row height the way priceTiersHtml does.
+function priceTiersHtmlCompact(p) {
+  var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]].filter(function (r) { return r[1]; });
+  return '<div style="display:flex; flex-direction:column; gap:1px; align-items:flex-end;">' +
+    rows.map(function (r) {
+      return '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-size:10.5px; color:var(--text-faint); flex:none;">' + r[0] + '</span><span style="font-family:Kanit; font-weight:700; font-size:13.5px; color:var(--navy-action); text-align:right;">฿' + r[1] + '</span></div>';
     }).join("") +
   '</div>';
 }
@@ -3031,25 +3045,25 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>';
       var listMediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:" + p.imgBg + ";";
       var listMediaSvg = p.image ? "" : '<svg width="44" height="44" viewBox="0 0 44 44"><defs><pattern id="stripe-list-' + p.id + '" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="' + p.imgBg + '"></rect><rect width="5" height="10" fill="' + p.imgStripe + '"></rect></pattern></defs><rect width="44" height="44" fill="url(#stripe-list-' + p.id + ')"></rect></svg>';
-      return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; align-items:center; padding:13px 20px; border-top:1px solid var(--border-light);">' +
+      return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; align-items:center; padding:9px 20px; border-top:1px solid var(--border-light);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           (isAdmin && s.selectMode && !p.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; flex:none; margin:0;" />' : '') +
-          '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="width:44px; height:44px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
+          '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="width:40px; height:40px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
           '<div>' +
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
           '</div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + '</span></div>' +
-        '<div>' + (p.hasMultiPrice ? priceTiersHtml(p) :
-          '<div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
+        '<div style="text-align:right;">' + (p.hasMultiPrice ? priceTiersHtmlCompact(p) :
+          '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-family:Kanit; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
         ) + '</div>' +
-        '<div style="font-size:13px; color:var(--text-muted);">' + esc(p.unit) + '</div>' +
+        '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
       '</div>';
     }).join("");
     body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' +
-      '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:12px; padding:12px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div>ราคา</div><div>หน่วย</div><div>ภาษี</div></div>' +
+      '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:10px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div style="text-align:right;">ราคา</div><div style="text-align:right;">หน่วย</div><div>ภาษี</div></div>' +
       rows + '</div>';
   }
 
