@@ -2803,15 +2803,15 @@ Dashboard.prototype.renderPricePage = function () {
   var novatCount = withOverrides.filter(function (p) { return p.vat === "novat"; }).length;
 
   var statCards = [
-    { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "oklch(0.4 0.02 60)" },
-    { label: "หมวดหมู่สินค้า", value: s.categories.length, color: "oklch(0.4 0.02 60)" },
+    { label: "สินค้าทั้งหมด", value: withOverrides.length, color: "var(--navy-action)" },
+    { label: "หมวดหมู่สินค้า", value: s.categories.length, color: "var(--navy-action)" },
     { label: "สินค้า NO VAT", value: novatCount, color: "var(--danger-red)" },
   ];
 
   var statCardsHtml = statCards.map(function (stat) {
-    return '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:6px;">' +
-      '<div style="font-size:12.5px; color:var(--text-muted); font-weight:500;">' + esc(stat.label) + '</div>' +
-      '<div style="font-family:Kanit; font-weight:700; font-size:28px; color:' + stat.color + ';">' + stat.value + '</div></div>';
+    return '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:7px;">' +
+      '<div style="font-size:12.5px; color:var(--text-muted); font-weight:600;">' + esc(stat.label) + '</div>' +
+      '<div style="font-family:Kanit; font-weight:700; font-size:30px; line-height:1.1; letter-spacing:-.01em; color:' + stat.color + ';">' + stat.value + '</div></div>';
   }).join("");
 
   var sortOptions = [
