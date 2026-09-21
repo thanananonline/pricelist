@@ -545,6 +545,7 @@ function Dashboard(root) {
     mitFileView: "list",
     search: "",
     category: "all",
+    subcat: "",
     categories: [],
     categoriesLoading: true,
     categoriesError: "",
@@ -557,6 +558,7 @@ function Dashboard(root) {
     editingCategoryValue: null,
     editCategoryName: "",
     catSidebarCollapsed: false,
+    expandedCatSidebar: {},
     calcSidebarCollapsed: false,
     discountSidebarCollapsed: false,
     sortBy: "name",
@@ -604,7 +606,6 @@ function Dashboard(root) {
     newProdImage: "",
     newProdNote: "",
     newProdError: "",
-    collapsedSubcatGroups: {},
     importMsg: "",
     importMsgType: "",
     importErrors: [],
@@ -1412,7 +1413,16 @@ Dashboard.prototype.handleClick = function (e) {
       var fieldEl = this.root.querySelector("#field-" + fieldKey);
       if (fieldEl) fieldEl.focus();
       break;
-    case "set-category": this.setState({ category: d.category }); break;
+    case "set-category": this.setState({ category: d.category, subcat: "" }); break;
+    case "set-subcat": this.setState({ category: d.category, subcat: d.subcat }); break;
+    case "toggle-cat-subcats":
+      var toggleCatKey = d.category;
+      this.setState(function (s2) {
+        var next = Object.assign({}, s2.expandedCatSidebar);
+        next[toggleCatKey] = !next[toggleCatKey];
+        return { expandedCatSidebar: next };
+      });
+      break;
     case "toggle-cat-sidebar": this.setState(function (s2) { return { catSidebarCollapsed: !s2.catSidebarCollapsed }; }); break;
     case "toggle-calc-sidebar": this.setState(function (s2) { return { calcSidebarCollapsed: !s2.calcSidebarCollapsed }; }); break;
     case "toggle-discount-sidebar": this.setState(function (s2) { return { discountSidebarCollapsed: !s2.discountSidebarCollapsed }; }); break;
@@ -1535,14 +1545,6 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-category": this.cancelEditCategory(); break;
     case "save-edit-category": this.saveEditCategory(d.value); break;
     case "view-product-image": this.setState({ imagePreview: { url: d.image, name: d.name || "" } }); break;
-    case "toggle-subcat-group":
-      var subcatGroupKey = d.group;
-      this.setState(function (s2) {
-        var next = Object.assign({}, s2.collapsedSubcatGroups);
-        next[subcatGroupKey] = !next[subcatGroupKey];
-        return { collapsedSubcatGroups: next };
-      });
-      break;
     case "close-image-preview": this.setState({ imagePreview: null }); break;
   }
 };
@@ -1734,9 +1736,10 @@ Dashboard.prototype.computeProducts = function () {
 
   var list = withOverrides.filter(function (p) {
     var matchesCat = s.category === "all" || p.cat === s.category;
+    var matchesSubcat = !s.subcat || (p.subcat || "") === s.subcat;
     var haystack = (p.name + " " + p.sku).toLowerCase();
     var matchesQ = !queryTerms.length || queryTerms.every(function (term) { return haystack.indexOf(term) !== -1; });
-    return matchesCat && matchesQ;
+    return matchesCat && matchesSubcat && matchesQ;
   });
 
   if (s.sortBy === "name") list = list.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "th"); });
@@ -3062,7 +3065,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="position:relative; height:130px; ' + mediaStyle + (p.image ? ' cursor:pointer;' : '') + '">' +
           mediaSvg +
           (isAdmin && s.selectMode && !p.isEditing ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:rgba(255,255,255,.92); border-radius:7px; padding:4px; display:flex; line-height:0;"><input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; margin:0;" /></div>' : '') +
-          '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + '</span>' +
+          '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span>' +
         '</div>' +
         cardBody +
       '</div>';
@@ -3108,7 +3111,7 @@ Dashboard.prototype.renderPricePage = function () {
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
           '</div>' +
         '</div>' +
-        '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + '</span></div>' +
+        '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span></div>' +
         '<div style="text-align:right;">' + (p.hasMultiPrice ? priceTiersHtmlCompact(p) :
           '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' + (p.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + p.oldPriceDisplay + '</span>' : '') + '</div>'
         ) + '</div>' +
@@ -3122,54 +3125,10 @@ Dashboard.prototype.renderPricePage = function () {
   var body;
   if (products.length === 0) {
     body = '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
+  } else if (gridActive) {
+    body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(renderGridCard).join("") + '</div>';
   } else {
-    // Two-level (main category > subcategory) grouping only kicks in while
-    // browsing a single main category -- picking one already happens via
-    // the sidebar, so nesting main categories here too would just duplicate
-    // that filter. It also only appears once a category actually has more
-    // than one subcat value in play, so categories nobody has split into
-    // subcategories yet keep rendering exactly as before.
-    var subcatGroups = null;
-    if (s.category !== "all") {
-      var bucket = {};
-      var order = [];
-      products.forEach(function (p) {
-        var key = p.subcat || "";
-        if (!bucket[key]) { bucket[key] = []; order.push(key); }
-        bucket[key].push(p);
-      });
-      if (order.length > 1) {
-        order.sort(function (a, b) {
-          if (a === "") return -1;
-          if (b === "") return 1;
-          return a.localeCompare(b, "th");
-        });
-        subcatGroups = order.map(function (key) { return { key: key, label: key || "ไม่ระบุหมวดย่อย", items: bucket[key] }; });
-      }
-    }
-
-    if (subcatGroups) {
-      body = subcatGroups.map(function (g) {
-        var groupKey = s.category + "::" + (g.key || "__none__");
-        var collapsed = !!s.collapsedSubcatGroups[groupKey];
-        var innerHtml = "";
-        if (!collapsed) {
-          innerHtml = gridActive
-            ? '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px; padding:16px 18px 18px;">' + g.items.map(renderGridCard).join("") + '</div>'
-            : '<div class="list-table" style="border-top:1px solid var(--border-light);">' + listHeaderHtml + g.items.map(renderListRow).join("") + '</div>';
-        }
-        return '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; margin-bottom:16px; overflow:hidden;">' +
-          '<button type="button" data-action="toggle-subcat-group" data-group="' + esc(groupKey) + '" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px; border:none; background:transparent; cursor:pointer; font-family:inherit; text-align:left;">' +
-            '<span style="font-weight:700; font-size:14.5px;">' + esc(g.label) + '</span>' +
-            '<span style="display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--text-muted);"><span>' + g.items.length + ' รายการ</span><span style="display:inline-block; transition:transform .15s; transform:rotate(' + (collapsed ? "0deg" : "180deg") + ');">▾</span></span>' +
-          '</button>' + innerHtml +
-        '</div>';
-      }).join("");
-    } else if (gridActive) {
-      body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(renderGridCard).join("") + '</div>';
-    } else {
-      body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' + listHeaderHtml + products.map(renderListRow).join("") + '</div>';
-    }
+    body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' + listHeaderHtml + products.map(renderListRow).join("") + '</div>';
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
@@ -3181,13 +3140,40 @@ Dashboard.prototype.renderPricePage = function () {
 
 Dashboard.prototype.renderCategoryBox = function () {
   var s = this.state;
+  var self = this;
   var catExpanded = !s.catSidebarCollapsed;
+  // Subcategories aren't a master list -- they're derived per main category
+  // from whatever `subcat` values actually exist on products right now (see
+  // subcatOptionsFor), so a category only gets an expand arrow once someone
+  // has actually used subcategories under it. "ทุกหมวดหมู่" spans every main
+  // category, so it never gets one.
   var categoryRowsHtml = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
-    var isActive = opt.value === s.category;
-    return '<button data-action="set-category" data-category="' + opt.value + '" class="cat-sidebar-btn" style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (isActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (isActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (isActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
+    var subcats = opt.value === "all" ? [] : self.subcatOptionsFor(opt.value);
+    var hasSubcats = subcats.length > 0;
+    var mainIsActive = opt.value === s.category && !s.subcat;
+    var subExpanded = hasSubcats && !!s.expandedCatSidebar[opt.value];
+
+    var labelBtn = '<button data-action="set-category" data-category="' + esc(opt.value) + '" class="cat-sidebar-btn" style="flex:1; min-width:0; box-sizing:border-box; text-align:left; padding:9px 10px 9px 34px; border:none; border-radius:8px; font-size:13.5px; font-weight:' + (mainIsActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:transparent; color:' + (mainIsActive ? "#fff" : "rgba(255,255,255,.75)") + ';">' +
       '<span style="min-width:0; overflow-wrap:break-word;">' + esc(opt.label) + '</span>' +
-      '<span style="font-size:13px; flex:none; color:rgba(255,255,255,.4);">›</span>' +
     '</button>';
+
+    var arrowBtn = hasSubcats
+      ? '<button type="button" data-action="toggle-cat-subcats" data-category="' + esc(opt.value) + '" aria-label="' + (subExpanded ? "ยุบหมวดย่อย" : "ขยายหมวดย่อย") + '" style="flex:none; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:rgba(255,255,255,.5); cursor:pointer; padding:0;">' +
+          '<span style="font-size:13px; display:inline-block; transition:transform .15s; transform:rotate(' + (subExpanded ? "90deg" : "0deg") + ');">›</span>' +
+        '</button>'
+      : '<span style="flex:none; width:28px;"></span>';
+
+    var row = '<div style="display:flex; align-items:center; border-radius:8px; background:' + (mainIsActive ? "rgba(255,255,255,.14)" : "transparent") + ';">' + labelBtn + arrowBtn + '</div>';
+
+    var subRowsHtml = "";
+    if (subExpanded) {
+      subRowsHtml = subcats.map(function (sc) {
+        var subIsActive = opt.value === s.category && s.subcat === sc;
+        return '<button data-action="set-subcat" data-category="' + esc(opt.value) + '" data-subcat="' + esc(sc) + '" class="cat-sidebar-btn" style="display:block; width:100%; min-width:0; box-sizing:border-box; text-align:left; padding:8px 10px 8px 54px; border:none; border-radius:8px; font-size:12.5px; font-weight:' + (subIsActive ? "600" : "400") + '; font-family:inherit; cursor:pointer; background:' + (subIsActive ? "rgba(255,255,255,.14)" : "transparent") + '; color:' + (subIsActive ? "#fff" : "rgba(255,255,255,.6)") + ';">' + esc(sc) + '</button>';
+      }).join("");
+    }
+
+    return row + subRowsHtml;
   }).join("");
 
   return '<div class="cat-sidebar" style="width:100%; min-width:0; box-sizing:border-box; background:transparent; border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:1px; margin:2px 0 8px;">' +
