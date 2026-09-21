@@ -143,6 +143,7 @@ function nullableNumber(v) {
 function sanitizeProduct(body) {
   return {
     cat: String(body.cat || ""),
+    subcat: String(body.subcat || "").trim(),
     name: String(body.name || "").trim(),
     sku: String(body.sku || "").trim(),
     price: Number(body.price) || 0,
@@ -161,8 +162,8 @@ async function insertProduct(env, item) {
   const p = Object.assign({ id: genId() }, sanitizeProduct(item));
   if (!p.sku) p.sku = autoSku();
   await env.DB.prepare(
-    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
-  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image, p.note).run();
+    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image, note, subcat) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image, p.note, p.subcat).run();
   return p;
 }
 
@@ -294,7 +295,7 @@ export default {
       if (!existing) return json({ error: "not found" }, 404);
 
       const merged = Object.assign({}, existing);
-      ["cat", "name", "sku", "unit", "vat", "image", "note"].forEach(function (k) {
+      ["cat", "subcat", "name", "sku", "unit", "vat", "image", "note"].forEach(function (k) {
         if (body[k] !== undefined) merged[k] = String(body[k]);
       });
       if (body.price !== undefined) merged.price = Number(body.price) || 0;
@@ -304,8 +305,8 @@ export default {
       if (body.price3 !== undefined) merged.price3 = nullableNumber(body.price3);
 
       await env.DB.prepare(
-        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=?, note=? WHERE id=?"
-      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, merged.note, id).run();
+        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=?, note=?, subcat=? WHERE id=?"
+      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, merged.note, merged.subcat, id).run();
       return json(merged);
     }
 

@@ -452,6 +452,10 @@ function esc(str) {
   });
 }
 
+function subcatDatalistHtml(id, options) {
+  return '<datalist id="' + id + '">' + options.map(function (o) { return '<option value="' + esc(o) + '"></option>'; }).join("") + '</datalist>';
+}
+
 function resizeImageFile(file, maxDim, quality, callback) {
   var reader = new FileReader();
   reader.onload = function () {
@@ -587,9 +591,11 @@ function Dashboard(root) {
     editVat: "vat",
     editImage: "",
     editNote: "",
+    editSubcat: "",
     showAddForm: false,
     newProdName: "",
     newProdCat: "",
+    newProdSubcat: "",
     newProdPrice: "",
     newProdPrice2: "",
     newProdPrice3: "",
@@ -598,6 +604,7 @@ function Dashboard(root) {
     newProdImage: "",
     newProdNote: "",
     newProdError: "",
+    collapsedSubcatGroups: {},
     importMsg: "",
     importMsgType: "",
     importErrors: [],
@@ -1281,6 +1288,19 @@ Dashboard.prototype.catValueByLabel = function (label) {
   return found ? found.value : "";
 };
 
+// Subcategories aren't a master list -- they're free-text labels on
+// products (e.g. under "กระเบื้องหลังคา": ADAMAS, CT, ลอนคู่). Suggestions
+// are just the distinct values already used within one main category, so
+// any category can grow subcategories organically with no setup.
+Dashboard.prototype.subcatOptionsFor = function (catValue) {
+  var seen = {};
+  var out = [];
+  this.state.products.forEach(function (p) {
+    if (p.cat === catValue && p.subcat && !seen[p.subcat]) { seen[p.subcat] = true; out.push(p.subcat); }
+  });
+  return out.sort(function (a, b) { return a.localeCompare(b, "th"); });
+};
+
 Dashboard.prototype.addCategory = function () {
   var s = this.state;
   var label = s.newCategoryName.trim();
@@ -1515,6 +1535,14 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-category": this.cancelEditCategory(); break;
     case "save-edit-category": this.saveEditCategory(d.value); break;
     case "view-product-image": this.setState({ imagePreview: { url: d.image, name: d.name || "" } }); break;
+    case "toggle-subcat-group":
+      var subcatGroupKey = d.group;
+      this.setState(function (s2) {
+        var next = Object.assign({}, s2.collapsedSubcatGroups);
+        next[subcatGroupKey] = !next[subcatGroupKey];
+        return { collapsedSubcatGroups: next };
+      });
+      break;
     case "close-image-preview": this.setState({ imagePreview: null }); break;
   }
 };
@@ -1719,7 +1747,7 @@ Dashboard.prototype.computeProducts = function () {
   return list.map(function (p) {
     var im = img(p.cat);
     return {
-      id: p.id, name: p.name, sku: p.sku, note: p.note || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
+      id: p.id, name: p.name, sku: p.sku, note: p.note || "", cat: p.cat, subcat: p.subcat || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
       hasDiscount: !!p.oldPrice,
@@ -1743,6 +1771,7 @@ Dashboard.prototype.startEdit = function (id) {
     editingId: p.id, editName: p.name, editPrice: String(p.price),
     editPrice2: p.price2 != null ? String(p.price2) : "", editPrice3: p.price3 != null ? String(p.price3) : "",
     editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "", editNote: p.note || "",
+    editSubcat: p.subcat || "",
   });
 };
 
@@ -1751,7 +1780,7 @@ Dashboard.prototype.saveEdit = function (id) {
   var price = parseFloat(s.editPrice);
   var name = s.editName.trim();
   var unit = s.editUnit.trim();
-  var body = { vat: s.editVat, image: s.editImage, note: s.editNote.trim() };
+  var body = { vat: s.editVat, image: s.editImage, note: s.editNote.trim(), subcat: s.editSubcat.trim() };
   if (name) body.name = name;
   if (unit) body.unit = unit;
   if (!isNaN(price)) body.price = price;
@@ -1796,14 +1825,14 @@ Dashboard.prototype.onAddProduct = function () {
   }
   var price2 = parseFloat(s.newProdPrice2); if (isNaN(price2)) price2 = null;
   var price3 = parseFloat(s.newProdPrice3); if (isNaN(price3)) price3 = null;
-  var body = { cat: s.newProdCat, name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "", note: s.newProdNote.trim() };
+  var body = { cat: s.newProdCat, subcat: s.newProdSubcat.trim(), name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "", note: s.newProdNote.trim() };
   var self = this;
   apiRequest("/products", { method: "POST", auth: true, body: body })
     .then(function (created) {
       self.setState(function (s2) {
         return {
           products: s2.products.concat([created]), showAddForm: false,
-          newProdName: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdNote: "", newProdError: "",
+          newProdName: "", newProdSubcat: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdNote: "", newProdError: "",
         };
       });
     })
@@ -2791,6 +2820,7 @@ Dashboard.prototype.isAdmin = function () {
 Dashboard.prototype.renderPricePage = function () {
   var s = this.state;
   var isAdmin = this.isAdmin();
+  var self = this;
 
   if (s.productsLoading || s.categoriesLoading) {
     return '<div class="page-content" style="padding:60px 32px; max-width:1500px; margin:0 auto; text-align:center; color:var(--text-muted);">' +
@@ -2911,6 +2941,10 @@ Dashboard.prototype.renderPricePage = function () {
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">หมวดหมู่' +
           '<select id="field-newProdCat" data-bind="newProdCat" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; background:#fff;">' + catOptsNoAll + '</select>' +
         '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">หมวดย่อย (ถ้ามี)' +
+          '<input id="field-newProdSubcat" type="text" list="subcat-datalist-add" placeholder="เช่น ADAMAS, CT, ลอนคู่" data-bind="newProdSubcat" value="' + esc(s.newProdSubcat) + '" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
+          subcatDatalistHtml("subcat-datalist-add", this.subcatOptionsFor(s.newProdCat)) +
+        '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">ราคา ช่อง 1 (บาท)' +
           '<input id="field-newProdPrice" type="text" inputmode="decimal" required data-bind="newProdPrice" data-clear="newProdError" value="' + esc(s.newProdPrice) + '" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
         '</label>' +
@@ -2977,11 +3011,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   var resultCount = '<div style="font-size:13.5px; color:var(--text-muted); margin-bottom:14px;">พบ <strong style="color:oklch(0.3 0.01 60);">' + products.length + '</strong> รายการ</div>';
 
-  var body;
-  if (products.length === 0) {
-    body = '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
-  } else if (gridActive) {
-    body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(function (p) {
+  function renderGridCard(p) {
       var mediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
       var mediaSvg = p.image ? "" : noImageIconSvg(40);
       var cardBody = p.isEditing ?
@@ -3000,6 +3030,8 @@ Dashboard.prototype.renderPricePage = function () {
               '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
             '</select>' +
           '</div>' +
+          '<input id="field-editSubcat" type="text" list="subcat-datalist-edit-' + p.id + '" data-bind="editSubcat" value="' + esc(s.editSubcat) + '" placeholder="หมวดย่อย (ถ้ามี)" style="width:100%; box-sizing:border-box; padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          subcatDatalistHtml("subcat-datalist-edit-" + p.id, self.subcatOptionsFor(p.cat)) +
           '<div style="display:flex; align-items:center; gap:6px;">' +
             (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
             '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:var(--bg-subtle); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
@@ -3034,9 +3066,9 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' +
         cardBody +
       '</div>';
-    }).join("") + '</div>';
-  } else {
-    var rows = products.map(function (p) {
+  }
+
+  function renderListRow(p) {
       var editRow = p.isEditing ?
         '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
           '<div style="display:flex; flex-direction:column; gap:6px; flex:1 1 220px;">' +
@@ -3051,6 +3083,8 @@ Dashboard.prototype.renderPricePage = function () {
             '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
             '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
           '</select>' +
+          '<input id="field-editSubcat" type="text" list="subcat-datalist-edit-' + p.id + '" data-bind="editSubcat" value="' + esc(s.editSubcat) + '" placeholder="หมวดย่อย (ถ้ามี)" style="width:140px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+          subcatDatalistHtml("subcat-datalist-edit-" + p.id, self.subcatOptionsFor(p.cat)) +
           '<div style="display:flex; align-items:center; gap:6px;">' +
             (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
             '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:var(--bg-subtle); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
@@ -3081,10 +3115,61 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
       '</div>';
-    }).join("");
-    body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' +
-      '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:10px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div style="text-align:right;">ราคา</div><div style="text-align:right;">หน่วย</div><div>ภาษี</div></div>' +
-      rows + '</div>';
+  }
+
+  var listHeaderHtml = '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:10px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div style="text-align:right;">ราคา</div><div style="text-align:right;">หน่วย</div><div>ภาษี</div></div>';
+
+  var body;
+  if (products.length === 0) {
+    body = '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);"><div style="font-size:32px; margin-bottom:8px;">🔎</div><div style="font-size:15px;">ไม่พบสินค้าที่ตรงกับเงื่อนไข ลองปรับคำค้นหาหรือหมวดหมู่</div></div>';
+  } else {
+    // Two-level (main category > subcategory) grouping only kicks in while
+    // browsing a single main category -- picking one already happens via
+    // the sidebar, so nesting main categories here too would just duplicate
+    // that filter. It also only appears once a category actually has more
+    // than one subcat value in play, so categories nobody has split into
+    // subcategories yet keep rendering exactly as before.
+    var subcatGroups = null;
+    if (s.category !== "all") {
+      var bucket = {};
+      var order = [];
+      products.forEach(function (p) {
+        var key = p.subcat || "";
+        if (!bucket[key]) { bucket[key] = []; order.push(key); }
+        bucket[key].push(p);
+      });
+      if (order.length > 1) {
+        order.sort(function (a, b) {
+          if (a === "") return -1;
+          if (b === "") return 1;
+          return a.localeCompare(b, "th");
+        });
+        subcatGroups = order.map(function (key) { return { key: key, label: key || "ไม่ระบุหมวดย่อย", items: bucket[key] }; });
+      }
+    }
+
+    if (subcatGroups) {
+      body = subcatGroups.map(function (g) {
+        var groupKey = s.category + "::" + (g.key || "__none__");
+        var collapsed = !!s.collapsedSubcatGroups[groupKey];
+        var innerHtml = "";
+        if (!collapsed) {
+          innerHtml = gridActive
+            ? '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px; padding:16px 18px 18px;">' + g.items.map(renderGridCard).join("") + '</div>'
+            : '<div class="list-table" style="border-top:1px solid var(--border-light);">' + listHeaderHtml + g.items.map(renderListRow).join("") + '</div>';
+        }
+        return '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; margin-bottom:16px; overflow:hidden;">' +
+          '<button type="button" data-action="toggle-subcat-group" data-group="' + esc(groupKey) + '" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px; border:none; background:transparent; cursor:pointer; font-family:inherit; text-align:left;">' +
+            '<span style="font-weight:700; font-size:14.5px;">' + esc(g.label) + '</span>' +
+            '<span style="display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--text-muted);"><span>' + g.items.length + ' รายการ</span><span style="display:inline-block; transition:transform .15s; transform:rotate(' + (collapsed ? "0deg" : "180deg") + ');">▾</span></span>' +
+          '</button>' + innerHtml +
+        '</div>';
+      }).join("");
+    } else if (gridActive) {
+      body = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:18px;">' + products.map(renderGridCard).join("") + '</div>';
+    } else {
+      body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' + listHeaderHtml + products.map(renderListRow).join("") + '</div>';
+    }
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
