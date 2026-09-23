@@ -225,6 +225,31 @@
 
 var ALL_CATEGORY = { value: "all", label: "ทุกหมวดหมู่" };
 
+var PRODUCTS_PER_PAGE = 20;
+
+// Builds the compact page-number sequence for the pagination bar, e.g.
+// [1,'...',4,5,6,'...',52] for page 5 of 52 - keeps the first/last page plus
+// a window of one page on either side of the current page. Small page
+// counts (<= 7, the most an ellipsis'd sequence ever shows anyway) are
+// listed in full instead, since collapsing e.g. 4 pages into "1 2 ... 4"
+// hides a single page number for no space saved.
+function paginationRange(current, total) {
+  if (total <= 7) {
+    var all = [];
+    for (var n = 1; n <= total; n++) all.push(n);
+    return all;
+  }
+  var delta = 1;
+  var range = [];
+  for (var i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
+  var withDots = [1];
+  if (range.length && range[0] > 2) withDots.push("...");
+  withDots = withDots.concat(range);
+  if (range.length && range[range.length - 1] < total - 1) withDots.push("...");
+  withDots.push(total);
+  return withDots;
+}
+
 var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
@@ -563,6 +588,7 @@ function Dashboard(root) {
     discountSidebarCollapsed: false,
     sortBy: "name",
     view: "list",
+    productsPage: 1,
     products: [],
     productsLoading: true,
     productsError: "",
@@ -1409,12 +1435,23 @@ Dashboard.prototype.handleClick = function (e) {
       var fieldKey = d.field;
       var fieldPatch = {};
       fieldPatch[fieldKey] = "";
+      if (fieldKey === "search") fieldPatch.productsPage = 1;
       this.setState(fieldPatch);
       var fieldEl = this.root.querySelector("#field-" + fieldKey);
       if (fieldEl) fieldEl.focus();
       break;
-    case "set-category": this.setState({ category: d.category, subcat: "" }); break;
-    case "set-subcat": this.setState({ category: d.category, subcat: d.subcat }); break;
+    case "set-category": this.setState({ category: d.category, subcat: "", productsPage: 1 }); break;
+    case "set-subcat": this.setState({ category: d.category, subcat: d.subcat, productsPage: 1 }); break;
+    case "products-go-page":
+      var targetPage = parseInt(d.page, 10);
+      if (!isNaN(targetPage)) {
+        var pageBounds = this.getProductsPageInfo();
+        if (targetPage < 1) targetPage = 1;
+        if (targetPage > pageBounds.totalPages) targetPage = pageBounds.totalPages;
+        this.setState({ productsPage: targetPage });
+        this.scrollToProductsTop();
+      }
+      break;
     case "toggle-cat-subcats":
       var toggleCatKey = d.category;
       this.setState(function (s2) {
@@ -1484,7 +1521,7 @@ Dashboard.prototype.handleClick = function (e) {
       });
       break;
     case "toggle-select-all-products":
-      var visibleIds = this.computeProducts().map(function (p) { return p.id; });
+      var visibleIds = this.getProductsPageInfo().pageItems.map(function (p) { return p.id; });
       this.setState(function (s2) {
         var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return s2.selectedProductIds.indexOf(id) !== -1; });
         return { selectedProductIds: allSelected ? [] : visibleIds.slice() };
@@ -1594,6 +1631,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
   if (!el || el.type === "file") return;
   var key = el.dataset.bind;
   this.state[key] = el.value;
+  if (key === "search" || key === "sortBy") this.state.productsPage = 1;
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
   // Same reasoning as the login screen below: a full re-render while typing
   // tears down and recreates this input, jumping the cursor/keyboard. The
@@ -1765,6 +1803,26 @@ Dashboard.prototype.computeProducts = function () {
       isEditing: s.editingId === p.id,
     };
   });
+};
+
+// Client-side pagination over the already-filtered/sorted list. Clamps
+// (and persists) the stored page whenever the result set has shrunk out
+// from under it, so deleting the last item on the last page steps back a
+// page automatically instead of showing an empty page.
+Dashboard.prototype.getProductsPageInfo = function () {
+  var all = this.computeProducts();
+  var totalPages = Math.max(1, Math.ceil(all.length / PRODUCTS_PER_PAGE));
+  var page = this.state.productsPage || 1;
+  if (page > totalPages) page = totalPages;
+  if (page < 1) page = 1;
+  this.state.productsPage = page;
+  var start = (page - 1) * PRODUCTS_PER_PAGE;
+  return { all: all, total: all.length, totalPages: totalPages, page: page, start: start, pageItems: all.slice(start, start + PRODUCTS_PER_PAGE) };
+};
+
+Dashboard.prototype.scrollToProductsTop = function () {
+  var el = document.getElementById("products-table-top");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
 Dashboard.prototype.startEdit = function (id) {
@@ -2831,7 +2889,8 @@ Dashboard.prototype.renderPricePage = function () {
     '</div>';
   }
 
-  var products = this.computeProducts();
+  var pageInfo = this.getProductsPageInfo();
+  var products = pageInfo.pageItems;
   var withOverrides = this.getMergedProducts();
   var novatCount = withOverrides.filter(function (p) { return p.vat === "novat"; }).length;
 
@@ -2886,7 +2945,7 @@ Dashboard.prototype.renderPricePage = function () {
   }
 
   var controls =
-    '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:22px;">' +
+    '<div id="products-table-top" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:22px;">' +
       filterRow + adminActionsRow +
     '</div>';
 
@@ -3012,7 +3071,11 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>';
   }
 
-  var resultCount = '<div style="font-size:13.5px; color:var(--text-muted); margin-bottom:14px;">พบ <strong style="color:oklch(0.3 0.01 60);">' + products.length + '</strong> รายการ</div>';
+  var rangeStart = pageInfo.total === 0 ? 0 : pageInfo.start + 1;
+  var rangeEnd = Math.min(pageInfo.start + PRODUCTS_PER_PAGE, pageInfo.total);
+  var resultCount = '<div style="font-size:13.5px; color:var(--text-muted); margin-bottom:14px;">พบ <strong style="color:oklch(0.3 0.01 60);">' + pageInfo.total + '</strong> รายการ' +
+    (pageInfo.total > 0 ? '<span style="margin-left:8px; color:var(--text-faint);">(แสดง ' + rangeStart + '–' + rangeEnd + ' จาก ' + pageInfo.total + ' รายการ)</span>' : '') +
+  '</div>';
 
   function renderGridCard(p) {
       var mediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
@@ -3131,11 +3194,40 @@ Dashboard.prototype.renderPricePage = function () {
     body = '<div class="list-table" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden;">' + listHeaderHtml + products.map(renderListRow).join("") + '</div>';
   }
 
+  var paginationBar = this.renderPagination(pageInfo.page, pageInfo.totalPages, "products-go-page");
+
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
-    productsErrorBanner + importBanner + controls + bulkBar + manageCategoriesPanel + addForm + resultCount + body +
+    productsErrorBanner + importBanner + controls + bulkBar + manageCategoriesPanel + addForm + resultCount + body + paginationBar +
   '</div>';
+};
+
+// Shared pagination bar (« ก่อนหน้า | 1 2 3 … | ถัดไป »). `actionName` is the
+// data-action value each page/prev/next button dispatches, carrying the
+// target page number in data-page; hidden entirely when everything fits on
+// one page.
+Dashboard.prototype.renderPagination = function (page, totalPages, actionName) {
+  if (totalPages <= 1) return "";
+  var btnBase = "min-width:40px; min-height:40px; padding:0 12px; box-sizing:border-box; border-radius:8px; border:1px solid var(--border-input); background:#fff; color:var(--text-body); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;";
+  var btnActive = "min-width:40px; min-height:40px; padding:0 12px; box-sizing:border-box; border-radius:8px; border:1px solid var(--navy-action); background:var(--navy-action); color:#fff; font-size:13.5px; font-weight:700; font-family:inherit;";
+  var btnDisabled = "min-width:40px; min-height:40px; padding:0 12px; box-sizing:border-box; border-radius:8px; border:1px solid var(--border-input); background:var(--bg-subtle); color:var(--text-faint); font-size:13.5px; font-weight:600; cursor:not-allowed; font-family:inherit;";
+  var prevDisabled = page <= 1;
+  var nextDisabled = page >= totalPages;
+
+  var html = '<div class="pagination-bar" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-top:22px;">';
+  html += '<button type="button" data-action="' + actionName + '" data-page="' + (page - 1) + '"' + (prevDisabled ? " disabled" : "") + ' style="' + (prevDisabled ? btnDisabled : btnBase) + '">« ก่อนหน้า</button>';
+  paginationRange(page, totalPages).forEach(function (p) {
+    if (p === "...") {
+      html += '<span style="min-width:24px; text-align:center; color:var(--text-faint); font-size:13px;">…</span>';
+      return;
+    }
+    var isActive = p === page;
+    html += '<button type="button" data-action="' + actionName + '" data-page="' + p + '" style="' + (isActive ? btnActive : btnBase) + '">' + p + '</button>';
+  });
+  html += '<button type="button" data-action="' + actionName + '" data-page="' + (page + 1) + '"' + (nextDisabled ? " disabled" : "") + ' style="' + (nextDisabled ? btnDisabled : btnBase) + '">ถัดไป »</button>';
+  html += '</div>';
+  return html;
 };
 
 Dashboard.prototype.renderCategoryBox = function () {
