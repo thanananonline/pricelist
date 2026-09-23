@@ -173,6 +173,7 @@ async function upsertProductByName(env, item) {
   if (existing) {
     const merged = Object.assign({}, existing, {
       cat: sanitized.cat || existing.cat,
+      subcat: sanitized.subcat,
       price: sanitized.price,
       price2: sanitized.price2,
       price3: sanitized.price3,
@@ -182,8 +183,8 @@ async function upsertProductByName(env, item) {
       note: sanitized.note || existing.note,
     });
     await env.DB.prepare(
-      "UPDATE products SET cat=?, price=?, price2=?, price3=?, unit=?, stock=?, vat=?, note=? WHERE id=?"
-    ).bind(merged.cat, merged.price, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.note, existing.id).run();
+      "UPDATE products SET cat=?, price=?, price2=?, price3=?, unit=?, stock=?, vat=?, note=?, subcat=? WHERE id=?"
+    ).bind(merged.cat, merged.price, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.note, merged.subcat, existing.id).run();
     return { product: merged, action: "updated" };
   }
   const product = await insertProduct(env, item);

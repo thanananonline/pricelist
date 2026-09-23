@@ -250,7 +250,7 @@ function paginationRange(current, total) {
   return withDots;
 }
 
-var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
+var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "หมวดหมู่ย่อย", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
 
@@ -635,6 +635,7 @@ function Dashboard(root) {
     importMsg: "",
     importMsgType: "",
     importErrors: [],
+    importSubcatConfirm: null,
     toast: null,
     sharingFileId: null,
     newUserName: "",
@@ -1571,6 +1572,25 @@ Dashboard.prototype.handleClick = function (e) {
     case "save-edit-contact": this.saveEditContact(d.id); break;
     case "download-import-template": this.downloadImportTemplate(); break;
     case "dismiss-import-msg": this.setState({ importMsg: "", importMsgType: "", importErrors: [] }); break;
+    case "cancel-import-subcat-confirm": this.setState({ importSubcatConfirm: null }); break;
+    case "confirm-import-subcat-create":
+      var subcatConfirmCreate = this.state.importSubcatConfirm;
+      if (subcatConfirmCreate) {
+        var allImportProducts = subcatConfirmCreate.readyProducts.concat(subcatConfirmCreate.pendingItems.map(function (item) { return item.product; }));
+        this.setState({ importSubcatConfirm: null });
+        this._finishExcelImport(allImportProducts, subcatConfirmCreate.errors);
+      }
+      break;
+    case "confirm-import-subcat-skip":
+      var subcatConfirmSkip = this.state.importSubcatConfirm;
+      if (subcatConfirmSkip) {
+        var skipErrors = subcatConfirmSkip.pendingItems.map(function (item) {
+          return "แถว " + item.rowNum + ': ข้ามหมวดหมู่ย่อยใหม่ "' + item.subcat + '" ตามที่เลือก';
+        });
+        this.setState({ importSubcatConfirm: null });
+        this._finishExcelImport(subcatConfirmSkip.readyProducts, subcatConfirmSkip.errors.concat(skipErrors));
+      }
+      break;
     case "open-download-modal": this.setState({ showDownloadModal: true, downloadCategory: "all" }); break;
     case "close-download-modal": this.setState({ showDownloadModal: false }); break;
     case "confirm-download-products": this.downloadProductsExcel(); this.setState({ showDownloadModal: false }); break;
@@ -2058,23 +2078,40 @@ Dashboard.prototype.shareFile = function (fileId, fileName) {
 Dashboard.prototype.downloadImportTemplate = function () {
   var categories = this.state.categories;
   var catLabels = categories.map(function (c) { return c.label; });
-  var exampleCat = catLabels[0] || "";
+  var exampleCat = catLabels.indexOf("กระเบื้องหลังคา") !== -1 ? "กระเบื้องหลังคา" : (catLabels[0] || "");
+  var exampleSubcat = exampleCat === "กระเบื้องหลังคา" ? "ลอนคู่" : "";
 
   var wb = new ExcelJS.Workbook();
   var ws1 = wb.addWorksheet("สินค้า");
   ws1.addRow(IMPORT_HEADERS);
-  ws1.addRow(["ปูนซีเมนต์ตัวอย่าง 50 กก.", exampleCat, 145, "", "", "ถุง", "VAT", 0]);
+  ws1.addRow(["ปูนซีเมนต์ตัวอย่าง 50 กก.", exampleCat, exampleSubcat, 145, "", "", "ถุง", "VAT", 0]);
   ws1.columns.forEach(function (col) { col.width = 20; });
 
-  var ws2 = wb.addWorksheet("หมวดหมู่ที่ใช้ได้");
-  ws2.addRow(['หมวดหมู่ที่ใช้ได้ (เลือกจาก dropdown ในคอลัมน์ "หมวดหมู่" ของชีตสินค้า)']);
-  catLabels.forEach(function (label) { ws2.addRow([label]); });
-  ws2.getColumn(1).width = 40;
+  // Reference sheet for people filling in the template: main categories plus
+  // whichever subcategory labels already exist under each right now (there's
+  // no master subcategory table -- like subcatOptionsFor, this is derived
+  // straight from the loaded products). Column A also feeds the "หมวดหมู่"
+  // dropdown below, same as the old single-column "หมวดหมู่ที่ใช้ได้" sheet.
+  var subcatsByCat = {};
+  this.state.products.forEach(function (p) {
+    if (!p.subcat) return;
+    if (!subcatsByCat[p.cat]) subcatsByCat[p.cat] = {};
+    subcatsByCat[p.cat][p.subcat] = true;
+  });
+  var ws2 = wb.addWorksheet("รายการหมวดหมู่");
+  ws2.addRow(["หมวดหมู่หลัก", "หมวดหมู่ย่อยที่มีอยู่ในระบบ"]);
+  categories.forEach(function (c) {
+    var subs = subcatsByCat[c.value] ? Object.keys(subcatsByCat[c.value]) : [];
+    ws2.addRow([c.label, subs.join(", ")]);
+  });
+  ws2.getColumn(1).width = 28;
+  ws2.getColumn(2).width = 50;
 
   // Category dropdown on column B ("หมวดหมู่") of the products sheet, sourced
-  // from the visible reference sheet so the list always matches what's on it.
+  // from the reference sheet's category column so the list always matches
+  // what's on it.
   if (catLabels.length) {
-    var listRange = "'หมวดหมู่ที่ใช้ได้'!$A$2:$A$" + (catLabels.length + 1);
+    var listRange = "'รายการหมวดหมู่'!$A$2:$A$" + (catLabels.length + 1);
     for (var r = 2; r <= 500; r++) {
       ws1.getCell("B" + r).dataValidation = {
         type: "list",
@@ -2149,6 +2186,7 @@ Dashboard.prototype.downloadProductsExcel = function () {
     ws.addRow([
       p.name,
       self.catLabel(p.cat),
+      p.subcat || "",
       p.price,
       p.price2 != null ? p.price2 : "",
       p.price3 != null ? p.price3 : "",
@@ -2175,6 +2213,35 @@ Dashboard.prototype.downloadProductsExcel = function () {
   });
 };
 
+// Sends the parsed rows to the server and reports the result -- shared by
+// the direct (no new-subcat) import path and both choices on the "new
+// subcategory found" confirmation modal.
+Dashboard.prototype._finishExcelImport = function (newProducts, errors) {
+  var self = this;
+  if (newProducts.length) {
+    apiRequest("/products/bulk", { method: "POST", auth: true, body: newProducts })
+      .then(function (result) {
+        self.setState(function (s2) {
+          var updatedIds = result.updated.map(function (p) { return p.id; });
+          var products = s2.products
+            .filter(function (p) { return updatedIds.indexOf(p.id) === -1; })
+            .concat(result.updated, result.created);
+          var parts = [];
+          if (result.created.length) parts.push("เพิ่มใหม่ " + result.created.length + " รายการ");
+          if (result.updated.length) parts.push("แก้ไข " + result.updated.length + " รายการ (ชื่อซ้ำ)");
+          var msg = "นำเข้าสำเร็จ: " + parts.join(", ") + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
+          return { products: products, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
+        });
+        self.showToast("นำเข้าข้อมูลสำเร็จ", "success");
+      })
+      .catch(function (err) {
+        self.setState({ importMsg: "นำเข้าไม่สำเร็จ: " + err.message, importMsgType: "error", importErrors: errors });
+      });
+  } else {
+    self.setState({ importMsg: "ไม่พบข้อมูลสินค้าที่ถูกต้องในไฟล์", importMsgType: "error", importErrors: errors });
+  }
+};
+
 Dashboard.prototype.importExcelFile = function (file) {
   var self = this;
   var reader = new FileReader();
@@ -2185,12 +2252,27 @@ Dashboard.prototype.importExcelFile = function (file) {
       var ws = wb.Sheets[wb.SheetNames[0]];
       var rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
       var newProducts = [];
+      var pendingItems = []; // rows using a subcat that doesn't exist anywhere yet -- held for confirmation
       var errors = [];
+
+      // Which category(ies) each subcategory label already belongs to, going
+      // by the products currently loaded (there's no master subcategory
+      // table -- same source subcatOptionsFor uses). A label absent here is
+      // "new"; one present under a different cat than the row's is a conflict.
+      var subcatToCats = {};
+      self.state.products.forEach(function (p) {
+        if (!p.subcat) return;
+        if (!subcatToCats[p.subcat]) subcatToCats[p.subcat] = {};
+        subcatToCats[p.subcat][p.cat] = true;
+      });
 
       rows.forEach(function (row, i) {
         var rowNum = i + 2;
         var name = String(row["ชื่อสินค้า"] || "").trim();
         var catRaw = String(row["หมวดหมู่"] || "").trim();
+        // Older template files simply don't have this column, so this reads
+        // as "" for them -- same as leaving it blank on the current one.
+        var subcatRaw = String(row["หมวดหมู่ย่อย"] || "").trim();
         var priceRaw = row["ช่อง 1"];
         var unit = String(row["หน่วย"] || "").trim();
         if (!name && !catRaw && !unit && (priceRaw === "" || priceRaw == null)) return;
@@ -2202,6 +2284,18 @@ Dashboard.prototype.importExcelFile = function (file) {
         if (!cat) errs.push('หมวดหมู่ไม่ถูกต้อง ("' + catRaw + '")');
         if (isNaN(price) || price < 0) errs.push("ราคาไม่ถูกต้อง");
         if (!unit) errs.push("ไม่มีหน่วยนับ");
+
+        var subcatIsNew = false;
+        if (!errs.length && subcatRaw) {
+          var ownerCats = subcatToCats[subcatRaw];
+          if (ownerCats && !ownerCats[cat]) {
+            var ownerLabels = Object.keys(ownerCats).map(function (cv) { return self.catLabel(cv); }).join(", ");
+            errs.push('หมวดหมู่ย่อย "' + subcatRaw + '" มีอยู่แล้วภายใต้หมวดหมู่อื่น (' + ownerLabels + ') ไม่ใช่ "' + self.catLabel(cat) + '"');
+          } else if (!ownerCats) {
+            subcatIsNew = true;
+          }
+        }
+
         if (errs.length) { errors.push("แถว " + rowNum + ": " + errs.join(", ")); return; }
 
         var price2Raw = row["ช่อง 2"];
@@ -2214,34 +2308,34 @@ Dashboard.prototype.importExcelFile = function (file) {
         var vat = (vatRaw === "novat" || vatRaw === "no vat") ? "novat" : "vat";
         var stock = parseInt(row["สต็อก"], 10); if (isNaN(stock) || stock < 0) stock = 0;
 
-        newProducts.push({
-          cat: cat, name: name, sku: "",
+        var product = {
+          cat: cat, subcat: subcatRaw, name: name, sku: "",
           price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: stock, vat: vat, image: "",
-        });
+        };
+
+        if (subcatIsNew) pendingItems.push({ rowNum: rowNum, product: product, subcat: subcatRaw, catLabel: self.catLabel(cat) });
+        else newProducts.push(product);
       });
 
-      if (newProducts.length) {
-        apiRequest("/products/bulk", { method: "POST", auth: true, body: newProducts })
-          .then(function (result) {
-            self.setState(function (s2) {
-              var updatedIds = result.updated.map(function (p) { return p.id; });
-              var products = s2.products
-                .filter(function (p) { return updatedIds.indexOf(p.id) === -1; })
-                .concat(result.updated, result.created);
-              var parts = [];
-              if (result.created.length) parts.push("เพิ่มใหม่ " + result.created.length + " รายการ");
-              if (result.updated.length) parts.push("แก้ไข " + result.updated.length + " รายการ (ชื่อซ้ำ)");
-              var msg = "นำเข้าสำเร็จ: " + parts.join(", ") + (errors.length ? " (ข้าม " + errors.length + " แถวที่ไม่ถูกต้อง)" : "");
-              return { products: products, importMsg: msg, importMsgType: errors.length ? "warn" : "success", importErrors: errors };
-            });
-            self.showToast("นำเข้าข้อมูลสำเร็จ", "success");
-          })
-          .catch(function (err) {
-            self.setState({ importMsg: "นำเข้าไม่สำเร็จ: " + err.message, importMsgType: "error", importErrors: errors });
-          });
-      } else {
-        self.setState({ importMsg: "ไม่พบข้อมูลสินค้าที่ถูกต้องในไฟล์", importMsgType: "error", importErrors: errors });
+      if (pendingItems.length) {
+        var comboMap = {};
+        pendingItems.forEach(function (item) {
+          var key = item.catLabel + "|||" + item.subcat;
+          if (!comboMap[key]) comboMap[key] = { catLabel: item.catLabel, subcat: item.subcat, count: 0 };
+          comboMap[key].count++;
+        });
+        self.setState({
+          importSubcatConfirm: {
+            readyProducts: newProducts,
+            pendingItems: pendingItems,
+            combos: Object.keys(comboMap).map(function (k) { return comboMap[k]; }),
+            errors: errors,
+          },
+        });
+        return;
       }
+
+      self._finishExcelImport(newProducts, errors);
     } catch (e) {
       self.setState({ importMsg: "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบว่าเป็นไฟล์ Excel (.xlsx) ที่ถูกต้อง", importMsgType: "error", importErrors: [] });
     }
@@ -2785,6 +2879,34 @@ Dashboard.prototype.renderChangePasswordModal = function () {
   '</div>';
 };
 
+Dashboard.prototype.renderImportSubcatConfirmModal = function () {
+  var c = this.state.importSubcatConfirm;
+  if (!c) return "";
+  var rowsHtml = c.combos.map(function (combo) {
+    return '<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--border-light); font-size:13px;">' +
+      '<div><strong>' + esc(combo.catLabel) + '</strong> › ' + esc(combo.subcat) + '</div>' +
+      '<div style="color:var(--text-muted); flex:none;">' + combo.count + ' แถว</div>' +
+    '</div>';
+  }).join("");
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:460px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:oklch(0.95 0.05 90); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🏷️</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">พบหมวดหมู่ย่อยใหม่</div>' +
+      '</div>' +
+      '<div style="font-size:13.5px; color:var(--text-body); line-height:1.6;">' +
+        'ไฟล์ที่นำเข้ามีหมวดหมู่ย่อยที่ยังไม่มีในระบบ ' + c.combos.length + ' รายการ ต้องการสร้างใหม่ หรือข้ามแถวที่ใช้หมวดหมู่ย่อยเหล่านี้?' +
+        '<div style="max-height:220px; overflow-y:auto; margin-top:10px;">' + rowsHtml + '</div>' +
+      '</div>' +
+      '<div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+        '<button type="button" data-action="cancel-import-subcat-confirm" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิกการนำเข้า</button>' +
+        '<button type="button" data-action="confirm-import-subcat-skip" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 16px; border:1px solid var(--danger-red); background:#fff; color:var(--danger-red); border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">ข้ามแถวเหล่านี้</button>' +
+        '<button type="button" data-action="confirm-import-subcat-create" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 16px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;">สร้างหมวดหมู่ย่อยใหม่</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderImagePreviewModal = function () {
   var p = this.state.imagePreview;
   if (!p) return "";
@@ -2869,7 +2991,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImagePreviewModal() + this.renderToast() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImportSubcatConfirmModal() + this.renderImagePreviewModal() + this.renderToast() +
     '</div>'
   );
 };
