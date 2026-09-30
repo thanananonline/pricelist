@@ -331,6 +331,35 @@ function noImageIconSvg(px) {
 }
 
 function fmt(n) { return Number(n).toLocaleString("th-TH"); }
+
+// Splits "X - กระเบื้อง (ไพลินทอแสง (MTO))" into base "X - กระเบื้อง" and
+// label "ไพลินทอแสง (MTO)", matching the trailing parenthesis by balance so
+// nested notes stay with the color. Returns null when the name doesn't end
+// in a (...) group.
+function splitTrailingParen(name) {
+  var t = String(name || "").replace(/\s+$/, "");
+  if (t.charAt(t.length - 1) !== ")") return null;
+  var depth = 0;
+  for (var i = t.length - 1; i >= 0; i--) {
+    var c = t.charAt(i);
+    if (c === ")") depth++;
+    else if (c === "(" && --depth === 0) {
+      var base = t.slice(0, i).replace(/\s+$/, "");
+      var label = t.slice(i + 1, -1).trim();
+      return base && label ? { base: base, label: label } : null;
+    }
+  }
+  return null;
+}
+
+// Grouping key for the color-merge in computeProductRows: products that
+// differ only in the trailing (...) and share category/subcategory/unit/VAT
+// and all three price tiers. "" = never grouped.
+function productGroupKey(p) {
+  var parts = splitTrailingParen(p.name);
+  if (!parts) return "";
+  return [p.cat, p.subcat || "", parts.base, p.unit, p.vat || "vat", p.price, p.price2 == null ? "" : p.price2, p.price3 == null ? "" : p.price3, p.oldPrice == null ? "" : p.oldPrice].join("\u0001");
+}
 function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
   return '<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px;">' +
@@ -598,6 +627,16 @@ function Dashboard(root) {
     selectMode: false,
     selectedProductIds: [],
     bulkDeleteConfirm: false,
+    // Color-group rows (see computeProductRows): which groups are expanded,
+    // which one has its shared-price editor open, and the pending
+    // "delete all colors" confirmation.
+    expandedProductGroups: {},
+    editingGroupKey: null,
+    editGroupPrice: "",
+    editGroupPrice2: "",
+    editGroupPrice3: "",
+    editGroupError: "",
+    groupDeleteConfirm: null,
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
     editingFolderId: null,
@@ -1515,15 +1554,39 @@ Dashboard.prototype.handleClick = function (e) {
     case "delete-product": this.setState({ deleteConfirmId: null, deleteConfirmName: "" }); this.removeProduct(d.id); break;
     case "toggle-select-mode": this.setState(function (s2) { return { selectMode: !s2.selectMode, selectedProductIds: [] }; }); break;
     case "toggle-select-product":
-      var toggleId = d.id;
+      // A color-group row carries all its colors' ids (comma-separated) and
+      // selects/deselects them together.
+      var toggleIds = d.ids ? d.ids.split(",") : [d.id];
       this.setState(function (s2) {
-        var i = s2.selectedProductIds.indexOf(toggleId);
-        var next = i === -1 ? s2.selectedProductIds.concat([toggleId]) : s2.selectedProductIds.slice(0, i).concat(s2.selectedProductIds.slice(i + 1));
-        return { selectedProductIds: next };
+        var allOn = toggleIds.every(function (id) { return s2.selectedProductIds.indexOf(id) !== -1; });
+        var rest = s2.selectedProductIds.filter(function (id) { return toggleIds.indexOf(id) === -1; });
+        return { selectedProductIds: allOn ? rest : rest.concat(toggleIds) };
       });
       break;
+    case "toggle-product-group":
+      var groupToggleKey = d.key;
+      this.setState(function (s2) {
+        var next = Object.assign({}, s2.expandedProductGroups);
+        if (next[groupToggleKey]) delete next[groupToggleKey]; else next[groupToggleKey] = true;
+        return { expandedProductGroups: next };
+      });
+      break;
+    case "start-edit-group": this.startGroupEdit(d.key); break;
+    case "cancel-edit-group": this.setState({ editingGroupKey: null, editGroupError: "" }); break;
+    case "save-edit-group": this.saveGroupEdit(d.key); break;
+    case "cancel-edit": this.setState({ editingId: null }); break;
+    case "request-delete-group":
+      var delGroup = this.findProductGroup(d.key);
+      if (delGroup) this.setState({ groupDeleteConfirm: { key: delGroup.key, name: delGroup.name, ids: delGroup.ids.slice() } });
+      break;
+    case "cancel-delete-group": this.setState({ groupDeleteConfirm: null }); break;
+    case "confirm-delete-group":
+      var gdc = this.state.groupDeleteConfirm;
+      this.setState({ groupDeleteConfirm: null });
+      if (gdc) this.removeProducts(gdc.ids, { keepSelectMode: true, toast: "ลบ " + gdc.name + " ทั้งหมด " + gdc.ids.length + " สีแล้ว" });
+      break;
     case "toggle-select-all-products":
-      var visibleIds = this.getProductsPageInfo().pageItems.map(function (p) { return p.id; });
+      var visibleIds = [].concat.apply([], this.getProductsPageInfo().pageItems.map(productRowIds));
       this.setState(function (s2) {
         var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return s2.selectedProductIds.indexOf(id) !== -1; });
         return { selectedProductIds: allSelected ? [] : visibleIds.slice() };
@@ -1811,6 +1874,7 @@ Dashboard.prototype.computeProducts = function () {
     var im = img(p.cat);
     return {
       id: p.id, name: p.name, sku: p.sku, note: p.note || "", cat: p.cat, subcat: p.subcat || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
+      groupKey: productGroupKey(p),
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
       hasDiscount: !!p.oldPrice,
@@ -1827,12 +1891,71 @@ Dashboard.prototype.computeProducts = function () {
   });
 };
 
-// Client-side pagination over the already-filtered/sorted list. Clamps
+// Display-only merge of color variants into one row, e.g. the 12 rows
+// "กระเบื้องคอนกรีต ADAMAS กลุ่มสีมาตรฐาน - กระเบื้อง (เทาปฐพี)", "(เทาแปซิฟิก)", ...
+// all priced the same become a single "... - กระเบื้อง" row with "12 สี" that
+// expands to the color list. The products themselves are never touched:
+// grouping runs on the already-filtered/sorted list, so a search that only
+// hits one color (e.g. "เทาปฐพี") just shows that product as a normal row.
+// Products group only when everything but the trailing (color) matches --
+// category, subcategory, unit, VAT and price ช่อง 1-3 -- so a color priced
+// differently stays on its own row.
+Dashboard.prototype.computeProductRows = function () {
+  var s = this.state;
+  var list = this.computeProducts();
+  var byKey = {};
+  var rows = [];
+  list.forEach(function (p) {
+    if (!p.groupKey) { rows.push(p); return; }
+    var g = byKey[p.groupKey];
+    if (!g) {
+      g = byKey[p.groupKey] = { isGroup: true, members: [] };
+      rows.push(g);
+    }
+    g.members.push(p);
+  });
+  return rows.map(function (row) {
+    if (!row.isGroup) return row;
+    if (row.members.length === 1) return row.members[0];
+    var first = row.members[0];
+    var ids = row.members.map(function (m) { return m.id; });
+    // Keyed by the smallest member id so expand/edit state survives a
+    // shared-price edit (which changes the price part of groupKey).
+    var key = "g:" + ids.slice().sort()[0];
+    var withImage = row.members.find(function (m) { return m.image; });
+    var sameNote = row.members.every(function (m) { return m.note === first.note; });
+    var group = Object.assign({}, first, {
+      isGroup: true,
+      key: key,
+      id: key,
+      ids: ids,
+      name: splitTrailingParen(first.name).base,
+      note: sameNote ? first.note : "",
+      image: withImage ? withImage.image : "",
+      members: row.members.map(function (m) {
+        return Object.assign({}, m, { colorLabel: splitTrailingParen(m.name).label });
+      }),
+      isExpanded: !!s.expandedProductGroups[key],
+      isEditing: s.editingGroupKey === key,
+    });
+    // A color being edited on its own needs its row visible.
+    if (group.members.some(function (m) { return m.isEditing; })) group.isExpanded = true;
+    return group;
+  });
+};
+
+// Every product id a row stands for (one for a plain row, all colors for a
+// group) -- what select/delete act on.
+function productRowIds(row) {
+  return row.isGroup ? row.ids : [row.id];
+}
+
+// Client-side pagination over the already-filtered/sorted/grouped rows. Clamps
 // (and persists) the stored page whenever the result set has shrunk out
 // from under it, so deleting the last item on the last page steps back a
 // page automatically instead of showing an empty page.
 Dashboard.prototype.getProductsPageInfo = function () {
-  var all = this.computeProducts();
+  var all = this.computeProductRows();
   var totalPages = Math.max(1, Math.ceil(all.length / PRODUCTS_PER_PAGE));
   var page = this.state.productsPage || 1;
   if (page > totalPages) page = totalPages;
@@ -1851,7 +1974,7 @@ Dashboard.prototype.startEdit = function (id) {
   var p = this.getMergedProducts().find(function (x) { return x.id === id; });
   if (!p) return;
   this.setState({
-    editingId: p.id, editName: p.name, editPrice: String(p.price),
+    editingId: p.id, editingGroupKey: null, editName: p.name, editPrice: String(p.price),
     editPrice2: p.price2 != null ? String(p.price2) : "", editPrice3: p.price3 != null ? String(p.price3) : "",
     editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "", editNote: p.note || "",
     editSubcat: p.subcat || "",
@@ -1882,6 +2005,56 @@ Dashboard.prototype.saveEdit = function (id) {
     .catch(function (err) {
       self.setState({ importMsg: "บันทึกไม่สำเร็จ: " + err.message, importMsgType: "error" });
     });
+};
+
+Dashboard.prototype.findProductGroup = function (key) {
+  return this.computeProductRows().find(function (r) { return r.isGroup && r.key === key; }) || null;
+};
+
+Dashboard.prototype.startGroupEdit = function (key) {
+  var g = this.findProductGroup(key);
+  if (!g) return;
+  var first = this.getMergedProducts().find(function (x) { return x.id === g.ids[0]; });
+  if (!first) return;
+  this.setState({
+    editingGroupKey: key, editingId: null, editGroupError: "",
+    editGroupPrice: String(first.price),
+    editGroupPrice2: first.price2 != null ? String(first.price2) : "",
+    editGroupPrice3: first.price3 != null ? String(first.price3) : "",
+  });
+};
+
+// Writes the shared price ช่อง 1-3 to every color in the group, one PUT per
+// product (the same endpoint the single-row editor uses). Colors that saved
+// are applied locally even if others failed, and the failure count is shown.
+Dashboard.prototype.saveGroupEdit = function (key) {
+  var s = this.state;
+  var g = this.findProductGroup(key);
+  if (!g) return;
+  var price = parseFloat(s.editGroupPrice);
+  if (isNaN(price) || price < 0) {
+    this.setState({ editGroupError: "กรุณากรอกราคา ช่อง 1 ให้ถูกต้อง" });
+    return;
+  }
+  var price2 = parseFloat(s.editGroupPrice2);
+  var price3 = parseFloat(s.editGroupPrice3);
+  var body = { price: price, price2: isNaN(price2) ? null : price2, price3: isNaN(price3) ? null : price3 };
+  var self = this;
+  Promise.all(g.ids.map(function (id) {
+    return apiRequest("/products/" + encodeURIComponent(id), { method: "PUT", auth: true, body: body })
+      .then(function (updated) { return { ok: true, product: updated }; }, function (err) { return { ok: false, error: err }; });
+  })).then(function (results) {
+    var updatedById = {};
+    var failed = results.filter(function (r) { return !r.ok; });
+    results.forEach(function (r) { if (r.ok) updatedById[r.product.id] = r.product; });
+    self.setState(function (s2) {
+      var patch = { products: s2.products.map(function (p) { return updatedById[p.id] || p; }) };
+      if (failed.length) patch.editGroupError = "บันทึกไม่สำเร็จ " + failed.length + " จาก " + g.ids.length + " สี: " + failed[0].error.message;
+      else { patch.editingGroupKey = null; patch.editGroupError = ""; }
+      return patch;
+    });
+    if (!failed.length) self.showToast("อัปเดตราคา " + g.ids.length + " สีแล้ว", "success");
+  });
 };
 
 Dashboard.prototype.uploadProductImage = function (file, stateKey) {
@@ -1939,8 +2112,12 @@ Dashboard.prototype.removeProduct = function (id) {
     });
 };
 
-Dashboard.prototype.removeProducts = function (ids) {
+// opts.keepSelectMode: used by a color-group row's own delete, which isn't a
+// select-mode action, so it only drops the deleted ids from the selection.
+// opts.toast overrides the success message.
+Dashboard.prototype.removeProducts = function (ids, opts) {
   if (!ids || !ids.length) return;
+  opts = opts || {};
   var self = this;
   apiRequest("/products/bulk-delete", { method: "POST", auth: true, body: { ids: ids } })
     .then(function () {
@@ -1949,13 +2126,13 @@ Dashboard.prototype.removeProducts = function (ids) {
         ids.forEach(function (id) { idSet[id] = true; });
         var patch = {
           products: s2.products.filter(function (p) { return !idSet[p.id]; }),
-          selectedProductIds: [],
-          selectMode: false,
+          selectedProductIds: opts.keepSelectMode ? s2.selectedProductIds.filter(function (id) { return !idSet[id]; }) : [],
+          selectMode: opts.keepSelectMode ? s2.selectMode : false,
         };
         if (idSet[s2.editingId]) patch.editingId = null;
         return patch;
       });
-      self.showToast("ลบสินค้า " + ids.length + " รายการแล้ว", "success");
+      self.showToast(opts.toast || ("ลบสินค้า " + ids.length + " รายการแล้ว"), "success");
     })
     .catch(function (err) {
       self.setState({ importMsg: "ลบสินค้าไม่สำเร็จ: " + err.message, importMsgType: "error" });
@@ -2835,6 +3012,22 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   var cc = s.contactDeleteConfirm;
   var catc = s.categoryDeleteConfirm;
   var bc = s.bulkDeleteConfirm;
+  var gdc = s.groupDeleteConfirm;
+  if (gdc) {
+    return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+      '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div style="width:40px; height:40px; border-radius:10px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
+          '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">ยืนยันการลบทุกสีในกลุ่ม</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px; color:var(--text-body); line-height:1.6;">ต้องการลบ "<strong>' + esc(gdc.name) + '</strong>" <strong style="color:var(--danger-red);">ทั้งหมด ' + gdc.ids.length + ' สี</strong> (' + gdc.ids.length + ' รายการสินค้า) ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้<div style="margin-top:6px; color:var(--text-muted);">ถ้าต้องการลบเฉพาะบางสี ให้กดจำนวนสีเพื่อกางรายการแล้วลบทีละสี</div></div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+          '<button data-action="cancel-delete-group" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+          '<button data-action="confirm-delete-group" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--danger-red); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">ลบทั้งหมด ' + gdc.ids.length + ' สี</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
   if (!s.deleteConfirmId && !fc && !dc && !uc && !cc && !catc && !bc) return "";
   var title = bc ? "ยืนยันการลบสินค้าหลายรายการ" : fc ? "ยืนยันการลบไฟล์" : dc ? "ยืนยันการลบโฟลเดอร์" : uc ? "ยืนยันการลบผู้ใช้" : cc ? "ยืนยันการลบรายชื่อติดต่อ" : catc ? "ยืนยันการลบหมวดหมู่" : "ยืนยันการลบสินค้า";
   var name = fc ? fc.name : dc ? dc.name : uc ? uc.username : cc ? cc.name : catc ? catc.label : s.deleteConfirmName;
@@ -3089,7 +3282,7 @@ Dashboard.prototype.renderPricePage = function () {
 
   var bulkBar = "";
   if (isAdmin && s.selectMode) {
-    var visibleIds = products.map(function (p) { return p.id; });
+    var visibleIds = [].concat.apply([], products.map(productRowIds));
     var selectedCount = s.selectedProductIds.length;
     var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return s.selectedProductIds.indexOf(id) !== -1; });
     bulkBar = '<div style="background:oklch(0.95 0.05 275); border:1px solid var(--navy-action-soft-border); border-radius:12px; padding:12px 18px; margin-bottom:18px; display:flex; flex-wrap:wrap; align-items:center; gap:14px;">' +
@@ -3216,6 +3409,12 @@ Dashboard.prototype.renderPricePage = function () {
   '</div>';
 
   function renderGridCard(p) {
+      if (p.isGroup) {
+        // Editing one color from the group: show that color's normal editor
+        // card in the group's place until it's saved or cancelled.
+        var editingMember = p.members.find(function (m) { return m.isEditing; });
+        return editingMember ? renderGridCard(editingMember) : renderGroupGridCard(p);
+      }
       var mediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
       var mediaSvg = p.image ? "" : noImageIconSvg(40);
       var cardBody = p.isEditing ?
@@ -3242,6 +3441,7 @@ Dashboard.prototype.renderPricePage = function () {
             (s.editImage ? '<button type="button" data-action="clear-edit-image" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:var(--danger-red); font-size:12.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
           '</div>' +
           '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--navy-action); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:auto;">บันทึก</button>' +
+          (p.colorLabel ? '<button type="button" data-action="cancel-edit" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:7px; padding:10px 14px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' : '') +
         '</div>' :
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<div>' +
@@ -3272,30 +3472,37 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>';
   }
 
+  // The single-product editor as a full-width cell of a list row (also used
+  // for one color inside an expanded color group, with a ยกเลิก button).
+  function listEditFormHtml(p, withCancel) {
+    return '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
+      '<div style="display:flex; flex-direction:column; gap:6px; flex:1 1 220px;">' +
+        '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+        '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '</div>' +
+      '<input id="field-editPrice" type="text" inputmode="decimal" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '<input id="field-editPrice2" type="text" inputmode="decimal" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '<input id="field-editPrice3" type="text" inputmode="decimal" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
+        '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
+        '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
+      '</select>' +
+      '<input id="field-editSubcat" type="text" list="subcat-datalist-edit-' + p.id + '" data-bind="editSubcat" value="' + esc(s.editSubcat) + '" placeholder="หมวดย่อย (ถ้ามี)" style="width:140px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      subcatDatalistHtml("subcat-datalist-edit-" + p.id, self.subcatOptionsFor(p.cat)) +
+      '<div style="display:flex; align-items:center; gap:6px;">' +
+        (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
+        '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:var(--bg-subtle); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
+        (s.editImage ? '<button type="button" data-action="clear-edit-image" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:var(--danger-red); font-size:12.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
+      '</div>' +
+      '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--navy-action); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+      (withCancel ? '<button type="button" data-action="cancel-edit" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:7px; padding:10px 14px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' : '') +
+    '</div>';
+  }
+
   function renderListRow(p) {
-      var editRow = p.isEditing ?
-        '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
-          '<div style="display:flex; flex-direction:column; gap:6px; flex:1 1 220px;">' +
-            '<input id="field-editName" type="text" data-bind="editName" value="' + esc(s.editName) + '" placeholder="ชื่อสินค้า" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-            '<input id="field-editNote" type="text" data-bind="editNote" value="' + esc(s.editNote) + '" placeholder="หมายเหตุ (ถ้ามี)" style="padding:6px 9px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '</div>' +
-          '<input id="field-editPrice" type="text" inputmode="decimal" data-bind="editPrice" value="' + esc(s.editPrice) + '" placeholder="ราคา ช่อง 1" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editPrice2" type="text" inputmode="decimal" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editPrice3" type="text" inputmode="decimal" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
-            '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
-            '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
-          '</select>' +
-          '<input id="field-editSubcat" type="text" list="subcat-datalist-edit-' + p.id + '" data-bind="editSubcat" value="' + esc(s.editSubcat) + '" placeholder="หมวดย่อย (ถ้ามี)" style="width:140px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
-          subcatDatalistHtml("subcat-datalist-edit-" + p.id, self.subcatOptionsFor(p.cat)) +
-          '<div style="display:flex; align-items:center; gap:6px;">' +
-            (s.editImage ? '<img src="' + s.editImage + '" alt="" style="width:28px; height:28px; border-radius:6px; object-fit:cover;" />' : '') +
-            '<label style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; display:inline-flex; align-items:center; font-size:12.5px; padding:10px 12px; border-radius:7px; background:var(--bg-subtle); cursor:pointer; font-family:inherit;">🖼️ รูป<input type="file" accept="image/*" data-action="upload-edit-image" style="display:none;" /></label>' +
-            (s.editImage ? '<button type="button" data-action="clear-edit-image" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 12px; border:none; background:transparent; color:var(--danger-red); font-size:12.5px; cursor:pointer; font-family:inherit;">ลบรูป</button>' : '') +
-          '</div>' +
-          '<button data-action="save-edit" data-id="' + p.id + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--navy-action); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
-        '</div>' :
+      if (p.isGroup) return renderGroupListRow(p);
+      var editRow = p.isEditing ? listEditFormHtml(p, false) :
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
           (isAdmin ? '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' : '') +
@@ -3321,7 +3528,121 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>';
   }
 
-  var listHeaderHtml = '<div class="list-grid-row list-header" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:10px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div style="text-align:right;">ราคา</div><div style="text-align:right;">หน่วย</div><div>ภาษี</div></div>';
+  // ---- color-group rows (see computeProductRows) ----
+  function groupCheckboxHtml(g) {
+    var allOn = g.ids.every(function (id) { return s.selectedProductIds.indexOf(id) !== -1; });
+    return '<input type="checkbox" data-action="toggle-select-product" data-ids="' + esc(g.ids.join(",")) + '"' + (allOn ? " checked" : "") + ' aria-label="เลือกทั้ง ' + g.members.length + ' สี" style="width:18px; height:18px; cursor:pointer; flex:none; margin:0;" />';
+  }
+
+  function groupToggleHtml(g) {
+    return '<button type="button" data-action="toggle-product-group" data-key="' + esc(g.key) + '" aria-expanded="' + (g.isExpanded ? "true" : "false") + '" title="' + (g.isExpanded ? "ซ่อนรายชื่อสี" : "ดูรายชื่อสี") + '" style="min-height:32px; display:inline-flex; align-items:center; gap:5px; margin-top:4px; padding:4px 10px; border:1px solid var(--navy-action-soft-border); border-radius:20px; background:' + (g.isExpanded ? "oklch(0.95 0.05 275)" : "#fff") + '; color:var(--navy-action); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">' +
+      '<span style="display:inline-block; font-size:9px; transition:transform .15s; transform:rotate(' + (g.isExpanded ? "90deg" : "0deg") + ');">▶</span>' + g.members.length + ' สี' +
+    '</button>';
+  }
+
+  function groupEditFormHtml(g) {
+    var inputStyle = "width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;";
+    return '<div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px;">' +
+      '<div style="flex:1 1 100%; font-size:12.5px; color:var(--text-muted);">แก้ราคาทั้งกลุ่ม: ราคาใหม่จะบันทึกให้ <strong style="color:var(--text-body);">ทั้ง ' + g.members.length + ' สี</strong> พร้อมกัน (แก้ชื่อ/หมายเหตุ/รูป รายสีได้จากรายชื่อสีที่กางออก)</div>' +
+      '<input id="field-editGroupPrice" type="text" inputmode="decimal" data-bind="editGroupPrice" data-clear="editGroupError" value="' + esc(s.editGroupPrice) + '" placeholder="ราคา ช่อง 1" style="' + inputStyle + '" />' +
+      '<input id="field-editGroupPrice2" type="text" inputmode="decimal" data-bind="editGroupPrice2" value="' + esc(s.editGroupPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="' + inputStyle + '" />' +
+      '<input id="field-editGroupPrice3" type="text" inputmode="decimal" data-bind="editGroupPrice3" value="' + esc(s.editGroupPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="' + inputStyle + '" />' +
+      '<button data-action="save-edit-group" data-key="' + esc(g.key) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--navy-action); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึกทั้ง ' + g.members.length + ' สี</button>' +
+      '<button type="button" data-action="cancel-edit-group" style="min-height:44px; display:inline-flex; align-items:center;border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:7px; padding:10px 14px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+      (s.editGroupError ? '<div style="flex:1 1 100%; font-size:12.5px; color:var(--danger-red); background:var(--danger-red-bg); padding:7px 10px; border-radius:7px;">' + esc(s.editGroupError) + '</div>' : '') +
+    '</div>';
+  }
+
+  // The expanded color list: one line per color with its own note (e.g.
+  // "(MTO)") and per-color edit/delete. `inList` lays it out as a full-width
+  // cell of the list-view row; otherwise it's stacked inside a grid card.
+  function groupColorsHtml(g, inList) {
+    var rows = g.members.map(function (m) {
+      // In the list view the line reuses the row's column template so the
+      // per-color ✏️/🗑️ sit under the group's own buttons in the last column.
+      var line = '<div style="' + (inList ? "display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:5px 0;" : "display:flex; gap:10px; padding:4px 0;") + ' align-items:center; border-top:1px dashed var(--border-light); min-height:' + (isAdmin ? "44px" : "30px") + ';">' +
+        '<div style="' + (inList ? "grid-column:1 / 5; padding-left:52px;" : "flex:1; min-width:0;") + ' display:flex; align-items:center; gap:10px;">' +
+        (isAdmin && s.selectMode && !m.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + m.id + '"' + (s.selectedProductIds.indexOf(m.id) !== -1 ? " checked" : "") + ' style="width:16px; height:16px; cursor:pointer; flex:none; margin:0;" />' : '') +
+        (m.image ? '<div data-action="view-product-image" data-image="' + esc(m.image) + '" data-name="' + esc(m.name) + '" style="width:26px; height:26px; flex:none; border-radius:6px; cursor:pointer; background:var(--bg-subtle-2) center/cover no-repeat url(\'' + m.image + '\');"></div>' : '') +
+        '<div style="flex:1; min-width:0; font-size:13px;">' +
+          '<span style="font-weight:600; color:var(--text-body);">' + esc(m.colorLabel) + '</span>' +
+          (m.note ? '<span style="margin-left:6px; font-size:11.5px; color:var(--text-faint);">' + esc(m.note) + '</span>' : '') +
+        '</div>' +
+        '</div>' +
+        (isAdmin && !m.isEditing ? '<div style="display:flex; gap:6px; flex:none;">' +
+          '<button class="row-icon-btn" data-action="start-edit" data-id="' + m.id + '" aria-label="แก้ไขสี ' + esc(m.colorLabel) + '">✏️</button>' +
+          '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + m.id + '" data-name="' + esc(m.name) + '" aria-label="ลบสี ' + esc(m.colorLabel) + '">🗑️</button>' +
+        '</div>' : '') +
+      '</div>';
+      if (m.isEditing && inList) line += '<div style="padding-left:52px; padding-bottom:6px;">' + listEditFormHtml(m, true) + '</div>';
+      return line;
+    }).join("");
+    return '<div style="' + (inList ? "grid-column:1 / -1; margin-top:4px;" : "margin-top:2px;") + '">' + rows + '</div>';
+  }
+
+  function renderGroupListRow(g) {
+    var actions = g.isEditing ? groupEditFormHtml(g) :
+      '<div style="display:flex; align-items:center; gap:10px;">' +
+        '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + g.vatBadgeBg + '; color:' + g.vatBadgeColor + '; font-weight:600;">' + g.vatLabel + '</span>' +
+        (isAdmin ? '<button class="row-icon-btn" data-action="start-edit-group" data-key="' + esc(g.key) + '" aria-label="แก้ราคาทั้ง ' + g.members.length + ' สี" title="แก้ราคาทั้ง ' + g.members.length + ' สี">✏️</button>' : '') +
+        (isAdmin ? '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-group" data-key="' + esc(g.key) + '" aria-label="ลบทั้ง ' + g.members.length + ' สี" title="ลบทั้ง ' + g.members.length + ' สี">🗑️</button>' : '') +
+      '</div>';
+    var mediaStyle = g.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + g.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
+    return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; align-items:center; padding:9px 20px; border-top:1px solid var(--border-light);">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        (isAdmin && s.selectMode && !g.isEditing ? groupCheckboxHtml(g) : '') +
+        '<div' + (g.image ? ' data-action="view-product-image" data-image="' + esc(g.image) + '" data-name="' + esc(g.name) + '"' : '') + ' style="width:40px; height:40px; border-radius:8px; ' + mediaStyle + ' flex:none; position:relative; overflow:hidden;' + (g.image ? ' cursor:pointer;' : '') + '">' + (g.image ? "" : noImageIconSvg(20)) + '</div>' +
+        '<div>' +
+          '<div style="font-weight:600; font-size:14px;">' + esc(g.name) + '</div>' +
+          (g.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(g.note) + '</div>' : '') +
+          groupToggleHtml(g) +
+        '</div>' +
+      '</div>' +
+      '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(g.categoryLabel) + (g.subcat ? " · " + esc(g.subcat) : "") + '</span></div>' +
+      '<div style="text-align:right;">' + (g.hasMultiPrice ? priceTiersHtmlCompact(g) :
+        '<div style="display:flex; align-items:baseline; gap:6px; justify-content:flex-end;"><span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:15.5px; color:var(--navy-action);">฿' + g.priceDisplay + '</span>' + (g.hasDiscount ? '<span style="font-size:11.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + g.oldPriceDisplay + '</span>' : '') + '</div>'
+      ) + '</div>' +
+      '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(g.unit) + '</div>' +
+      actions +
+      (g.isExpanded ? groupColorsHtml(g, true) : '') +
+    '</div>';
+  }
+
+  function renderGroupGridCard(g) {
+    var mediaStyle = g.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + g.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
+    var editBody = g.isEditing ? '<div style="display:flex; flex-direction:column; gap:8px;">' + groupEditFormHtml(g) + '</div>' : '';
+    return '<div class="product-card" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;">' +
+      '<div' + (g.image ? ' data-action="view-product-image" data-image="' + esc(g.image) + '" data-name="' + esc(g.name) + '"' : '') + ' style="position:relative; height:130px; ' + mediaStyle + (g.image ? ' cursor:pointer;' : '') + '">' +
+        (g.image ? '' : noImageIconSvg(40)) +
+        (isAdmin && s.selectMode && !g.isEditing ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:rgba(255,255,255,.92); border-radius:7px; padding:4px; display:flex; line-height:0;">' + groupCheckboxHtml(g) + '</div>' : '') +
+        '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(g.categoryLabel) + (g.subcat ? " · " + esc(g.subcat) : "") + '</span>' +
+      '</div>' +
+      '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
+        '<div>' +
+          '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(g.name) + '</div>' +
+          (g.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(g.note) + '</div>' : '') +
+          groupToggleHtml(g) +
+        '</div>' +
+        (g.isExpanded ? groupColorsHtml(g, false) : '') +
+        (g.hasMultiPrice ? priceTiersHtml(g) :
+        '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
+          '<span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; color:var(--navy-action);">฿' + g.priceDisplay + '</span>' +
+          (g.hasDiscount ? '<span style="font-size:12.5px; color:oklch(0.6 0.01 60); text-decoration:line-through;">฿' + g.oldPriceDisplay + '</span>' : '') +
+          '<span style="font-size:11.5px; color:var(--text-faint);">/' + esc(g.unit) + '</span>' +
+        '</div>') +
+        editBody +
+        (g.isEditing ? '' : '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px;">' +
+          '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + g.vatBadgeBg + '; color:' + g.vatBadgeColor + '; font-weight:600;">' + g.vatLabel + '</span>' +
+          (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
+            '<button class="row-icon-btn" data-action="start-edit-group" data-key="' + esc(g.key) + '" aria-label="แก้ราคาทั้ง ' + g.members.length + ' สี" title="แก้ราคาทั้ง ' + g.members.length + ' สี">✏️</button>' +
+            '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-group" data-key="' + esc(g.key) + '" aria-label="ลบทั้ง ' + g.members.length + ' สี" title="ลบทั้ง ' + g.members.length + ' สี">🗑️</button>' +
+          '</div>' : '') +
+        '</div>') +
+      '</div>' +
+    '</div>';
+  }
+
+  var listHeaderHtml = '<div class="list-grid-row list-header\" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:10px 20px; background:var(--bg-subtle-2); font-size:12px; font-weight:700; color:oklch(0.45 0.01 60); text-transform:uppercase; letter-spacing:.03em;"><div>สินค้า</div><div>หมวดหมู่</div><div style="text-align:right;">ราคา</div><div style="text-align:right;">หน่วย</div><div>ภาษี</div></div>';
 
   var body;
   if (products.length === 0) {
