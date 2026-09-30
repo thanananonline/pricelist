@@ -579,6 +579,7 @@ function Dashboard(root) {
     categoryError: "",
     showDownloadModal: false,
     downloadCategory: "all",
+    downloadSubcat: "",
     categoryDeleteConfirm: null,
     editingCategoryValue: null,
     editCategoryName: "",
@@ -1591,7 +1592,7 @@ Dashboard.prototype.handleClick = function (e) {
         this._finishExcelImport(subcatConfirmSkip.readyProducts, subcatConfirmSkip.errors.concat(skipErrors));
       }
       break;
-    case "open-download-modal": this.setState({ showDownloadModal: true, downloadCategory: "all" }); break;
+    case "open-download-modal": this.setState({ showDownloadModal: true, downloadCategory: "all", downloadSubcat: "" }); break;
     case "close-download-modal": this.setState({ showDownloadModal: false }); break;
     case "confirm-download-products": this.downloadProductsExcel(); this.setState({ showDownloadModal: false }); break;
     case "toggle-manage-categories": this.setState(function (s2) { return { showManageCategories: !s2.showManageCategories, categoryError: "" }; }); break;
@@ -1652,6 +1653,7 @@ Dashboard.prototype.handleFieldChange = function (e) {
   var key = el.dataset.bind;
   this.state[key] = el.value;
   if (key === "search" || key === "sortBy") this.state.productsPage = 1;
+  if (key === "downloadCategory") this.state.downloadSubcat = "";
   if (el.dataset.clear) this.state[el.dataset.clear] = "";
   // Same reasoning as the login screen below: a full re-render while typing
   // tears down and recreates this input, jumping the cursor/keyboard. The
@@ -2154,6 +2156,19 @@ Dashboard.prototype.renderDownloadModal = function () {
   var catOpts = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
     return '<option value="' + esc(opt.value) + '"' + (opt.value === s.downloadCategory ? " selected" : "") + '>' + esc(opt.label) + '</option>';
   }).join("");
+  // Subcategory picker only shows once a main category that actually has
+  // subcategories is chosen (same derived list as the sidebar).
+  var subcats = s.downloadCategory === "all" ? [] : this.subcatOptionsFor(s.downloadCategory);
+  var subcatHtml = subcats.length
+    ? '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--text-body);">หมวดหมู่ย่อย' +
+        '<select id="field-downloadSubcat" data-bind="downloadSubcat" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; background:#fff;">' +
+          '<option value=""' + (!s.downloadSubcat ? " selected" : "") + '>ทุกหมวดหมู่ย่อย</option>' +
+          subcats.map(function (sc) {
+            return '<option value="' + esc(sc) + '"' + (sc === s.downloadSubcat ? " selected" : "") + '>' + esc(sc) + '</option>';
+          }).join("") +
+        '</select>' +
+      '</label>'
+    : "";
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
@@ -2162,7 +2177,7 @@ Dashboard.prototype.renderDownloadModal = function () {
       '</div>' +
       '<label style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--text-body);">หมวดหมู่' +
         '<select id="field-downloadCategory" data-bind="downloadCategory" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; background:#fff;">' + catOpts + '</select>' +
-      '</label>' +
+      '</label>' + subcatHtml +
       '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
         '<button type="button" data-action="close-download-modal" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
         '<button type="button" data-action="confirm-download-products" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">ดาวน์โหลด</button>' +
@@ -2175,8 +2190,9 @@ Dashboard.prototype.downloadProductsExcel = function () {
   var self = this;
   var s = this.state;
   var catValue = s.downloadCategory || "all";
+  var subcatValue = catValue === "all" ? "" : (s.downloadSubcat || "");
   var products = s.products.filter(function (p) {
-    return catValue === "all" || p.cat === catValue;
+    return (catValue === "all" || p.cat === catValue) && (!subcatValue || (p.subcat || "") === subcatValue);
   });
 
   var wb = new ExcelJS.Workbook();
@@ -2197,7 +2213,7 @@ Dashboard.prototype.downloadProductsExcel = function () {
   });
   ws.columns.forEach(function (col) { col.width = 20; });
 
-  var catLabelForName = catValue === "all" ? "ทั้งหมด" : self.catLabel(catValue);
+  var catLabelForName = catValue === "all" ? "ทั้งหมด" : self.catLabel(catValue) + (subcatValue ? "_" + subcatValue : "");
   var filename = "สินค้า_" + sanitizeFilenamePart(catLabelForName) + "_" + formatDateYMD(new Date()) + ".xlsx";
 
   wb.xlsx.writeBuffer().then(function (buffer) {
