@@ -155,6 +155,7 @@ function sanitizeProduct(body) {
     vat: body.vat === "novat" ? "novat" : "vat",
     image: String(body.image || ""),
     note: String(body.note || "").trim(),
+    color: String(body.color || "").trim(),
   };
 }
 
@@ -162,14 +163,44 @@ async function insertProduct(env, item) {
   const p = Object.assign({ id: genId() }, sanitizeProduct(item));
   if (!p.sku) p.sku = autoSku();
   await env.DB.prepare(
-    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image, note, subcat) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image, p.note, p.subcat).run();
+    "INSERT INTO products (id, cat, name, sku, price, oldPrice, price2, price3, unit, stock, vat, image, note, subcat, color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.id, p.cat, p.name, p.sku, p.price, p.oldPrice, p.price2, p.price3, p.unit, p.stock, p.vat, p.image, p.note, p.subcat, p.color).run();
   return p;
+}
+
+// Same name can now appear once per color, so the match is on name + color.
+// A row with no color (e.g. from an Excel file that predates the สี column)
+// whose name still ends in "(color)" also matches a product whose color has
+// since been moved out of the name into the color field.
+async function findProductByNameColor(env, name, color) {
+  const exact = await env.DB.prepare("SELECT * FROM products WHERE name = ? AND color = ?").bind(name, color).first();
+  if (exact || color) return exact;
+  const parts = splitTrailingParen(name);
+  if (!parts) return null;
+  return await env.DB.prepare("SELECT * FROM products WHERE name = ? AND color = ?").bind(parts.base, parts.label).first();
+}
+
+// Same as the dashboard's splitTrailingParen: "X (ไพลินทอแสง (MTO))" ->
+// { base: "X", label: "ไพลินทอแสง (MTO)" }, null if no trailing (...).
+function splitTrailingParen(name) {
+  const t = String(name || "").replace(/\s+$/, "");
+  if (t.charAt(t.length - 1) !== ")") return null;
+  let depth = 0;
+  for (let i = t.length - 1; i >= 0; i--) {
+    const c = t.charAt(i);
+    if (c === ")") depth++;
+    else if (c === "(" && --depth === 0) {
+      const base = t.slice(0, i).replace(/\s+$/, "");
+      const label = t.slice(i + 1, -1).trim();
+      return base && label ? { base: base, label: label } : null;
+    }
+  }
+  return null;
 }
 
 async function upsertProductByName(env, item) {
   const sanitized = sanitizeProduct(item);
-  const existing = await env.DB.prepare("SELECT * FROM products WHERE name = ?").bind(sanitized.name).first();
+  const existing = await findProductByNameColor(env, sanitized.name, sanitized.color);
   if (existing) {
     const merged = Object.assign({}, existing, {
       cat: sanitized.cat || existing.cat,
@@ -296,7 +327,7 @@ export default {
       if (!existing) return json({ error: "not found" }, 404);
 
       const merged = Object.assign({}, existing);
-      ["cat", "subcat", "name", "sku", "unit", "vat", "image", "note"].forEach(function (k) {
+      ["cat", "subcat", "name", "sku", "unit", "vat", "image", "note", "color"].forEach(function (k) {
         if (body[k] !== undefined) merged[k] = String(body[k]);
       });
       if (body.price !== undefined) merged.price = Number(body.price) || 0;
@@ -306,8 +337,8 @@ export default {
       if (body.price3 !== undefined) merged.price3 = nullableNumber(body.price3);
 
       await env.DB.prepare(
-        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=?, note=?, subcat=? WHERE id=?"
-      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, merged.note, merged.subcat, id).run();
+        "UPDATE products SET cat=?, name=?, sku=?, price=?, oldPrice=?, price2=?, price3=?, unit=?, stock=?, vat=?, image=?, note=?, subcat=?, color=? WHERE id=?"
+      ).bind(merged.cat, merged.name, merged.sku, merged.price, merged.oldPrice, merged.price2, merged.price3, merged.unit, merged.stock, merged.vat, merged.image, merged.note, merged.subcat, merged.color, id).run();
       return json(merged);
     }
 

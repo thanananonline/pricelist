@@ -250,7 +250,7 @@ function paginationRange(current, total) {
   return withDots;
 }
 
-var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "หมวดหมู่ย่อย", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "ภาษี", "สต็อก"];
+var IMPORT_HEADERS = ["ชื่อสินค้า", "หมวดหมู่", "หมวดหมู่ย่อย", "ช่อง 1", "ช่อง 2", "ช่อง 3", "หน่วย", "สี", "ภาษี", "สต็อก"];
 
 var API_BASE = "https://thananan-pricelist-api.thanananonline.workers.dev";
 
@@ -352,13 +352,36 @@ function splitTrailingParen(name) {
   return null;
 }
 
-// Grouping key for the color-merge in computeProductRows: products that
-// differ only in the trailing (...) and share category/subcategory/unit/VAT
+// A product's color and the name without it: the สี field when set (the
+// name is then already color-free), otherwise the legacy trailing "(...)"
+// on the name for products whose color hasn't been moved into the field
+// yet. null = no color either way.
+function productColorParts(p) {
+  var color = String(p.color || "").trim();
+  if (color) return { base: String(p.name || "").trim(), label: color };
+  return splitTrailingParen(p.name);
+}
+
+// Grouping key for the color-merge in computeProductRows: products whose
+// name minus color matches and that share category/subcategory/unit/VAT
 // and all three price tiers. "" = never grouped.
 function productGroupKey(p) {
-  var parts = splitTrailingParen(p.name);
+  var parts = productColorParts(p);
   if (!parts) return "";
   return [p.cat, p.subcat || "", parts.base, p.unit, p.vat || "vat", p.price, p.price2 == null ? "" : p.price2, p.price3 == null ? "" : p.price3, p.oldPrice == null ? "" : p.oldPrice].join("\u0001");
+}
+// Name plus color, for places that identify one product on its own (delete
+// confirm, image viewer) -- colors moved into the สี field share a name.
+function productLabel(p) {
+  return p.color ? p.name + " (" + p.color + ")" : p.name;
+}
+
+// Small "สี: ..." line under a product name; nothing when there's no color.
+// Labels that already start with "สี" (e.g. "สีแดงชบา") skip the prefix.
+function productColorLineHtml(color) {
+  if (!color) return "";
+  var text = color.indexOf("สี") === 0 ? color : "สี: " + color;
+  return '<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">' + esc(text) + '</div>';
 }
 function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
@@ -660,6 +683,7 @@ function Dashboard(root) {
     editImage: "",
     editNote: "",
     editSubcat: "",
+    editColor: "",
     showAddForm: false,
     newProdName: "",
     newProdCat: "",
@@ -668,6 +692,7 @@ function Dashboard(root) {
     newProdPrice2: "",
     newProdPrice3: "",
     newProdUnit: "",
+    newProdColor: "",
     newProdVat: "vat",
     newProdImage: "",
     newProdNote: "",
@@ -1860,7 +1885,7 @@ Dashboard.prototype.computeProducts = function () {
   var list = withOverrides.filter(function (p) {
     var matchesCat = s.category === "all" || p.cat === s.category;
     var matchesSubcat = !s.subcat || (p.subcat || "") === s.subcat;
-    var haystack = (p.name + " " + p.sku).toLowerCase();
+    var haystack = (p.name + " " + p.sku + " " + (p.color || "")).toLowerCase();
     var matchesQ = !queryTerms.length || queryTerms.every(function (term) { return haystack.indexOf(term) !== -1; });
     return matchesCat && matchesSubcat && matchesQ;
   });
@@ -1873,7 +1898,7 @@ Dashboard.prototype.computeProducts = function () {
   return list.map(function (p) {
     var im = img(p.cat);
     return {
-      id: p.id, name: p.name, sku: p.sku, note: p.note || "", cat: p.cat, subcat: p.subcat || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
+      id: p.id, name: p.name, sku: p.sku, note: p.note || "", color: p.color || "", cat: p.cat, subcat: p.subcat || "", categoryLabel: self.catLabel(p.cat), unit: p.unit,
       groupKey: productGroupKey(p),
       priceDisplay: fmt(p.price),
       oldPriceDisplay: p.oldPrice ? fmt(p.oldPrice) : "",
@@ -1897,7 +1922,9 @@ Dashboard.prototype.computeProducts = function () {
 // expands to the color list. The products themselves are never touched:
 // grouping runs on the already-filtered/sorted list, so a search that only
 // hits one color (e.g. "เทาปฐพี") just shows that product as a normal row.
-// Products group only when everything but the trailing (color) matches --
+// The color comes from the สี field, or the trailing (...) on the name for
+// products that don't have one yet (see productColorParts).
+// Products group only when everything but the color matches --
 // category, subcategory, unit, VAT and price ช่อง 1-3 -- so a color priced
 // differently stays on its own row.
 Dashboard.prototype.computeProductRows = function () {
@@ -1929,11 +1956,12 @@ Dashboard.prototype.computeProductRows = function () {
       key: key,
       id: key,
       ids: ids,
-      name: splitTrailingParen(first.name).base,
+      name: productColorParts(first).base,
+      color: "",
       note: sameNote ? first.note : "",
       image: withImage ? withImage.image : "",
       members: row.members.map(function (m) {
-        return Object.assign({}, m, { colorLabel: splitTrailingParen(m.name).label });
+        return Object.assign({}, m, { colorLabel: productColorParts(m).label });
       }),
       isExpanded: !!s.expandedProductGroups[key],
       isEditing: s.editingGroupKey === key,
@@ -1977,7 +2005,7 @@ Dashboard.prototype.startEdit = function (id) {
     editingId: p.id, editingGroupKey: null, editName: p.name, editPrice: String(p.price),
     editPrice2: p.price2 != null ? String(p.price2) : "", editPrice3: p.price3 != null ? String(p.price3) : "",
     editUnit: p.unit, editVat: p.vat || "vat", editImage: p.image || "", editNote: p.note || "",
-    editSubcat: p.subcat || "",
+    editSubcat: p.subcat || "", editColor: p.color || "",
   });
 };
 
@@ -1986,7 +2014,7 @@ Dashboard.prototype.saveEdit = function (id) {
   var price = parseFloat(s.editPrice);
   var name = s.editName.trim();
   var unit = s.editUnit.trim();
-  var body = { vat: s.editVat, image: s.editImage, note: s.editNote.trim(), subcat: s.editSubcat.trim() };
+  var body = { vat: s.editVat, image: s.editImage, note: s.editNote.trim(), subcat: s.editSubcat.trim(), color: s.editColor.trim() };
   if (name) body.name = name;
   if (unit) body.unit = unit;
   if (!isNaN(price)) body.price = price;
@@ -2081,14 +2109,14 @@ Dashboard.prototype.onAddProduct = function () {
   }
   var price2 = parseFloat(s.newProdPrice2); if (isNaN(price2)) price2 = null;
   var price3 = parseFloat(s.newProdPrice3); if (isNaN(price3)) price3 = null;
-  var body = { cat: s.newProdCat, subcat: s.newProdSubcat.trim(), name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: 0, vat: s.newProdVat, image: s.newProdImage || "", note: s.newProdNote.trim() };
+  var body = { cat: s.newProdCat, subcat: s.newProdSubcat.trim(), name: name, sku: "", price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, color: s.newProdColor.trim(), stock: 0, vat: s.newProdVat, image: s.newProdImage || "", note: s.newProdNote.trim() };
   var self = this;
   apiRequest("/products", { method: "POST", auth: true, body: body })
     .then(function (created) {
       self.setState(function (s2) {
         return {
           products: s2.products.concat([created]), showAddForm: false,
-          newProdName: "", newProdSubcat: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdVat: "vat", newProdImage: "", newProdNote: "", newProdError: "",
+          newProdName: "", newProdSubcat: "", newProdPrice: "", newProdPrice2: "", newProdPrice3: "", newProdUnit: "", newProdColor: "", newProdVat: "vat", newProdImage: "", newProdNote: "", newProdError: "",
         };
       });
     })
@@ -2263,7 +2291,7 @@ Dashboard.prototype.downloadImportTemplate = function () {
   var wb = new ExcelJS.Workbook();
   var ws1 = wb.addWorksheet("สินค้า");
   ws1.addRow(IMPORT_HEADERS);
-  ws1.addRow(["ปูนซีเมนต์ตัวอย่าง 50 กก.", exampleCat, exampleSubcat, 145, "", "", "ถุง", "VAT", 0]);
+  ws1.addRow(["ปูนซีเมนต์ตัวอย่าง 50 กก.", exampleCat, exampleSubcat, 145, "", "", "ถุง", "", "VAT", 0]);
   ws1.columns.forEach(function (col) { col.width = 20; });
 
   // Reference sheet for people filling in the template: main categories plus
@@ -2384,6 +2412,7 @@ Dashboard.prototype.downloadProductsExcel = function () {
       p.price2 != null ? p.price2 : "",
       p.price3 != null ? p.price3 : "",
       p.unit,
+      p.color || "",
       p.vat === "novat" ? "NOVAT" : "VAT",
       p.stock != null ? p.stock : 0,
     ]);
@@ -2468,6 +2497,8 @@ Dashboard.prototype.importExcelFile = function (file) {
         var subcatRaw = String(row["หมวดหมู่ย่อย"] || "").trim();
         var priceRaw = row["ช่อง 1"];
         var unit = String(row["หน่วย"] || "").trim();
+        // Optional; also missing entirely from files made before the สี column.
+        var color = String(row["สี"] || "").trim();
         if (!name && !catRaw && !unit && (priceRaw === "" || priceRaw == null)) return;
 
         var price = parseFloat(priceRaw);
@@ -2503,7 +2534,7 @@ Dashboard.prototype.importExcelFile = function (file) {
 
         var product = {
           cat: cat, subcat: subcatRaw, name: name, sku: "",
-          price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, stock: stock, vat: vat, image: "",
+          price: price, oldPrice: null, price2: price2, price3: price3, unit: unit, color: color, stock: stock, vat: vat, image: "",
         };
 
         if (subcatIsNew) pendingItems.push({ rowNum: rowNum, product: product, subcat: subcatRaw, catLabel: self.catLabel(cat) });
@@ -3350,6 +3381,9 @@ Dashboard.prototype.renderPricePage = function () {
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">หน่วยนับ' +
           '<input id="field-newProdUnit" type="text" required placeholder="เช่น ถุง, แผ่น, ชิ้น" data-bind="newProdUnit" data-clear="newProdError" value="' + esc(s.newProdUnit) + '" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
         '</label>' +
+        '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">สี (ถ้ามี)' +
+          '<input id="field-newProdColor" type="text" placeholder="เช่น เทาปฐพี" data-bind="newProdColor" value="' + esc(s.newProdColor) + '" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
+        '</label>' +
         '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">ภาษี' +
           '<select id="field-newProdVat" data-bind="newProdVat" style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; background:#fff;">' +
             '<option value="vat"' + (s.newProdVat === "vat" ? " selected" : "") + '>VAT</option>' +
@@ -3428,6 +3462,7 @@ Dashboard.prototype.renderPricePage = function () {
           '</div>' +
           '<div style="display:flex; gap:6px;">' +
             '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+            '<input id="field-editColor" type="text" data-bind="editColor" value="' + esc(s.editColor) + '" placeholder="สี (ถ้ามี)" style="width:0; flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
             '<select id="field-editVat" data-bind="editVat" style="flex:1; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
               '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
               '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
@@ -3446,6 +3481,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<div>' +
             '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(p.name) + '</div>' +
+            productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
           '</div>' +
           (p.hasMultiPrice ? priceTiersHtml(p) :
@@ -3458,12 +3494,12 @@ Dashboard.prototype.renderPricePage = function () {
             '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
             (isAdmin ? '<div style="display:flex; align-items:center; gap:6px;">' +
               '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' +
-              '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" aria-label="ลบ">🗑️</button>' +
+              '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(productLabel(p)) + '" aria-label="ลบ">🗑️</button>' +
             '</div>' : '') +
           '</div>' +
         '</div>';
       return '<div class="product-card" style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s;">' +
-        '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="position:relative; height:130px; ' + mediaStyle + (p.image ? ' cursor:pointer;' : '') + '">' +
+        '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(productLabel(p)) + '"' : '') + ' style="position:relative; height:130px; ' + mediaStyle + (p.image ? ' cursor:pointer;' : '') + '">' +
           mediaSvg +
           (isAdmin && s.selectMode && !p.isEditing ? '<div style="position:absolute; top:8px; left:8px; z-index:2; background:rgba(255,255,255,.92); border-radius:7px; padding:4px; display:flex; line-height:0;"><input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; margin:0;" /></div>' : '') +
           '<span style="position:absolute; bottom:8px; left:10px; font-family:ui-monospace,monospace; font-size:10.5px; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:5px; color:#444;">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span>' +
@@ -3484,6 +3520,7 @@ Dashboard.prototype.renderPricePage = function () {
       '<input id="field-editPrice2" type="text" inputmode="decimal" data-bind="editPrice2" value="' + esc(s.editPrice2) + '" placeholder="ช่อง 2 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
       '<input id="field-editPrice3" type="text" inputmode="decimal" data-bind="editPrice3" value="' + esc(s.editPrice3) + '" placeholder="ช่อง 3 (ถ้ามี)" style="width:90px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
       '<input id="field-editUnit" type="text" data-bind="editUnit" value="' + esc(s.editUnit) + '" placeholder="หน่วย" style="width:70px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
+      '<input id="field-editColor" type="text" data-bind="editColor" value="' + esc(s.editColor) + '" placeholder="สี (ถ้ามี)" style="width:110px; padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit;" />' +
       '<select id="field-editVat" data-bind="editVat" style="padding:6px 8px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; background:#fff;">' +
         '<option value="vat"' + (s.editVat === "vat" ? " selected" : "") + '>VAT</option>' +
         '<option value="novat"' + (s.editVat === "novat" ? " selected" : "") + '>NO VAT</option>' +
@@ -3506,16 +3543,17 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="font-size:11.5px; padding:3px 8px; border-radius:6px; background:' + p.vatBadgeBg + '; color:' + p.vatBadgeColor + '; font-weight:600;">' + p.vatLabel + '</span>' +
           (isAdmin ? '<button class="row-icon-btn" data-action="start-edit" data-id="' + p.id + '" aria-label="แก้ไข">✏️</button>' : '') +
-          (isAdmin ? '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(p.name) + '" aria-label="ลบ">🗑️</button>' : '') +
+          (isAdmin ? '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + p.id + '" data-name="' + esc(productLabel(p)) + '" aria-label="ลบ">🗑️</button>' : '') +
         '</div>';
       var listMediaStyle = p.image ? "background:var(--bg-subtle-2) center/cover no-repeat url('" + p.image + "');" : "background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; color:var(--text-faint);";
       var listMediaSvg = p.image ? "" : noImageIconSvg(20);
       return '<div class="list-grid-row" style="display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; align-items:center; padding:9px 20px; border-top:1px solid var(--border-light);">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           (isAdmin && s.selectMode && !p.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + p.id + '"' + (s.selectedProductIds.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px; height:18px; cursor:pointer; flex:none; margin:0;" />' : '') +
-          '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(p.name) + '"' : '') + ' style="width:40px; height:40px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
+          '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(productLabel(p)) + '"' : '') + ' style="width:40px; height:40px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
           '<div>' +
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
+            productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
           '</div>' +
         '</div>' +
@@ -3563,7 +3601,7 @@ Dashboard.prototype.renderPricePage = function () {
       var line = '<div style="' + (inList ? "display:grid; grid-template-columns:2.4fr 1fr 1fr 0.9fr 1fr; gap:10px; padding:5px 0;" : "display:flex; gap:10px; padding:4px 0;") + ' align-items:center; border-top:1px dashed var(--border-light); min-height:' + (isAdmin ? "44px" : "30px") + ';">' +
         '<div style="' + (inList ? "grid-column:1 / 5; padding-left:52px;" : "flex:1; min-width:0;") + ' display:flex; align-items:center; gap:10px;">' +
         (isAdmin && s.selectMode && !m.isEditing ? '<input type="checkbox" data-action="toggle-select-product" data-id="' + m.id + '"' + (s.selectedProductIds.indexOf(m.id) !== -1 ? " checked" : "") + ' style="width:16px; height:16px; cursor:pointer; flex:none; margin:0;" />' : '') +
-        (m.image ? '<div data-action="view-product-image" data-image="' + esc(m.image) + '" data-name="' + esc(m.name) + '" style="width:26px; height:26px; flex:none; border-radius:6px; cursor:pointer; background:var(--bg-subtle-2) center/cover no-repeat url(\'' + m.image + '\');"></div>' : '') +
+        (m.image ? '<div data-action="view-product-image" data-image="' + esc(m.image) + '" data-name="' + esc(productLabel(m)) + '" style="width:26px; height:26px; flex:none; border-radius:6px; cursor:pointer; background:var(--bg-subtle-2) center/cover no-repeat url(\'' + m.image + '\');"></div>' : '') +
         '<div style="flex:1; min-width:0; font-size:13px;">' +
           '<span style="font-weight:600; color:var(--text-body);">' + esc(m.colorLabel) + '</span>' +
           (m.note ? '<span style="margin-left:6px; font-size:11.5px; color:var(--text-faint);">' + esc(m.note) + '</span>' : '') +
@@ -3571,7 +3609,7 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' +
         (isAdmin && !m.isEditing ? '<div style="display:flex; gap:6px; flex:none;">' +
           '<button class="row-icon-btn" data-action="start-edit" data-id="' + m.id + '" aria-label="แก้ไขสี ' + esc(m.colorLabel) + '">✏️</button>' +
-          '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + m.id + '" data-name="' + esc(m.name) + '" aria-label="ลบสี ' + esc(m.colorLabel) + '">🗑️</button>' +
+          '<button class="row-icon-btn row-icon-btn--danger" data-action="request-delete-product" data-id="' + m.id + '" data-name="' + esc(productLabel(m)) + '" aria-label="ลบสี ' + esc(m.colorLabel) + '">🗑️</button>' +
         '</div>' : '') +
       '</div>';
       if (m.isEditing && inList) line += '<div style="padding-left:52px; padding-bottom:6px;">' + listEditFormHtml(m, true) + '</div>';
