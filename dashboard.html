@@ -655,6 +655,10 @@ function Dashboard(root) {
     // "delete all colors" confirmation.
     expandedProductGroups: {},
     editingGroupKey: null,
+    addColorSourceId: null,
+    addColorInput: "",
+    addColorError: "",
+    addColorSaving: false,
     editGroupPrice: "",
     editGroupPrice2: "",
     editGroupPrice3: "",
@@ -1597,6 +1601,13 @@ Dashboard.prototype.handleClick = function (e) {
       });
       break;
     case "start-edit-group": this.startGroupEdit(d.key); break;
+    case "start-add-color":
+      this.setState({ addColorSourceId: d.id, addColorInput: "", addColorError: "", editingId: null, editingGroupKey: null });
+      var addColorField = document.getElementById("field-addColorInput");
+      if (addColorField) addColorField.focus();
+      break;
+    case "cancel-add-color": this.setState({ addColorSourceId: null, addColorInput: "", addColorError: "" }); break;
+    case "save-add-color": this.saveAddColors(); break;
     case "cancel-edit-group": this.setState({ editingGroupKey: null, editGroupError: "" }); break;
     case "save-edit-group": this.saveGroupEdit(d.key); break;
     case "cancel-edit": this.setState({ editingId: null }); break;
@@ -2082,6 +2093,94 @@ Dashboard.prototype.saveGroupEdit = function (key) {
       return patch;
     });
     if (!failed.length) self.showToast("อัปเดตราคา " + g.ids.length + " สีแล้ว", "success");
+  });
+};
+
+// "แดง, เขียว, น้ำเงิน" -> ["แดง", "เขียว", "น้ำเงิน"]: splits on commas (ASCII
+// or full-width) and newlines, trims, and drops blanks and repeats within
+// the input itself.
+function parseColorList(str) {
+  var seen = {};
+  return String(str || "").split(/[,，\n]/).map(function (c) { return c.trim(); }).filter(function (c) {
+    var k = c.toLowerCase();
+    if (!c || seen[k]) return false;
+    seen[k] = true;
+    return true;
+  });
+}
+
+// Everything "+ เพิ่มสี" needs for the product it was opened from: the
+// fields copied to each new color, and which typed colors already exist in
+// the group. Siblings come from the full product list (same productGroupKey),
+// not the on-screen rows, so a search that hides some colors can't let a
+// duplicate through.
+Dashboard.prototype.addColorContext = function () {
+  var s = this.state;
+  var products = this.getMergedProducts();
+  var source = products.find(function (p) { return p.id === s.addColorSourceId; });
+  if (!source) return null;
+  var key = productGroupKey(source);
+  var existing = {};
+  products.forEach(function (p) {
+    if (p.id === source.id || (key && productGroupKey(p) === key)) existing[productColorParts(p).label.toLowerCase()] = true;
+  });
+  var colors = parseColorList(s.addColorInput).map(function (c) {
+    return { color: c, dup: !!existing[c.toLowerCase()] };
+  });
+  return { source: source, base: productColorParts(source).base, colors: colors };
+};
+
+// Creates one product per new color, copying name/category/subcategory/
+// prices/unit/VAT from the source so it lands in the same color group
+// (note and image start empty). Duplicates were already flagged in the form
+// and are skipped here; the group is left expanded so the new colors show.
+Dashboard.prototype.saveAddColors = function () {
+  var ctx = this.addColorContext();
+  if (!ctx || this.state.addColorSaving) return;
+  var fresh = ctx.colors.filter(function (c) { return !c.dup; }).map(function (c) { return c.color; });
+  var dups = ctx.colors.filter(function (c) { return c.dup; }).map(function (c) { return c.color; });
+  if (!fresh.length) {
+    this.setState({ addColorError: dups.length ? "ทุกสีที่กรอกมีอยู่ในกลุ่มแล้ว: " + dups.join(", ") : "กรุณากรอกสีอย่างน้อย 1 สี" });
+    return;
+  }
+  var src = ctx.source;
+  var self = this;
+  this.setState({ addColorSaving: true, addColorError: "" });
+  var created = [];
+  var failed = [];
+  fresh.reduce(function (chain, color) {
+    return chain.then(function () {
+      var body = {
+        cat: src.cat, subcat: src.subcat || "", name: ctx.base, sku: "", color: color,
+        price: src.price, oldPrice: src.oldPrice == null ? null : src.oldPrice,
+        price2: src.price2 == null ? null : src.price2, price3: src.price3 == null ? null : src.price3,
+        unit: src.unit, stock: 0, vat: src.vat || "vat", image: "", note: "",
+      };
+      return apiRequest("/products", { method: "POST", auth: true, body: body })
+        .then(function (p) { created.push(p); }, function (err) { failed.push(color + " (" + err.message + ")"); });
+    });
+  }, Promise.resolve()).then(function () {
+    self.setState(function (s2) {
+      var products = s2.products.concat(created);
+      var key = productGroupKey(src);
+      var ids = products.filter(function (p) { return productGroupKey(p) === key; }).map(function (p) { return p.id; }).sort();
+      var expanded = Object.assign({}, s2.expandedProductGroups);
+      if (ids.length > 1) expanded["g:" + ids[0]] = true;
+      var patch = { products: products, expandedProductGroups: expanded, addColorSaving: false };
+      if (failed.length) {
+        patch.addColorError = "บันทึกไม่สำเร็จ " + failed.length + " สี: " + failed.join(", ");
+        // keep only the colors that still need saving in the box
+        patch.addColorInput = fresh.filter(function (c) { return !created.some(function (p) { return p.color === c; }); }).join(", ");
+      } else {
+        patch.addColorSourceId = null;
+        patch.addColorInput = "";
+        patch.addColorError = "";
+      }
+      return patch;
+    });
+    if (created.length) {
+      self.showToast("เพิ่ม " + created.length + " สีแล้ว" + (dups.length ? " · ข้ามสีที่ซ้ำ: " + dups.join(", ") : ""), dups.length ? "warn" : "success");
+    }
   });
 };
 
@@ -3162,8 +3261,8 @@ Dashboard.prototype.renderImagePreviewModal = function () {
 Dashboard.prototype.renderToast = function () {
   var t = this.state.toast;
   if (!t) return "";
-  var bg = t.type === "error" ? "var(--danger-red)" : "oklch(0.45 0.14 150)";
-  var icon = t.type === "error" ? "⚠️" : "✅";
+  var bg = t.type === "error" ? "var(--danger-red)" : t.type === "warn" ? "oklch(0.5 0.12 70)" : "oklch(0.45 0.14 150)";
+  var icon = t.type === "error" || t.type === "warn" ? "⚠️" : "✅";
   return '<div style="position:fixed; top:50%; left:50%; z-index:1200; background:' + bg + '; color:#fff; padding:16px 26px; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; max-width:360px; animation:toast-in .25s ease forwards;">' +
     '<span style="font-size:18px;">' + icon + '</span>' +
     '<span>' + esc(t.message) + '</span>' +
@@ -3483,6 +3582,7 @@ Dashboard.prototype.renderPricePage = function () {
             '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(p.name) + '</div>' +
             productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
+            (p.color && !p.colorLabel ? addColorHtml(p, true) : '') +
           '</div>' +
           (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
@@ -3506,6 +3606,52 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' +
         cardBody +
       '</div>';
+  }
+
+  // "+ เพิ่มสี" pill, or the add-color panel when it's open for this product
+  // (a group passes its first member). The copied fields are shown
+  // read-only: changing any of them would drop the new color out of the group.
+  // The width cap keeps the panel inside the screen on phones, where list
+  // rows are 620px wide and scroll sideways.
+  function addColorHtml(source, compact) {
+    if (!isAdmin) return "";
+    if (s.addColorSourceId !== source.id) {
+      return '<button type="button" data-action="start-add-color" data-id="' + source.id + '" style="min-height:32px; display:inline-flex; align-items:center; gap:4px; margin-top:6px; padding:4px 10px; border:1px dashed var(--navy-action-soft-border); border-radius:20px; background:#fff; color:var(--navy-action); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">+ เพิ่มสี</button>';
+    }
+    var ctx = self.addColorContext();
+    if (!ctx) return "";
+    var src = ctx.source;
+    var prices = [["ช่อง 1", src.price], ["ช่อง 2", src.price2], ["ช่อง 3", src.price3]].filter(function (r) { return r[1] != null; })
+      .map(function (r) { return r[0] + " ฿" + fmt(r[1]); }).join(" · ");
+    var info = [
+      ["ชื่อ", ctx.base],
+      ["หมวด", self.catLabel(src.cat) + (src.subcat ? " › " + src.subcat : "")],
+      ["ราคา", prices],
+      ["หน่วย", src.unit],
+      ["ภาษี", src.vat === "novat" ? "NO VAT" : "VAT"],
+    ];
+    var freshCount = ctx.colors.filter(function (c) { return !c.dup; }).length;
+    var chips = ctx.colors.map(function (c) {
+      return c.dup
+        ? '<span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--danger-red-bg); color:var(--danger-red); font-weight:600;">ซ้ำ: ' + esc(c.color) + ' (จะข้าม)</span>'
+        : '<span style="font-size:12px; padding:3px 9px; border-radius:20px; background:oklch(0.94 0.05 155); color:oklch(0.35 0.09 155); font-weight:600;">+ ' + esc(c.color) + '</span>';
+    }).join("");
+    return '<div style="' + (compact ? "" : "grid-column:1 / -1; ") + 'box-sizing:border-box; max-width:min(520px, calc(100vw - 120px)); margin-top:8px; padding:12px 14px; border:1px solid var(--navy-action-soft-border); border-radius:10px; background:oklch(0.98 0.01 275); display:flex; flex-direction:column; gap:8px; text-align:left;">' +
+      '<div style="font-size:13px; font-weight:700; color:var(--text-body);">เพิ่มสีใหม่ในกลุ่มนี้</div>' +
+      '<div style="display:grid; grid-template-columns:auto 1fr; gap:2px 10px; font-size:12px; color:var(--text-muted);">' +
+        info.map(function (r) { return '<span>' + r[0] + '</span><span style="color:var(--text-body); min-width:0; overflow-wrap:anywhere;">' + esc(r[1]) + '</span>'; }).join("") +
+      '</div>' +
+      '<div style="font-size:11.5px; color:var(--text-faint);">คัดลอกจากสินค้าในกลุ่ม · หมายเหตุและรูปจะว่างไว้</div>' +
+      '<label style="display:flex; flex-direction:column; gap:4px; font-size:12.5px; font-weight:600; color:var(--text-body);">สี (กรอกหลายสีคั่นด้วยจุลภาค)' +
+        '<input id="field-addColorInput" type="text" data-bind="addColorInput" data-clear="addColorError" value="' + esc(s.addColorInput) + '" placeholder="เช่น แดง, เขียว, น้ำเงิน" style="padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13px; font-family:inherit; font-weight:400;" />' +
+      '</label>' +
+      (chips ? '<div style="display:flex; flex-wrap:wrap; gap:6px;">' + chips + '</div>' : '') +
+      (s.addColorError ? '<div style="font-size:12.5px; color:var(--danger-red); background:var(--danger-red-bg); padding:7px 10px; border-radius:7px;">' + esc(s.addColorError) + '</div>' : '') +
+      '<div style="display:flex; flex-wrap:wrap; gap:8px;">' +
+        '<button type="button" data-action="save-add-color"' + (s.addColorSaving ? " disabled" : "") + ' style="min-height:44px; display:inline-flex; align-items:center; border:none; background:var(--navy-action); color:#fff; border-radius:7px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;' + (s.addColorSaving ? " opacity:.6;" : "") + '">' + (s.addColorSaving ? "กำลังบันทึก..." : "บันทึก" + (freshCount ? " " + freshCount + " สี" : "")) + '</button>' +
+        '<button type="button" data-action="cancel-add-color" style="min-height:44px; display:inline-flex; align-items:center; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:7px; padding:10px 14px; font-size:13px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+      '</div>' +
+    '</div>';
   }
 
   // The single-product editor as a full-width cell of a list row (also used
@@ -3555,6 +3701,7 @@ Dashboard.prototype.renderPricePage = function () {
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
             productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
+            (p.color && !p.isEditing && s.addColorSourceId !== p.id ? addColorHtml(p, true) : '') +
           '</div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span></div>' +
@@ -3563,6 +3710,7 @@ Dashboard.prototype.renderPricePage = function () {
         ) + '</div>' +
         '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
+        (p.color && s.addColorSourceId === p.id ? addColorHtml(p, false) : '') +
       '</div>';
   }
 
@@ -3615,6 +3763,8 @@ Dashboard.prototype.renderPricePage = function () {
       if (m.isEditing && inList) line += '<div style="padding-left:52px; padding-bottom:6px;">' + listEditFormHtml(m, true) + '</div>';
       return line;
     }).join("");
+    var addColor = addColorHtml(g.members[0], true);
+    if (addColor) rows += '<div style="' + (inList ? "padding-left:52px;" : "") + ' border-top:1px dashed var(--border-light); padding-top:2px; padding-bottom:4px;">' + addColor + '</div>';
     return '<div style="' + (inList ? "grid-column:1 / -1; margin-top:4px;" : "margin-top:2px;") + '">' + rows + '</div>';
   }
 
