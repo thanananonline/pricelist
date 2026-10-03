@@ -383,6 +383,17 @@ function productColorLineHtml(color) {
   var text = color.indexOf("สี") === 0 ? color : "สี: " + color;
   return '<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">' + esc(text) + '</div>';
 }
+// Pulls a "สีXXX" word out of a name that still carries its color inline,
+// e.g. "เชิงชายพลัส สีธรรมชาติ (2 แผ่น/แพ็ค) 1.6*23*300" -> name
+// "เชิงชายพลัส (2 แผ่น/แพ็ค) 1.6*23*300", color "ธรรมชาติ". Only a
+// whole word starting with สี counts, and not สี่ (four, as in สี่เหลี่ยม).
+// null = nothing to split.
+function splitInlineColor(name) {
+  var m = /(^|\s)สี(?![\u0E48-\u0E4B])(\S+)/.exec(String(name || ""));
+  if (!m) return null;
+  var rest = (name.slice(0, m.index) + " " + name.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
+  return rest ? { name: rest, color: m[2] } : null;
+}
 function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
   return '<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px;">' +
@@ -659,6 +670,10 @@ function Dashboard(root) {
     addColorInput: "",
     addColorError: "",
     addColorSaving: false,
+    // "แยกสีจากชื่อ" panel: open flag, ids the admin unticked, save in flight.
+    colorSplitOpen: false,
+    colorSplitSkip: {},
+    colorSplitSaving: false,
     editGroupPrice: "",
     editGroupPrice2: "",
     editGroupPrice3: "",
@@ -1606,6 +1621,16 @@ Dashboard.prototype.handleClick = function (e) {
       var addColorField = document.getElementById("field-addColorInput");
       if (addColorField) addColorField.focus();
       break;
+    case "toggle-color-split": this.setState(function (s2) { return { colorSplitOpen: !s2.colorSplitOpen, colorSplitSkip: {} }; }); break;
+    case "toggle-color-split-item":
+      var splitId = d.id;
+      this.setState(function (s2) {
+        var skip = Object.assign({}, s2.colorSplitSkip);
+        if (skip[splitId]) delete skip[splitId]; else skip[splitId] = true;
+        return { colorSplitSkip: skip };
+      });
+      break;
+    case "save-color-split": this.saveColorSplit(); break;
     case "cancel-add-color": this.setState({ addColorSourceId: null, addColorInput: "", addColorError: "" }); break;
     case "save-add-color": this.saveAddColors(); break;
     case "cancel-edit-group": this.setState({ editingGroupKey: null, editGroupError: "" }); break;
@@ -2181,6 +2206,59 @@ Dashboard.prototype.saveAddColors = function () {
     if (created.length) {
       self.showToast("เพิ่ม " + created.length + " สีแล้ว" + (dups.length ? " · ข้ามสีที่ซ้ำ: " + dups.join(", ") : ""), dups.length ? "warn" : "success");
     }
+  });
+};
+
+// Products in the selected category whose สี field is empty but whose
+// name still has "สีXXX" in it, with the name/color they'd split into.
+// dup = another product in the category already has that name + color
+// (the Excel upsert matches on the pair), so it's listed but not saved.
+Dashboard.prototype.colorSplitCandidates = function () {
+  var s = this.state;
+  if (s.category === "all") return [];
+  var products = this.getMergedProducts().filter(function (p) { return p.cat === s.category; });
+  var taken = {};
+  products.forEach(function (p) { taken[(p.name + "\u0001" + (p.color || "")).toLowerCase()] = true; });
+  var out = [];
+  products.forEach(function (p) {
+    if (String(p.color || "").trim()) return;
+    var split = splitInlineColor(p.name);
+    if (!split) return;
+    var k = (split.name + "\u0001" + split.color).toLowerCase();
+    out.push({ id: p.id, oldName: p.name, name: split.name, color: split.color, dup: !!taken[k] });
+    taken[k] = true;
+  });
+  return out.sort(function (a, b) { return a.oldName.localeCompare(b.oldName, "th"); });
+};
+
+// Moves the color out of each ticked product's name into its สี field, one
+// PUT at a time; failures stay in the panel to retry.
+Dashboard.prototype.saveColorSplit = function () {
+  var s = this.state;
+  if (s.colorSplitSaving) return;
+  var todo = this.colorSplitCandidates().filter(function (c) { return !c.dup && !s.colorSplitSkip[c.id]; });
+  if (!todo.length) return;
+  var self = this;
+  this.setState({ colorSplitSaving: true });
+  var updated = [];
+  var failed = [];
+  todo.reduce(function (chain, c) {
+    return chain.then(function () {
+      return apiRequest("/products/" + encodeURIComponent(c.id), { method: "PUT", auth: true, body: { name: c.name, color: c.color } })
+        .then(function (p) { updated.push(p); }, function (err) { failed.push(c.oldName + " (" + err.message + ")"); });
+    });
+  }, Promise.resolve()).then(function () {
+    self.setState(function (s2) {
+      var byId = {};
+      updated.forEach(function (p) { byId[p.id] = p; });
+      return {
+        products: s2.products.map(function (p) { return byId[p.id] || p; }),
+        colorSplitSaving: false,
+        colorSplitOpen: failed.length > 0,
+      };
+    });
+    if (failed.length) self.setState({ importMsg: "แยกสีไม่สำเร็จ " + failed.length + " รายการ", importErrors: failed, importMsgType: "error" });
+    if (updated.length) self.showToast("แยกสีออกจากชื่อแล้ว " + updated.length + " รายการ");
   });
 };
 
@@ -3392,6 +3470,7 @@ Dashboard.prototype.renderPricePage = function () {
       '</div>' +
     '</div>';
 
+  var colorSplitList = isAdmin ? this.colorSplitCandidates() : [];
   var adminActionsRow = "";
   if (isAdmin) {
     adminActionsRow =
@@ -3401,6 +3480,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<button type="button" class="toolbar-btn" data-action="open-download-modal">⬇️ <span>ดาวน์โหลด</span></button>' +
         '<button type="button" class="toolbar-btn" data-action="toggle-manage-categories">' + (s.showManageCategories ? "✕ <span>ปิดหมวดหมู่</span>" : "🏷️ <span>จัดการหมวดหมู่</span>") + '</button>' +
         (!s.selectMode ? '<button type="button" class="toolbar-btn" data-action="toggle-select-mode">☑️ <span>เลือกหลายรายการ</span></button>' : '') +
+        (colorSplitList.length || s.colorSplitOpen ? '<button type="button" class="toolbar-btn" data-action="toggle-color-split">' + (s.colorSplitOpen ? "✕ <span>ปิดแยกสี</span>" : "🎨 <span>แยกสีจากชื่อ (" + colorSplitList.length + ")</span>") + '</button>' : '') +
         '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center; margin-left:auto; padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' +
       '</div>';
   }
@@ -3409,6 +3489,32 @@ Dashboard.prototype.renderPricePage = function () {
     '<div id="products-table-top" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:22px;">' +
       filterRow + adminActionsRow +
     '</div>';
+
+  var colorSplitPanel = "";
+  if (isAdmin && s.colorSplitOpen) {
+    var splitCount = colorSplitList.filter(function (c) { return !c.dup && !s.colorSplitSkip[c.id]; }).length;
+    colorSplitPanel = '<div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px;">' +
+      '<div style="font-size:14px; font-weight:700; margin-bottom:4px;">แยกสีออกจากชื่อสินค้า · ' + esc(this.catLabel(s.category)) + '</div>' +
+      '<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">ย้ายคำว่า "สี…" ในชื่อไปไว้ในช่องสี สีที่ราคาเท่ากันจะรวมเป็นแถวเดียว เอาเครื่องหมายถูกออกเพื่อข้ามรายการนั้น</div>' +
+      (colorSplitList.length ?
+        '<div style="display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin-bottom:12px;">' +
+          colorSplitList.map(function (c) {
+            var on = !c.dup && !s.colorSplitSkip[c.id];
+            return '<label style="display:flex; align-items:flex-start; gap:10px; padding:7px 4px; border-bottom:1px solid var(--border-light); font-size:13px; cursor:' + (c.dup ? "default" : "pointer") + ';' + (c.dup ? " opacity:.6;" : "") + '">' +
+              '<input type="checkbox" data-action="toggle-color-split-item" data-id="' + esc(c.id) + '"' + (on ? " checked" : "") + (c.dup ? " disabled" : "") + ' style="width:16px; height:16px; margin:2px 0 0; flex:none;" />' +
+              '<div style="min-width:0;">' +
+                '<div style="color:var(--text-faint); text-decoration:line-through; overflow-wrap:anywhere;">' + esc(c.oldName) + '</div>' +
+                '<div style="overflow-wrap:anywhere;">' + esc(c.name) + ' <span style="display:inline-block; font-size:11.5px; padding:1px 7px; border-radius:6px; background:var(--bg-subtle); color:var(--text-body); font-weight:600;">สี: ' + esc(c.color) + '</span>' +
+                  (c.dup ? ' <span style="font-size:11.5px; color:oklch(0.45 0.1 80);">มีชื่อ+สีนี้อยู่แล้ว ข้าม</span>' : '') +
+                '</div>' +
+              '</div>' +
+            '</label>';
+          }).join("") +
+        '</div>' +
+        '<button type="button" data-action="save-color-split"' + (splitCount && !s.colorSplitSaving ? "" : " disabled") + ' style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:none; border-radius:8px; background:' + (splitCount && !s.colorSplitSaving ? "var(--navy-action)" : "oklch(0.85 0.01 60)") + '; color:#fff; font-size:13px; font-weight:700; cursor:' + (splitCount && !s.colorSplitSaving ? "pointer" : "not-allowed") + '; font-family:inherit;">' + (s.colorSplitSaving ? "กำลังบันทึก…" : "แยกสี " + splitCount + " รายการ") + '</button>'
+      : '<div style="font-size:13px; color:var(--text-muted);">ไม่มีสินค้าที่มีสีอยู่ในชื่อแล้ว</div>') +
+    '</div>';
+  }
 
   var bulkBar = "";
   if (isAdmin && s.selectMode) {
@@ -3846,7 +3952,7 @@ Dashboard.prototype.renderPricePage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
-    productsErrorBanner + importBanner + controls + bulkBar + manageCategoriesPanel + addForm + resultCount + body + paginationBar +
+    productsErrorBanner + importBanner + controls + colorSplitPanel + bulkBar + manageCategoriesPanel + addForm + resultCount + body + paginationBar +
   '</div>';
 };
 
