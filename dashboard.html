@@ -2139,12 +2139,32 @@ function parseColorList(str) {
 // the group. Siblings come from the full product list (same productGroupKey),
 // not the on-screen rows, so a search that hides some colors can't let a
 // duplicate through.
+// inline = the source's สี field is empty, its color is still a "สีXXX" word
+// in the name and it isn't grouped with anything yet: saving first moves
+// that color into the field (base/label are the split name/color) so the
+// source and the new colors share a name and group together.
 Dashboard.prototype.addColorContext = function () {
   var s = this.state;
   var products = this.getMergedProducts();
   var source = products.find(function (p) { return p.id === s.addColorSourceId; });
   if (!source) return null;
   var key = productGroupKey(source);
+  var split = String(source.color || "").trim() ? null : splitInlineColor(source.name);
+  if (split && !(key && products.some(function (p) { return p.id !== source.id && productGroupKey(p) === key; }))) {
+    // dup = a product in the category already has this name + color, at any
+    // price, counting colors still inline in a name (incl. the source's own)
+    var taken = {};
+    products.forEach(function (p) {
+      if (p.cat !== source.cat) return;
+      var pc = String(p.color || "").trim();
+      var parts = pc ? { name: p.name, color: pc } : splitInlineColor(p.name);
+      if (parts) taken[(parts.name + "\u0001" + parts.color).toLowerCase()] = true;
+    });
+    var inlineColors = parseColorList(s.addColorInput).map(function (c) {
+      return { color: c, dup: !!taken[(split.name + "\u0001" + c).toLowerCase()] };
+    });
+    return { source: source, base: split.name, label: split.color, inline: true, colors: inlineColors };
+  }
   var existing = {};
   products.forEach(function (p) {
     if (p.id === source.id || (key && productGroupKey(p) === key)) existing[productColorParts(p).label.toLowerCase()] = true;
@@ -2159,6 +2179,8 @@ Dashboard.prototype.addColorContext = function () {
 // prices/unit/VAT from the source so it lands in the same color group
 // (note and image start empty). Duplicates were already flagged in the form
 // and are skipped here; the group is left expanded so the new colors show.
+// In inline mode the source's color is moved out of its name first; if that
+// fails nothing is created.
 Dashboard.prototype.saveAddColors = function () {
   var ctx = this.addColorContext();
   if (!ctx || this.state.addColorSaving) return;
@@ -2173,39 +2195,49 @@ Dashboard.prototype.saveAddColors = function () {
   this.setState({ addColorSaving: true, addColorError: "" });
   var created = [];
   var failed = [];
-  fresh.reduce(function (chain, color) {
-    return chain.then(function () {
-      var body = {
-        cat: src.cat, subcat: src.subcat || "", name: ctx.base, sku: "", color: color,
-        price: src.price, oldPrice: src.oldPrice == null ? null : src.oldPrice,
-        price2: src.price2 == null ? null : src.price2, price3: src.price3 == null ? null : src.price3,
-        unit: src.unit, stock: 0, vat: src.vat || "vat", image: "", note: "",
-      };
-      return apiRequest("/products", { method: "POST", auth: true, body: body })
-        .then(function (p) { created.push(p); }, function (err) { failed.push(color + " (" + err.message + ")"); });
-    });
-  }, Promise.resolve()).then(function () {
-    self.setState(function (s2) {
-      var products = s2.products.concat(created);
-      var key = productGroupKey(src);
-      var ids = products.filter(function (p) { return productGroupKey(p) === key; }).map(function (p) { return p.id; }).sort();
-      var expanded = Object.assign({}, s2.expandedProductGroups);
-      if (ids.length > 1) expanded["g:" + ids[0]] = true;
-      var patch = { products: products, expandedProductGroups: expanded, addColorSaving: false };
-      if (failed.length) {
-        patch.addColorError = "บันทึกไม่สำเร็จ " + failed.length + " สี: " + failed.join(", ");
-        // keep only the colors that still need saving in the box
-        patch.addColorInput = fresh.filter(function (c) { return !created.some(function (p) { return p.color === c; }); }).join(", ");
-      } else {
-        patch.addColorSourceId = null;
-        patch.addColorInput = "";
-        patch.addColorError = "";
+  var moveSource = !ctx.inline ? Promise.resolve() :
+    apiRequest("/products/" + encodeURIComponent(src.id), { method: "PUT", auth: true, body: { name: ctx.base, color: ctx.label } })
+      .then(function (p) {
+        src = p;
+        self.setState(function (s2) { return { products: s2.products.map(function (x) { return x.id === p.id ? p : x; }) }; });
+      });
+  moveSource.then(function () {
+    return fresh.reduce(function (chain, color) {
+      return chain.then(function () {
+        var body = {
+          cat: src.cat, subcat: src.subcat || "", name: ctx.base, sku: "", color: color,
+          price: src.price, oldPrice: src.oldPrice == null ? null : src.oldPrice,
+          price2: src.price2 == null ? null : src.price2, price3: src.price3 == null ? null : src.price3,
+          unit: src.unit, stock: 0, vat: src.vat || "vat", image: "", note: "",
+        };
+        return apiRequest("/products", { method: "POST", auth: true, body: body })
+          .then(function (p) { created.push(p); }, function (err) { failed.push(color + " (" + err.message + ")"); });
+      });
+    }, Promise.resolve()).then(function () {
+      self.setState(function (s2) {
+        var products = s2.products.concat(created);
+        var key = productGroupKey(src);
+        var ids = products.filter(function (p) { return productGroupKey(p) === key; }).map(function (p) { return p.id; }).sort();
+        var expanded = Object.assign({}, s2.expandedProductGroups);
+        if (ids.length > 1) expanded["g:" + ids[0]] = true;
+        var patch = { products: products, expandedProductGroups: expanded, addColorSaving: false };
+        if (failed.length) {
+          patch.addColorError = "บันทึกไม่สำเร็จ " + failed.length + " สี: " + failed.join(", ");
+          // keep only the colors that still need saving in the box
+          patch.addColorInput = fresh.filter(function (c) { return !created.some(function (p) { return p.color === c; }); }).join(", ");
+        } else {
+          patch.addColorSourceId = null;
+          patch.addColorInput = "";
+          patch.addColorError = "";
+        }
+        return patch;
+      });
+      if (created.length) {
+        self.showToast("เพิ่ม " + created.length + " สีแล้ว" + (dups.length ? " · ข้ามสีที่ซ้ำ: " + dups.join(", ") : ""), dups.length ? "warn" : "success");
       }
-      return patch;
     });
-    if (created.length) {
-      self.showToast("เพิ่ม " + created.length + " สีแล้ว" + (dups.length ? " · ข้ามสีที่ซ้ำ: " + dups.join(", ") : ""), dups.length ? "warn" : "success");
-    }
+  }, function (err) {
+    self.setState({ addColorSaving: false, addColorError: "ย้ายสีเดิมออกจากชื่อไม่สำเร็จ ยังไม่ได้เพิ่มสีใหม่: " + err.message });
   });
 };
 
@@ -3688,7 +3720,7 @@ Dashboard.prototype.renderPricePage = function () {
             '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(p.name) + '</div>' +
             productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
-            (p.color && !p.colorLabel ? addColorHtml(p, true) : '') +
+            (hasAddColor(p) && !p.colorLabel ? addColorHtml(p, true) : '') +
           '</div>' +
           (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
@@ -3719,6 +3751,12 @@ Dashboard.prototype.renderPricePage = function () {
   // read-only: changing any of them would drop the new color out of the group.
   // The width cap keeps the panel inside the screen on phones, where list
   // rows are 620px wide and scroll sideways.
+  // Single products get "+ เพิ่มสี" when they have a color, in the สี field
+  // or still inline in the name ("สีXXX").
+  function hasAddColor(p) {
+    return !!(p.color || splitInlineColor(p.name));
+  }
+
   function addColorHtml(source, compact) {
     if (!isAdmin) return "";
     if (s.addColorSourceId !== source.id) {
@@ -3731,11 +3769,12 @@ Dashboard.prototype.renderPricePage = function () {
       .map(function (r) { return r[0] + " ฿" + fmt(r[1]); }).join(" · ");
     var info = [
       ["ชื่อ", ctx.base],
+    ].concat(ctx.inline ? [["สีเดิม", ctx.label]] : []).concat([
       ["หมวด", self.catLabel(src.cat) + (src.subcat ? " › " + src.subcat : "")],
       ["ราคา", prices],
       ["หน่วย", src.unit],
       ["ภาษี", src.vat === "novat" ? "NO VAT" : "VAT"],
-    ];
+    ]);
     var freshCount = ctx.colors.filter(function (c) { return !c.dup; }).length;
     var chips = ctx.colors.map(function (c) {
       return c.dup
@@ -3747,7 +3786,9 @@ Dashboard.prototype.renderPricePage = function () {
       '<div style="display:grid; grid-template-columns:auto 1fr; gap:2px 10px; font-size:12px; color:var(--text-muted);">' +
         info.map(function (r) { return '<span>' + r[0] + '</span><span style="color:var(--text-body); min-width:0; overflow-wrap:anywhere;">' + esc(r[1]) + '</span>'; }).join("") +
       '</div>' +
-      '<div style="font-size:11.5px; color:var(--text-faint);">คัดลอกจากสินค้าในกลุ่ม · หมายเหตุและรูปจะว่างไว้</div>' +
+      '<div style="font-size:11.5px; color:var(--text-faint);">' + (ctx.inline
+        ? 'เมื่อบันทึก รายการเดิมจะใช้ชื่อด้านบน และย้ายสี "' + esc(ctx.label) + '" จากชื่อไปไว้ในช่องสี เพื่อรวมกลุ่มกับสีใหม่ · สีใหม่คัดลอกหมวด/ราคา/หน่วย/ภาษีจากรายการนี้ หมายเหตุและรูปจะว่างไว้'
+        : 'คัดลอกจากสินค้าในกลุ่ม · หมายเหตุและรูปจะว่างไว้') + '</div>' +
       '<label style="display:flex; flex-direction:column; gap:4px; font-size:12.5px; font-weight:600; color:var(--text-body);">สี (กรอกหลายสีคั่นด้วยจุลภาค)' +
         '<input id="field-addColorInput" type="text" data-bind="addColorInput" data-clear="addColorError" value="' + esc(s.addColorInput) + '" placeholder="เช่น แดง, เขียว, น้ำเงิน" style="padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:13px; font-family:inherit; font-weight:400;" />' +
       '</label>' +
@@ -3807,7 +3848,7 @@ Dashboard.prototype.renderPricePage = function () {
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
             productColorLineHtml(p.color) +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
-            (p.color && !p.isEditing && s.addColorSourceId !== p.id ? addColorHtml(p, true) : '') +
+            (hasAddColor(p) && !p.isEditing && s.addColorSourceId !== p.id ? addColorHtml(p, true) : '') +
           '</div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span></div>' +
@@ -3816,7 +3857,7 @@ Dashboard.prototype.renderPricePage = function () {
         ) + '</div>' +
         '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
-        (p.color && s.addColorSourceId === p.id ? addColorHtml(p, false) : '') +
+        (hasAddColor(p) && s.addColorSourceId === p.id ? addColorHtml(p, false) : '') +
       '</div>';
   }
 
