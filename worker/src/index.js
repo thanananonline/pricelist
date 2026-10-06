@@ -236,7 +236,7 @@ async function loadFolders(env, kind) {
     filesByFolder[f.folder_id].push({ id: f.id, name: f.name, sizeLabel: f.size_label });
   });
   return foldersRes.results.map(function (f) {
-    return { id: f.id, name: f.name, files: filesByFolder[f.id] || [] };
+    return { id: f.id, name: f.name, parentId: f.parent_id || null, files: filesByFolder[f.id] || [] };
   });
 }
 
@@ -806,9 +806,15 @@ export default {
       const kind = String(body.kind || "");
       const name = String(body.name || "").trim();
       if (!kind || !name) return json({ error: "kind and name are required" }, 400);
+      const parentId = body.parentId ? String(body.parentId) : null;
+      if (parentId) {
+        const parent = await env.DB.prepare("SELECT kind FROM folders WHERE id = ?").bind(parentId).first();
+        if (!parent) return json({ error: "parent folder not found" }, 404);
+        if (parent.kind !== kind) return json({ error: "parent folder kind mismatch" }, 400);
+      }
       const id = genId();
-      await env.DB.prepare("INSERT INTO folders (id, kind, name) VALUES (?,?,?)").bind(id, kind, name).run();
-      return json({ id: id, name: name, files: [] }, 201);
+      await env.DB.prepare("INSERT INTO folders (id, kind, name, parent_id) VALUES (?,?,?,?)").bind(id, kind, name, parentId).run();
+      return json({ id: id, name: name, parentId: parentId, files: [] }, 201);
     }
 
     const folderIdMatch = path.match(/^\/folders\/([^/]+)$/);
@@ -827,13 +833,23 @@ export default {
     if (folderIdMatch && method === "DELETE") {
       if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
       const id = decodeURIComponent(folderIdMatch[1]);
-      const filesRes = await env.DB.prepare("SELECT * FROM files WHERE folder_id = ?").bind(id).all();
-      for (const f of filesRes.results) {
-        await env.FILES.delete(f.r2_key);
+      const folder = await env.DB.prepare("SELECT id FROM folders WHERE id = ?").bind(id).first();
+      if (!folder) return json({ error: "not found" }, 404);
+      // Collect the folder plus every subfolder nested under it (any depth).
+      const treeRes = await env.DB.prepare(
+        "WITH RECURSIVE tree(id) AS (SELECT ? UNION SELECT f.id FROM folders f JOIN tree t ON f.parent_id = t.id) SELECT id FROM tree"
+      ).bind(id).all();
+      const ids = treeRes.results.map(function (r) { return r.id; });
+      for (const folderId of ids) {
+        const filesRes = await env.DB.prepare("SELECT r2_key FROM files WHERE folder_id = ?").bind(folderId).all();
+        for (const f of filesRes.results) {
+          await env.FILES.delete(f.r2_key);
+        }
+        await env.DB.prepare("DELETE FROM files WHERE folder_id = ?").bind(folderId).run();
       }
-      await env.DB.prepare("DELETE FROM files WHERE folder_id = ?").bind(id).run();
-      const res = await env.DB.prepare("DELETE FROM folders WHERE id = ?").bind(id).run();
-      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
+      for (const folderId of ids) {
+        await env.DB.prepare("DELETE FROM folders WHERE id = ?").bind(folderId).run();
+      }
       return json({ ok: true });
     }
 

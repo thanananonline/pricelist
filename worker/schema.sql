@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS folders (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,
-  name TEXT NOT NULL
+  name TEXT NOT NULL,
+  parent_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS files (
