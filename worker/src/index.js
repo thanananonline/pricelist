@@ -823,11 +823,30 @@ export default {
       const id = decodeURIComponent(folderIdMatch[1]);
       let body;
       try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const hasName = Object.prototype.hasOwnProperty.call(body, "name");
+      const hasParent = Object.prototype.hasOwnProperty.call(body, "parentId");
+      if (!hasName && !hasParent) return json({ error: "name or parentId is required" }, 400);
       const name = String(body.name || "").trim();
-      if (!name) return json({ error: "name is required" }, 400);
-      const res = await env.DB.prepare("UPDATE folders SET name = ? WHERE id = ?").bind(name, id).run();
-      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
-      return json({ id: id, name: name });
+      if (hasName && !name) return json({ error: "name is required" }, 400);
+      const folder = await env.DB.prepare("SELECT id, kind, name, parent_id FROM folders WHERE id = ?").bind(id).first();
+      if (!folder) return json({ error: "not found" }, 404);
+      let parentId = folder.parent_id || null;
+      if (hasParent) {
+        parentId = body.parentId ? String(body.parentId) : null;
+        if (parentId) {
+          const parent = await env.DB.prepare("SELECT kind FROM folders WHERE id = ?").bind(parentId).first();
+          if (!parent) return json({ error: "parent folder not found" }, 404);
+          if (parent.kind !== folder.kind) return json({ error: "parent folder kind mismatch" }, 400);
+          // Refuse to move a folder into itself or anywhere inside its own subtree.
+          const loop = await env.DB.prepare(
+            "WITH RECURSIVE tree(id) AS (SELECT ? UNION SELECT f.id FROM folders f JOIN tree t ON f.parent_id = t.id) SELECT id FROM tree WHERE id = ?"
+          ).bind(id, parentId).first();
+          if (loop) return json({ error: "cannot move a folder into itself or its subfolder" }, 400);
+        }
+      }
+      const newName = hasName ? name : folder.name;
+      await env.DB.prepare("UPDATE folders SET name = ?, parent_id = ? WHERE id = ?").bind(newName, parentId, id).run();
+      return json({ id: id, name: newName, parentId: parentId });
     }
 
     if (folderIdMatch && method === "DELETE") {

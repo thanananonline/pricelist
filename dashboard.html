@@ -681,6 +681,7 @@ function Dashboard(root) {
     groupDeleteConfirm: null,
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
+    folderMove: null,
     editingFolderId: null,
     editFolderKind: "",
     editFolderName: "",
@@ -1673,6 +1674,16 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-remove-folder": this.setState({ folderDeleteConfirm: null }); break;
     case "confirm-remove-folder": this.setState({ folderDeleteConfirm: null }); this.removeFolder(d.kind, d.id); break;
     case "start-edit-folder": this.startEditFolder(d.kind, d.id, d.name || ""); break;
+    case "request-move-folder": this.setState({ folderMove: { kind: d.kind, id: d.id, name: d.name || "", targetId: null, saving: false, error: "" } }); break;
+    case "select-move-target":
+      var mvTarget = d.target || "";
+      this.setState(function (s2) {
+        if (!s2.folderMove || s2.folderMove.saving) return {};
+        return { folderMove: Object.assign({}, s2.folderMove, { targetId: mvTarget, error: "" }) };
+      });
+      break;
+    case "cancel-move-folder": if (this.state.folderMove && !this.state.folderMove.saving) this.setState({ folderMove: null }); break;
+    case "confirm-move-folder": this.moveFolder(); break;
     case "cancel-edit-folder": this.cancelEditFolder(); break;
     case "save-edit-folder": this.saveEditFolder(d.kind, d.id); break;
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
@@ -2871,6 +2882,35 @@ Dashboard.prototype.removeFolder = function (kind, id) {
     });
 };
 
+Dashboard.prototype.moveFolder = function () {
+  var mv = this.state.folderMove;
+  if (!mv || mv.saving || mv.targetId === null) return;
+  var k = this._folderKeys(mv.kind);
+  var self = this;
+  var parentId = mv.targetId || null;
+  var target = parentId ? this.state[k.stateKey].find(function (f) { return f.id === parentId; }) : null;
+  var targetName = target ? target.name : "ชั้นบนสุด";
+  this.setState({ folderMove: Object.assign({}, mv, { saving: true, error: "" }) });
+  apiRequest("/folders/" + encodeURIComponent(mv.id), { method: "PUT", auth: true, body: { parentId: parentId } })
+    .then(function (updated) {
+      self.setState(function (s) {
+        var patch = {};
+        patch[k.stateKey] = s[k.stateKey].map(function (f) {
+          return f.id === mv.id ? Object.assign({}, f, { parentId: updated.parentId || null }) : f;
+        });
+        patch.folderMove = null;
+        return patch;
+      });
+      self.showToast('ย้าย "' + mv.name + '" ไปไว้ใน "' + targetName + '" แล้ว');
+    })
+    .catch(function (err) {
+      self.setState(function (s) {
+        if (!s.folderMove || s.folderMove.id !== mv.id) return {};
+        return { folderMove: Object.assign({}, s.folderMove, { saving: false, error: "ย้ายโฟลเดอร์ไม่สำเร็จ: " + err.message }) };
+      });
+    });
+};
+
 Dashboard.prototype.startEditFolder = function (kind, id, name) {
   this.setState({ editingFolderId: id, editFolderKind: kind, editFolderName: name, folderEditError: "" });
 };
@@ -3362,6 +3402,57 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   '</div>';
 };
 
+Dashboard.prototype.renderMoveFolderModal = function () {
+  var s = this.state;
+  var mv = s.folderMove;
+  if (!mv) return "";
+  var k = this._folderKeys(mv.kind);
+  var folders = (k && s[k.stateKey]) || [];
+  var moving = folders.find(function (f) { return f.id === mv.id; });
+  var currentParent = (moving && moving.parentId) || "";
+  var excluded = folderSubtreeIds(folders, mv.id);
+
+  var option = function (targetId, label, depth) {
+    var isCurrent = targetId === currentParent;
+    var isSelected = !isCurrent && mv.targetId === targetId;
+    var style = 'display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; min-height:44px; padding:10px 12px 10px ' + (12 + depth * 20) + 'px; border:none; border-radius:8px; text-align:left; font-size:13.5px; font-family:inherit; ' +
+      (isCurrent ? 'background:transparent; color:var(--text-faint); cursor:default;' :
+        isSelected ? 'background:var(--navy-action); color:#fff; font-weight:700; cursor:pointer;' :
+        'background:transparent; color:var(--text-body); cursor:pointer;');
+    var inner = '<span style="flex:1; min-width:0; overflow-wrap:break-word; word-break:break-word;">' + label + '</span>' +
+      (isCurrent ? '<span style="flex:none; font-size:11.5px;">อยู่ที่นี่แล้ว</span>' : '');
+    if (isCurrent) return '<div style="' + style + '">' + inner + '</div>';
+    return '<button type="button" data-action="select-move-target" data-target="' + esc(targetId) + '"' + (mv.saving ? ' disabled' : '') + ' style="' + style + '">' + inner + '</button>';
+  };
+
+  var rows = [option("", "📂 ชั้นบนสุด", 0)];
+  var walk = function (parentId, depth) {
+    folderChildren(folders, parentId).forEach(function (f) {
+      if (excluded.indexOf(f.id) !== -1) return;
+      rows.push(option(f.id, "📁 " + esc(f.name), depth));
+      walk(f.id, depth + 1);
+    });
+  };
+  walk(null, 1);
+
+  var canConfirm = mv.targetId !== null && !mv.saving;
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:24px 22px; max-width:440px; width:100%; max-height:calc(100vh - 40px); box-sizing:border-box; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:14px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">📁</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">ย้ายโฟลเดอร์ "' + esc(mv.name) + '"</div>' +
+      '</div>' +
+      '<div style="font-size:13px; color:var(--text-muted);">เลือกโฟลเดอร์ปลายทาง</div>' +
+      '<div style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
+      (mv.error ? '<div style="font-size:13px; color:var(--danger-red); background:var(--danger-red-bg); padding:8px 12px; border-radius:8px;">' + esc(mv.error) + '</div>' : '') +
+      '<div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">' +
+        '<button data-action="cancel-move-folder"' + (mv.saving ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:' + (mv.saving ? 'default' : 'pointer') + '; font-family:inherit;">ยกเลิก</button>' +
+        '<button data-action="confirm-move-folder"' + (canConfirm ? '' : ' disabled') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:14px; font-weight:700; font-family:inherit; cursor:' + (canConfirm ? 'pointer' : 'default') + '; opacity:' + (canConfirm ? '1' : '.5') + ';">' + (mv.saving ? 'กำลังย้าย...' : 'ย้ายมาที่นี่') + '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderChangePasswordModal = function () {
   var s = this.state;
   var t = s.passwordChangeTarget;
@@ -3498,7 +3589,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImportSubcatConfirmModal() + this.renderImagePreviewModal() + this.renderToast() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderMoveFolderModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImportSubcatConfirmModal() + this.renderImagePreviewModal() + this.renderToast() +
     '</div>'
   );
 };
@@ -4240,6 +4331,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         })() + '</div>' +
         (isAdmin ? '<div style="position:absolute; top:4px; right:4px; display:flex;">' +
           '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12.5px; font-family:inherit;">แก้ไข</button>' +
+          '<button data-action="request-move-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12.5px; font-family:inherit;">ย้าย</button>' +
           '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--danger-red); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' +
         '</div>' : '') +
       '</div>';
@@ -4372,7 +4464,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       '<div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:var(--text-muted);">' + (active.parentId ?
         esc(folderPath(folders, active.id).map(function (f) { return f.name; }).join(" › ")) :
         'ไฟล์ PDF ในโฟลเดอร์นี้') + '</div></div>' +
-      (isAdmin ? '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
+      (isAdmin ? '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
+        '<button data-action="request-move-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">ย้าย</button>' : '') +
     '</div>';
   }
 
