@@ -27,6 +27,9 @@
     --danger-red: oklch(0.5 0.15 30);
     --danger-red-bg: oklch(0.94 0.03 30);
 
+    /* Success green (toast สำเร็จ / ป้าย "+1" ตอนย้ายไฟล์เข้าโฟลเดอร์) */
+    --success-green: oklch(0.45 0.14 150);
+
     /* กลาง: ข้อความ / เส้นขอบ / พื้นหลัง */
     --text-strong: oklch(0.24 0.01 60);
     --text-body: oklch(0.4 0.01 60);
@@ -53,9 +56,42 @@
   /* Drag a PDF onto a subfolder card to move it there (admin only). These
      classes are toggled straight on the DOM while dragging - never via
      setState, since a re-render would destroy the dragged element. */
-  .folder-card.drop-target { border-color: var(--navy-action) !important; background: var(--navy-action-soft) !important; box-shadow: 0 0 0 3px var(--navy-action-soft), 0 6px 18px rgba(0,0,0,.08); }
-  .dragging-file { opacity: .4; }
-  [draggable="true"][data-file-id] { cursor: grab; }
+  .folder-card { transition: transform .2s ease, box-shadow .2s ease; }
+  [draggable="true"][data-file-id] { cursor: grab; transition: opacity .2s ease, transform .2s ease; }
+  .dragging-file { opacity: .4; transform: scale(.98); }
+  /* dropped, waiting on the API: fade + lift away, not clickable */
+  .file-moving { opacity: 0 !important; transform: translateY(-10px) !important; pointer-events: none; }
+  /* while one of our files is being dragged (class on the dashboard root):
+     every droppable card gets a dashed navy border and a slow pulse, and
+     its แก้ไข/ย้าย/ลบ buttons step aside */
+  .file-dragging .folder-card { border-style: dashed !important; border-color: var(--navy-action) !important; animation: folder-pulse 1.6s ease-in-out infinite; }
+  .file-dragging .folder-card .folder-card-actions { opacity: 0; pointer-events: none; }
+  .folder-card-actions { transition: opacity .15s ease; }
+  .folder-card.drop-target { border-style: solid !important; border-color: var(--navy-action) !important; background: var(--navy-action-soft) !important; box-shadow: 0 0 0 3px var(--navy-action-soft), 0 6px 18px rgba(0,0,0,.08); }
+  .file-dragging .folder-card.drop-target { animation: none; transform: scale(1.05); }
+  /* 📁 → 📂 and "N ไฟล์" → "ปล่อยเพื่อย้ายมาที่นี่" while hovered */
+  .folder-card .folder-icon-open, .folder-card .folder-drop-hint { display: none; }
+  .folder-card.drop-target .folder-icon-closed, .folder-card.drop-target .folder-count { display: none; }
+  .folder-card.drop-target .folder-icon-open { display: inline-block; animation: folder-icon-pop .3s ease-out forwards; }
+  .folder-card.drop-target .folder-drop-hint { display: block; font-weight: 600; color: var(--navy-action) !important; }
+  /* after a successful move: the target card bounces and a green "+1"
+     floats off its file count; after a failed drop it shakes once */
+  .folder-card.drop-success { animation: folder-drop-bounce .35s ease-out; }
+  .folder-card.drop-failed { animation: folder-drop-shake .4s ease-in-out; }
+  .folder-plus-one { display: inline-block; margin-left: 6px; font-weight: 700; color: var(--success-green); animation: folder-plus-one .7s ease-out forwards; }
+  @keyframes folder-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+  @keyframes folder-icon-pop { 0% { transform: translateY(0); } 60% { transform: translateY(-6px); } 100% { transform: translateY(-2px); } }
+  @keyframes folder-drop-bounce { 0% { transform: scale(1); } 45% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  @keyframes folder-drop-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @keyframes folder-plus-one { 0% { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-18px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .folder-card, [draggable="true"][data-file-id], .folder-card-actions { transition: none; }
+    .dragging-file { transform: none; }
+    .file-moving { transform: none !important; }
+    .file-dragging .folder-card, .file-dragging .folder-card.drop-target,
+    .folder-card.drop-target .folder-icon-open, .folder-card.drop-success, .folder-card.drop-failed { animation: none; transform: none; }
+    .folder-plus-one { display: none; }
+  }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
   /* icon-only แก้ไข/ลบ ในแถวตารางสินค้า: พื้นโปร่งใส เส้นขอบบาง, ปุ่มลบ
@@ -831,6 +867,7 @@ function Dashboard(root) {
   root.addEventListener("change", function (e) { self.handleChange(e); });
   root.addEventListener("keydown", function (e) { self.handleFieldNavKeyDown(e); });
   root.addEventListener("dragstart", function (e) { self.handleFileDragStart(e); });
+  root.addEventListener("dragenter", function (e) { self.handleFileDragOver(e); });
   root.addEventListener("dragover", function (e) { self.handleFileDragOver(e); });
   root.addEventListener("dragleave", function (e) { self.handleFileDragLeave(e); });
   root.addEventListener("drop", function (e) { self.handleFileDrop(e); });
@@ -3030,7 +3067,10 @@ Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId)
         }
         return patch;
       });
-      if (fileName) self.showToast('ย้าย "' + fileName + '" ไปไว้ใน "' + targetName + '" แล้ว');
+      if (fileName) {
+        self.showToast('ย้าย "' + fileName + '" ไปไว้ใน "' + targetName + '" แล้ว');
+        self._playFolderCardEffect(toFolderId, "drop-success");
+      }
     });
 };
 
@@ -3060,11 +3100,25 @@ Dashboard.prototype.confirmMoveFile = function () {
 
 Dashboard.prototype.handleFileDragStart = function (e) {
   var el = e.target.closest && e.target.closest('[draggable="true"][data-file-id]');
-  if (!el || !this.isAdmin()) return;
+  if (!el || !this.isAdmin() || el.classList.contains("file-moving")) return;
   this._dragFile = { kind: el.dataset.kind, fileId: el.dataset.fileId, folderId: el.dataset.folderId, el: el };
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData("text/plain", el.dataset.fileId); // Firefox won't start a drag without data
+  // A small "📕 name" chip follows the cursor instead of a snapshot of the
+  // whole row. It only has to exist for this dragstart, so it's built
+  // off-screen and thrown away right after.
+  if (e.dataTransfer.setDragImage) {
+    var chip = document.createElement("div");
+    chip.textContent = "📕 " + (el.dataset.name || "");
+    chip.style.cssText = "position:fixed; top:-1000px; left:-1000px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; " +
+      "padding:8px 14px; background:#fff; color:var(--text-strong); border:1px solid var(--border); border-radius:10px; " +
+      "box-shadow:0 8px 20px rgba(0,0,0,.18); font-family:'IBM Plex Sans Thai', sans-serif; font-size:13px; font-weight:600;";
+    document.body.appendChild(chip);
+    e.dataTransfer.setDragImage(chip, 16, 16);
+    setTimeout(function () { chip.remove(); }, 0);
+  }
   el.classList.add("dragging-file");
+  this.root.classList.add("file-dragging");
 };
 
 Dashboard.prototype._fileDropCard = function (e) {
@@ -3082,6 +3136,9 @@ Dashboard.prototype._setDropCard = function (card) {
   if (card) card.classList.add("drop-target");
 };
 
+// Bound to dragenter as well as dragover: an element whose dragenter isn't
+// accepted can leave the browser treating the spot as not droppable, so a
+// release right after crossing into a card's icon/text would drop nothing.
 Dashboard.prototype.handleFileDragOver = function (e) {
   // Leave anything that isn't our own file drag (e.g. files dragged in from
   // the desktop) to the browser's default handling.
@@ -3108,10 +3165,73 @@ Dashboard.prototype.handleFileDrop = function (e) {
   e.stopPropagation();
   var drag = this._dragFile;
   var toFolderId = card.dataset.id;
+  // Mark it moving before endFileDrag so a deferred render can't flash the
+  // row back in; _applyFileMoving keeps it hidden across any re-render
+  // until the API answers.
+  this._movingFileIds = this._movingFileIds || {};
+  this._movingFileIds[drag.fileId] = true;
   this.endFileDrag();
+  this._applyFileMoving();
   var self = this;
-  this.moveFile(drag.kind, drag.fileId, drag.folderId, toFolderId).catch(function (err) {
+  this.moveFile(drag.kind, drag.fileId, drag.folderId, toFolderId).then(function () {
+    delete self._movingFileIds[drag.fileId];
+  }, function (err) {
+    delete self._movingFileIds[drag.fileId];
+    self._applyFileMoving();
     self.showToast("ย้ายไฟล์ไม่สำเร็จ: " + err.message, "error");
+    self._playFolderCardEffect(toFolderId, "drop-failed");
+  });
+};
+
+// Re-hides rows whose drop is still waiting on the API (render() rebuilds
+// the DOM, so a class alone wouldn't survive), and un-hides the rest.
+Dashboard.prototype._applyFileMoving = function () {
+  var moving = this._movingFileIds || {};
+  var els = this.root.querySelectorAll('[draggable="true"][data-file-id]');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.toggle("file-moving", !!moving[els[i].dataset.fileId]);
+  }
+};
+
+// One-shot "drop-success" (bounce + green "+1") or "drop-failed" (shake) on
+// a folder card. Deferred to the next frame so it lands on the DOM left by
+// the last of the re-renders that follow a move (state, toast, modal close);
+// cleared on animationend so the next render doesn't replay it. The timer
+// is a fallback for when animations are off (reduced motion) and
+// animationend never fires.
+Dashboard.prototype._playFolderCardEffect = function (folderId, cls) {
+  var root = this.root;
+  requestAnimationFrame(function () {
+    var card = root.querySelector('.folder-card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(folderId) : folderId) + '"]');
+    if (!card) return;
+    var badge = null;
+    if (cls === "drop-success") {
+      var count = card.querySelector(".folder-count");
+      if (count) {
+        badge = document.createElement("span");
+        badge.className = "folder-plus-one";
+        badge.textContent = "+1";
+        count.appendChild(badge);
+      }
+    }
+    card.classList.remove("drop-success", "drop-failed");
+    void card.offsetWidth; // restart the animation if it's already playing
+    card.classList.add(cls);
+    var cardDone = false, badgeDone = !badge, timer;
+    var finish = function () {
+      if (!cardDone) card.classList.remove(cls);
+      if (!badgeDone) badge.remove();
+      cardDone = badgeDone = true;
+      card.removeEventListener("animationend", onEnd);
+      clearTimeout(timer);
+    };
+    var onEnd = function (e) {
+      if (e.target === card && !cardDone) { cardDone = true; card.classList.remove(cls); }
+      else if (badge && e.target === badge && !badgeDone) { badgeDone = true; badge.remove(); }
+      if (cardDone && badgeDone) finish();
+    };
+    card.addEventListener("animationend", onEnd);
+    timer = setTimeout(finish, 1000);
   });
 };
 
@@ -3121,6 +3241,7 @@ Dashboard.prototype.endFileDrag = function () {
   if (!drag) return;
   this._setDropCard(null);
   if (drag.el) drag.el.classList.remove("dragging-file");
+  this.root.classList.remove("file-dragging");
   this._dragFile = null;
   if (this._renderDeferred) {
     this._renderDeferred = false;
@@ -3356,6 +3477,7 @@ Dashboard.prototype.render = function () {
   var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
 
   this.root.innerHTML = this.state.checkingSession ? this.renderSessionCheck() : (this.state.loggedIn ? this.renderDashboard() : this.renderLogin());
+  this._applyFileMoving();
 
   if (focusId) {
     var el = document.getElementById(focusId);
@@ -3673,7 +3795,7 @@ Dashboard.prototype.renderImagePreviewModal = function () {
 Dashboard.prototype.renderToast = function () {
   var t = this.state.toast;
   if (!t) return "";
-  var bg = t.type === "error" ? "var(--danger-red)" : t.type === "warn" ? "oklch(0.5 0.12 70)" : "oklch(0.45 0.14 150)";
+  var bg = t.type === "error" ? "var(--danger-red)" : t.type === "warn" ? "oklch(0.5 0.12 70)" : "var(--success-green)";
   var icon = t.type === "error" || t.type === "warn" ? "⚠️" : "✅";
   return '<div style="position:fixed; top:50%; left:50%; z-index:1200; background:' + bg + '; color:#fff; padding:16px 26px; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; max-width:360px; animation:toast-in .25s ease forwards;">' +
     '<span style="font-size:18px;">' + icon + '</span>' +
@@ -4476,13 +4598,14 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
         '</div>';
       }
       return '<div class="folder-card" data-action="open-folder" data-kind="' + kind + '" data-id="' + f.id + '" style="position:relative; background:#fff; border:1px solid var(--border); border-radius:14px; padding:20px; cursor:pointer; display:flex; flex-direction:column; gap:8px;">' +
-        '<div style="font-size:30px;">📁</div>' +
+        '<div style="font-size:30px;"><span class="folder-icon-closed">📁</span><span class="folder-icon-open">📂</span></div>' +
         '<div style="font-weight:700; font-size:14.5px;">' + esc(f.name) + '</div>' +
-        '<div style="font-size:12px; color:var(--text-faint);">' + (function () {
+        '<div class="folder-count" style="font-size:12px; color:var(--text-faint);">' + (function () {
           var subCount = folderChildren(folders, f.id).length;
           return (subCount ? subCount + ' โฟลเดอร์ · ' : '') + f.files.length + ' ไฟล์';
         })() + '</div>' +
-        (isAdmin ? '<div style="position:absolute; top:4px; right:4px; display:flex;">' +
+        (isAdmin ? '<div class="folder-drop-hint" style="font-size:12px; color:var(--navy-action);">ปล่อยเพื่อย้ายมาที่นี่</div>' : '') +
+        (isAdmin ? '<div class="folder-card-actions" style="position:absolute; top:4px; right:4px; display:flex;">' +
           '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12.5px; font-family:inherit;">แก้ไข</button>' +
           '<button data-action="request-move-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12.5px; font-family:inherit;">ย้าย</button>' +
           '<button data-action="request-remove-folder" data-kind="' + kind + '" data-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--danger-red); cursor:pointer; font-size:12.5px; font-family:inherit;">ลบ</button>' +
@@ -4524,7 +4647,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
   // Admins can drag a file onto a subfolder card (see handleFileDragStart).
   var dragAttrs = function (f) {
-    return isAdmin ? ' draggable="true" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '"' : '';
+    return isAdmin ? ' draggable="true" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '"' : '';
   };
   var moveFileBtn = function (f, style) {
     return '<button data-action="request-move-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="' + style + '">ย้าย</button>';
