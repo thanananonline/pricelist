@@ -127,6 +127,9 @@
   /* แถวสลับสีอ่อนมากๆ ในตารางรายการสินค้า (ไม่รวมแถวหัวตาราง) */
   .list-grid-row:not(.list-header):nth-child(even) { background: var(--bg-zebra); }
   .mobile-cat-bar { display: none; margin-bottom: 16px; }
+  /* phone-only subcategory row under .mobile-cat-bar; its own container so
+     the !important .mobile-cat-bar button rules below don't restyle it */
+  .mobile-subcat-bar { display: none; }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
   .pdf-share-spinner {
     width: 16px; height: 16px; border-radius: 50%; display: inline-block;
@@ -175,6 +178,7 @@
     .nav-btn { white-space: normal !important; }
     .cat-sidebar { display: none !important; }
     .mobile-cat-bar { display: flex !important; flex-wrap: wrap; gap: 8px; }
+    .mobile-subcat-bar { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px; margin: -6px 0 16px; padding-top: 10px; border-top: 1px dashed var(--border); }
     .mobile-cat-bar button {
       min-height: 44px !important; padding: 10px 16px !important; box-sizing: border-box !important;
       display: inline-flex !important; align-items: center !important; justify-content: center !important;
@@ -4594,9 +4598,27 @@ Dashboard.prototype.renderMobileCatBar = function () {
   var s = this.state;
   var chips = [ALL_CATEGORY].concat(s.categories).map(function (opt) {
     var active = opt.value === s.category;
-    return '<button data-action="set-category" data-category="' + opt.value + '" style="padding:8px 14px; border-radius:999px; border:1px solid ' + (active ? "var(--navy-action)" : "var(--border-input)") + '; background:' + (active ? "var(--navy-action)" : "#fff") + '; color:' + (active ? "#fff" : "var(--text-body)") + '; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">' + esc(opt.label) + '</button>';
+    return '<button data-action="set-category" data-category="' + esc(opt.value) + '" style="padding:8px 14px; border-radius:999px; border:1px solid ' + (active ? "var(--navy-action)" : "var(--border-input)") + '; background:' + (active ? "var(--navy-action)" : "#fff") + '; color:' + (active ? "#fff" : "var(--text-body)") + '; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">' + esc(opt.label) + '</button>';
   }).join("");
-  return '<div class="mobile-cat-bar">' + chips + '</div>';
+  var html = '<div class="mobile-cat-bar">' + chips + '</div>';
+
+  // Phones hide the sidebar's category box, so the chosen category's
+  // subcategories get their own row here. "ทั้งหมด" re-selects the main
+  // category, which clears the subcategory.
+  var subcats = s.category !== "all" ? this.subcatOptionsFor(s.category) : [];
+  if (subcats.length) {
+    var subChip = function (attrs, label, active) {
+      return '<button ' + attrs + ' style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; padding:8px 12px; border-radius:999px; border:1px solid ' + (active ? "var(--navy-action-soft-border)" : "var(--border-input)") + '; background:' + (active ? "var(--navy-action-soft)" : "#fff") + '; color:' + (active ? "var(--navy-action-soft-text)" : "var(--text-muted)") + '; font-weight:' + (active ? "700" : "500") + '; font-size:12px; cursor:pointer; font-family:inherit; text-align:left;">' + label + '</button>';
+    };
+    html += '<div class="mobile-subcat-bar">' +
+      '<span style="font-size:11.5px; font-weight:600; color:var(--text-faint); margin-right:2px;">หมวดย่อย</span>' +
+      subChip('data-action="set-category" data-category="' + esc(s.category) + '"', "ทั้งหมด", !s.subcat) +
+      subcats.map(function (sc) {
+        return subChip('data-action="set-subcat" data-category="' + esc(s.category) + '" data-subcat="' + esc(sc) + '"', esc(sc), s.subcat === sc);
+      }).join("") +
+    '</div>';
+  }
+  return html;
 };
 
 var CALC_SIDEBAR_ITEMS = [
