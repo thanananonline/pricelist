@@ -271,6 +271,27 @@ export default {
       return json(publicUser(row));
     }
 
+    // Self-service password change for whoever owns the session. The
+    // username always comes from the session, never the body. A wrong current
+    // password is a 400, not 401: the dashboard logs out on any 401.
+    if (path === "/auth/password" && method === "PUT") {
+      const session = await requireAuth(request, env);
+      if (!session) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+      if (!currentPassword || !newPassword) return json({ error: "currentPassword and newPassword are required" }, 400);
+      const row = await env.DB.prepare("SELECT password_hash FROM users WHERE username = ?").bind(session.username).first();
+      if (!row) return json({ error: "unauthorized" }, 401);
+      if (!(await verifyPassword(currentPassword, row.password_hash))) return json({ error: "current password is incorrect" }, 400);
+      if (newPassword.length < 4) return json({ error: "password must be at least 4 characters" }, 400);
+      if (newPassword === currentPassword) return json({ error: "new password must be different from the current password" }, 400);
+      const passwordHash = await hashPassword(newPassword);
+      await env.DB.prepare("UPDATE users SET password_hash = ? WHERE username = ?").bind(passwordHash, session.username).run();
+      return json({ ok: true });
+    }
+
     if (path === "/products" && method === "GET") {
       const { results } = await env.DB.prepare("SELECT * FROM products").all();
       return json(results);

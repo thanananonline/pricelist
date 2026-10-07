@@ -772,6 +772,14 @@ function Dashboard(root) {
     passwordChangeTarget: null,
     passwordChangeValue: "",
     passwordChangeError: "",
+    // "เปลี่ยนรหัสผ่านของฉัน" (self-service) - kept apart from the admin's
+    // reset-someone-else modal above.
+    myPasswordOpen: false,
+    myPasswordCurrent: "",
+    myPasswordNew: "",
+    myPasswordConfirm: "",
+    myPasswordError: "",
+    myPasswordSaving: false,
     imagePreview: null,
     contacts: [],
     contactsLoading: true,
@@ -929,7 +937,7 @@ Dashboard.prototype.handleSessionExpired = function () {
   clearLastActivity();
   this.setState({
     loggedIn: false, checkingSession: false, username: "", role: "", password: "",
-    users: [], usersLoading: true, usersError: "",
+    users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
     authError: "เซสชันหมดอายุหรือบัญชีนี้ถูกยกเลิก กรุณาเข้าสู่ระบบใหม่",
   });
 };
@@ -960,7 +968,7 @@ Dashboard.prototype._checkIdleTimeout = function () {
     clearLastActivity();
     this.setState({
       loggedIn: false, username: "", role: "", password: "",
-      users: [], usersLoading: true, usersError: "",
+      users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
       authError: "ไม่ได้ใช้งานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่",
     });
   }
@@ -1760,6 +1768,14 @@ Dashboard.prototype.handleClick = function (e) {
     case "confirm-remove-user": this.setState({ userDeleteConfirm: null }); this.removeUser(d.username); break;
     case "request-change-password": this.setState({ passwordChangeTarget: { username: d.username }, passwordChangeValue: "", passwordChangeError: "" }); break;
     case "cancel-change-password": this.setState({ passwordChangeTarget: null, passwordChangeValue: "", passwordChangeError: "" }); break;
+    case "open-my-password":
+      this.setState(function (s2) {
+        var patch = { myPasswordOpen: true, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false };
+        if (window.innerWidth <= 700) patch.sidebarOpen = false;
+        return patch;
+      });
+      break;
+    case "cancel-my-password": if (!this.state.myPasswordSaving) this.closeMyPassword(); break;
     case "request-remove-contact": this.setState({ contactDeleteConfirm: { id: d.id, name: d.name || "" } }); break;
     case "cancel-remove-contact": this.setState({ contactDeleteConfirm: null }); break;
     case "confirm-remove-contact": this.setState({ contactDeleteConfirm: null }); this.removeContact(d.id); break;
@@ -1812,6 +1828,7 @@ Dashboard.prototype.handleSubmit = function (e) {
     case "add-product": this.onAddProduct(); break;
     case "add-user": this.onAddUser(); break;
     case "change-password": this.onChangePassword(); break;
+    case "change-my-password": this.onChangeMyPassword(); break;
     case "add-contact": this.onAddContact(); break;
     case "add-category": this.addCategory(); break;
     case "add-folder":
@@ -1975,7 +1992,7 @@ Dashboard.prototype.onSubmitAuth = function () {
 Dashboard.prototype.onLogout = function () {
   clearSessionToken();
   clearLastActivity();
-  this.setState({ loggedIn: false, username: "", role: "", password: "", users: [], usersLoading: true, usersError: "" });
+  this.setState({ loggedIn: false, username: "", role: "", password: "", users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false });
 };
 
 /* ---- products ---- */
@@ -3407,6 +3424,38 @@ Dashboard.prototype.onChangePassword = function () {
     });
 };
 
+Dashboard.prototype.closeMyPassword = function () {
+  this.setState({ myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false });
+};
+
+// Self-service change for the logged-in account (PUT /auth/password). A
+// wrong current password comes back as 400, so the session stays put.
+Dashboard.prototype.onChangeMyPassword = function () {
+  var s = this.state;
+  if (!s.myPasswordOpen || s.myPasswordSaving) return;
+  var cur = s.myPasswordCurrent, next = s.myPasswordNew, confirm = s.myPasswordConfirm;
+  var fail = function (msg) { this.setState({ myPasswordError: msg }); }.bind(this);
+  if (!cur || !next || !confirm) return fail("กรุณากรอกให้ครบทุกช่อง");
+  if (next.length < 4) return fail("รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร");
+  if (next !== confirm) return fail("รหัสผ่านใหม่กับช่องยืนยันไม่ตรงกัน");
+  if (next === cur) return fail("รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านเดิม");
+  var self = this;
+  this.setState({ myPasswordSaving: true, myPasswordError: "" });
+  apiRequest("/auth/password", { method: "PUT", auth: true, body: { currentPassword: cur, newPassword: next } })
+    .then(function () {
+      self.closeMyPassword();
+      self.showToast("เปลี่ยนรหัสผ่านแล้ว");
+    })
+    .catch(function (err) {
+      if (!self.state.myPasswordOpen) return; // logged out meanwhile (e.g. a 401)
+      var msg = err.message === "current password is incorrect" ? "รหัสผ่านเดิมไม่ถูกต้อง" :
+        /different/.test(err.message) ? "รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านเดิม" :
+        /at least 4/.test(err.message) ? "รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร" :
+        "เปลี่ยนรหัสผ่านไม่สำเร็จ: " + err.message;
+      self.setState({ myPasswordSaving: false, myPasswordError: msg });
+    });
+};
+
 /* ---- contacts ---- */
 
 Dashboard.prototype.onAddContact = function () {
@@ -3760,6 +3809,35 @@ Dashboard.prototype.renderChangePasswordModal = function () {
   '</div>';
 };
 
+Dashboard.prototype.renderMyPasswordModal = function () {
+  var s = this.state;
+  if (!s.myPasswordOpen) return "";
+  var saving = s.myPasswordSaving;
+  var field = function (label, id, key, autocomplete) {
+    return '<label style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-body);">' + label +
+      '<input id="field-' + key + '" type="password" autocomplete="' + autocomplete + '" data-bind="' + key + '" data-clear="myPasswordError" value="' + esc(s[key]) + '"' + (saving ? ' disabled' : '') + ' style="padding:10px 12px; border-radius:9px; border:1px solid var(--border-input); font-size:14px; font-family:inherit;" />' +
+    '</label>';
+  };
+  return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+    '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3);">' +
+    '<form data-form="change-my-password" style="display:flex; flex-direction:column; gap:16px;">' +
+      '<div style="display:flex; align-items:center; gap:12px;">' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🔑</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">เปลี่ยนรหัสผ่านของฉัน</div>' +
+      '</div>' +
+      field("รหัสผ่านเดิม", "current", "myPasswordCurrent", "current-password") +
+      field("รหัสผ่านใหม่", "new", "myPasswordNew", "new-password") +
+      field("ยืนยันรหัสผ่านใหม่", "confirm", "myPasswordConfirm", "new-password") +
+      (s.myPasswordError ? '<div style="font-size:13px; color:var(--danger-red); background:var(--danger-red-bg); padding:8px 12px; border-radius:8px;">' + esc(s.myPasswordError) + '</div>' : '') +
+      '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">' +
+        '<button type="button" data-action="cancel-my-password"' + (saving ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:' + (saving ? 'default' : 'pointer') + '; font-family:inherit;">ยกเลิก</button>' +
+        '<button type="submit"' + (saving ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:' + (saving ? 'default' : 'pointer') + '; opacity:' + (saving ? '.6' : '1') + '; font-family:inherit;">' + (saving ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่') + '</button>' +
+      '</div>' +
+    '</form>' +
+    '</div>' +
+  '</div>';
+};
+
 Dashboard.prototype.renderImportSubcatConfirmModal = function () {
   var c = this.state.importSubcatConfirm;
   if (!c) return "";
@@ -3844,6 +3922,11 @@ Dashboard.prototype.renderDashboard = function () {
       (page === "calc" ? this.renderCalcSidebar() : "") +
       (isAdmin ? navItem("จัดการผู้ใช้", "👥", "users", page === "users") : "") +
       navItem("ติดต่อเรา", "☎️", "contact", page === "contact") +
+      // Same look as the topbar's "ออกจากระบบ" button; lives here so it's
+      // reachable from the phone drawer too.
+      '<div style="margin-top:12px; padding-top:14px; border-top:1px solid rgba(255,255,255,.12);">' +
+        '<button data-action="open-my-password" style="width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:11px 18px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer; white-space:nowrap;">🔑 เปลี่ยนรหัสผ่าน</button>' +
+      '</div>' +
     '</div>';
 
   var topbar =
@@ -3876,7 +3959,7 @@ Dashboard.prototype.renderDashboard = function () {
     '<div class="app-shell" style="display:flex; min-height:100vh;">' + sidebar +
     '<div class="sidebar-backdrop' + (s.sidebarOpen ? " show" : "") + '" data-action="close-sidebar"></div>' +
     '<div class="main-col" style="flex:1; min-width:0;">' + topbar + pageContent + '</div>' +
-    '</div>' + this.renderDeleteConfirmModal() + this.renderMoveFolderModal() + this.renderChangePasswordModal() + this.renderDownloadModal() + this.renderImportSubcatConfirmModal() + this.renderImagePreviewModal() + this.renderToast() +
+    '</div>' + this.renderDeleteConfirmModal() + this.renderMoveFolderModal() + this.renderChangePasswordModal() + this.renderMyPasswordModal() + this.renderDownloadModal() + this.renderImportSubcatConfirmModal() + this.renderImagePreviewModal() + this.renderToast() +
     '</div>'
   );
 };
