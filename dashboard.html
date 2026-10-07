@@ -433,12 +433,32 @@ function productColorLineHtml(color) {
 // e.g. "เชิงชายพลัส สีธรรมชาติ (2 แผ่น/แพ็ค) 1.6*23*300" -> name
 // "เชิงชายพลัส (2 แผ่น/แพ็ค) 1.6*23*300", color "ธรรมชาติ". Only a
 // whole word starting with สี counts, and not สี่ (four, as in สี่เหลี่ยม).
+// "สี" words in NON_COLOR_WORDS are price-group names, not colors, so they
+// stay in the name and the next "สี…" word (if any) is used instead.
 // null = nothing to split.
 function splitInlineColor(name) {
-  var m = /(^|\s)สี(?![\u0E48-\u0E4B])(\S+)/.exec(String(name || ""));
-  if (!m) return null;
-  var rest = (name.slice(0, m.index) + " " + name.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
-  return rest ? { name: rest, color: m[2] } : null;
+  name = String(name || "");
+  var re = /(^|\s)สี(?![\u0E48-\u0E4B])(\S+)/g;
+  var m;
+  while ((m = re.exec(name))) {
+    if (NON_COLOR_WORDS.indexOf(m[2]) !== -1) continue;
+    var rest = (name.slice(0, m.index) + " " + name.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
+    return rest ? { name: rest, color: m[2] } : null;
+  }
+  return null;
+}
+
+// Words that follow "สี" in product names but name a price group
+// ("สีมาตรฐาน", "สีเมทัลลิค"), so they belong in the name, not the สี field.
+var NON_COLOR_WORDS = ["มาตรฐาน", "เมทัลลิค", "เมทัลลิก"];
+
+// Puts "สี<word>" back into a name: before the first " - " if there is one
+// ("ครอบลอนคู่ - ครอบปิดชาย" -> "ครอบลอนคู่ สีมาตรฐาน - ครอบปิดชาย"),
+// otherwise at the end.
+function nameWithColorWord(name, word) {
+  name = String(name || "").trim();
+  var at = name.indexOf(" - ");
+  return at === -1 ? name + " สี" + word : name.slice(0, at) + " สี" + word + name.slice(at);
 }
 function priceTiersHtml(p) {
   var rows = [["ช่อง 1", p.priceDisplay], ["ช่อง 2", p.price2Display], ["ช่อง 3", p.price3Display]];
@@ -720,6 +740,12 @@ function Dashboard(root) {
     colorSplitOpen: false,
     colorSplitSkip: {},
     colorSplitSaving: false,
+    // "คืนสีเข้าชื่อ": undo splits that moved a price-group word (see
+    // NON_COLOR_WORDS) into the สี field
+    colorRestoreOpen: false,
+    colorRestoreSkip: {},
+    colorRestoreSaving: false,
+    colorRestoreError: "",
     editGroupPrice: "",
     editGroupPrice2: "",
     editGroupPrice3: "",
@@ -1700,6 +1726,19 @@ Dashboard.prototype.handleClick = function (e) {
       });
       break;
     case "save-color-split": this.saveColorSplit(); break;
+    case "toggle-color-restore":
+      if (this.state.colorRestoreSaving) break;
+      this.setState(function (s2) { return { colorRestoreOpen: !s2.colorRestoreOpen, colorRestoreSkip: {}, colorRestoreError: "" }; });
+      break;
+    case "toggle-color-restore-item":
+      var restoreId = d.id;
+      this.setState(function (s2) {
+        var skip = Object.assign({}, s2.colorRestoreSkip);
+        if (skip[restoreId]) delete skip[restoreId]; else skip[restoreId] = true;
+        return { colorRestoreSkip: skip };
+      });
+      break;
+    case "save-color-restore": this.saveColorRestore(); break;
     case "cancel-add-color": this.setState({ addColorSourceId: null, addColorInput: "", addColorError: "" }); break;
     case "save-add-color": this.saveAddColors(); break;
     case "cancel-edit-group": this.setState({ editingGroupKey: null, editGroupError: "" }); break;
@@ -2383,6 +2422,60 @@ Dashboard.prototype.saveColorSplit = function () {
     });
     if (failed.length) self.setState({ importMsg: "แยกสีไม่สำเร็จ " + failed.length + " รายการ", importErrors: failed, importMsgType: "error" });
     if (updated.length) self.showToast("แยกสีออกจากชื่อแล้ว " + updated.length + " รายการ");
+  });
+};
+
+// Products in the selected category whose สี field is exactly one of
+// NON_COLOR_WORDS (split out by mistake earlier), with the name they'd get
+// back. dup = that name with an empty สี already exists in the category, so
+// it's listed but not saved.
+Dashboard.prototype.colorRestoreCandidates = function () {
+  var s = this.state;
+  if (s.category === "all") return [];
+  var products = this.getMergedProducts().filter(function (p) { return p.cat === s.category; });
+  var taken = {};
+  products.forEach(function (p) { taken[(p.name + "\u0001" + (p.color || "")).toLowerCase()] = true; });
+  var out = [];
+  products.forEach(function (p) {
+    var word = String(p.color || "").trim();
+    if (NON_COLOR_WORDS.indexOf(word) === -1) return;
+    var name = nameWithColorWord(p.name, word);
+    var k = (name + "\u0001").toLowerCase();
+    out.push({ id: p.id, oldName: p.name, word: word, name: name, dup: !!taken[k] });
+    taken[k] = true;
+  });
+  return out.sort(function (a, b) { return a.oldName.localeCompare(b.oldName, "th"); });
+};
+
+// Writes each ticked product back as { name: <with สี<word>>, color: "" },
+// one PUT at a time like saveColorSplit; failures stay listed to retry.
+Dashboard.prototype.saveColorRestore = function () {
+  var s = this.state;
+  if (s.colorRestoreSaving) return;
+  var todo = this.colorRestoreCandidates().filter(function (c) { return !c.dup && !s.colorRestoreSkip[c.id]; });
+  if (!todo.length) return;
+  var self = this;
+  this.setState({ colorRestoreSaving: true, colorRestoreError: "" });
+  var updated = [];
+  var failed = [];
+  todo.reduce(function (chain, c) {
+    return chain.then(function () {
+      return apiRequest("/products/" + encodeURIComponent(c.id), { method: "PUT", auth: true, body: { name: c.name, color: "" } })
+        .then(function (p) { updated.push(p); }, function (err) { failed.push(c.oldName + " (" + err.message + ")"); });
+    });
+  }, Promise.resolve()).then(function () {
+    self.setState(function (s2) {
+      var byId = {};
+      updated.forEach(function (p) { byId[p.id] = p; });
+      return {
+        products: s2.products.map(function (p) { return byId[p.id] || p; }),
+        colorRestoreSaving: false,
+        colorRestoreOpen: failed.length > 0,
+        colorRestoreError: failed.length ? "คืนค่าไม่สำเร็จ " + failed.length + " รายการ ลองใหม่อีกครั้ง: " + failed.join(", ") : "",
+      };
+    });
+    if (updated.length) self.showToast("คืนสีเข้าชื่อแล้ว " + updated.length + " รายการ" + (failed.length ? " · ไม่สำเร็จ " + failed.length + " รายการ" : ""), failed.length ? "warn" : "success");
+    else if (failed.length) self.showToast("คืนสีเข้าชื่อไม่สำเร็จ " + failed.length + " รายการ", "error");
   });
 };
 
@@ -4045,6 +4138,7 @@ Dashboard.prototype.renderPricePage = function () {
     '</div>';
 
   var colorSplitList = isAdmin ? this.colorSplitCandidates() : [];
+  var colorRestoreList = isAdmin ? this.colorRestoreCandidates() : [];
   var adminActionsRow = "";
   if (isAdmin) {
     adminActionsRow =
@@ -4055,6 +4149,7 @@ Dashboard.prototype.renderPricePage = function () {
         '<button type="button" class="toolbar-btn" data-action="toggle-manage-categories">' + (s.showManageCategories ? "✕ <span>ปิดหมวดหมู่</span>" : "🏷️ <span>จัดการหมวดหมู่</span>") + '</button>' +
         (!s.selectMode ? '<button type="button" class="toolbar-btn" data-action="toggle-select-mode">☑️ <span>เลือกหลายรายการ</span></button>' : '') +
         (colorSplitList.length || s.colorSplitOpen ? '<button type="button" class="toolbar-btn" data-action="toggle-color-split">' + (s.colorSplitOpen ? "✕ <span>ปิดแยกสี</span>" : "🎨 <span>แยกสีจากชื่อ (" + colorSplitList.length + ")</span>") + '</button>' : '') +
+        (colorRestoreList.length || s.colorRestoreOpen ? '<button type="button" class="toolbar-btn" data-action="toggle-color-restore">' + (s.colorRestoreOpen ? "✕ <span>ปิดคืนสีเข้าชื่อ</span>" : "↩️ <span>คืนสีเข้าชื่อ (" + colorRestoreList.length + ")</span>") + '</button>' : '') +
         '<button data-action="toggle-add-form" style="min-height:44px; display:inline-flex; align-items:center; margin-left:auto; padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">' + (s.showAddForm ? "✕ ปิดฟอร์ม" : "+ เพิ่มสินค้า") + '</button>' +
       '</div>';
   }
@@ -4087,6 +4182,34 @@ Dashboard.prototype.renderPricePage = function () {
         '</div>' +
         '<button type="button" data-action="save-color-split"' + (splitCount && !s.colorSplitSaving ? "" : " disabled") + ' style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:none; border-radius:8px; background:' + (splitCount && !s.colorSplitSaving ? "var(--navy-action)" : "oklch(0.85 0.01 60)") + '; color:#fff; font-size:13px; font-weight:700; cursor:' + (splitCount && !s.colorSplitSaving ? "pointer" : "not-allowed") + '; font-family:inherit;">' + (s.colorSplitSaving ? "กำลังบันทึก…" : "แยกสี " + splitCount + " รายการ") + '</button>'
       : '<div style="font-size:13px; color:var(--text-muted);">ไม่มีสินค้าที่มีสีอยู่ในชื่อแล้ว</div>') +
+    '</div>';
+  }
+
+  var colorRestorePanel = "";
+  if (isAdmin && s.colorRestoreOpen) {
+    var restoreCount = colorRestoreList.filter(function (c) { return !c.dup && !s.colorRestoreSkip[c.id]; }).length;
+    var restoreReady = restoreCount && !s.colorRestoreSaving;
+    colorRestorePanel = '<div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px;">' +
+      '<div style="font-size:14px; font-weight:700; margin-bottom:4px;">คืนสีเข้าชื่อสินค้า · ' + esc(this.catLabel(s.category)) + '</div>' +
+      '<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">"' + NON_COLOR_WORDS.map(function (w) { return "สี" + w; }).join('", "') + '" เป็นชื่อกลุ่มราคา ไม่ใช่สี จะย้ายกลับเข้าไปในชื่อและล้างช่องสี เอาเครื่องหมายถูกออกเพื่อข้ามรายการนั้น</div>' +
+      (colorRestoreList.length ?
+        '<div data-keep-scroll="color-restore-' + esc(s.category) + '-' + esc(s.subcat || "") + '" style="display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin-bottom:12px;">' +
+          colorRestoreList.map(function (c) {
+            var on = !c.dup && !s.colorRestoreSkip[c.id];
+            return '<label style="display:flex; align-items:flex-start; gap:10px; padding:7px 4px; border-bottom:1px solid var(--border-light); font-size:13px; cursor:' + (c.dup ? "default" : "pointer") + ';' + (c.dup ? " opacity:.6;" : "") + '">' +
+              '<input type="checkbox" id="color-restore-item-' + esc(c.id) + '" data-action="toggle-color-restore-item" data-id="' + esc(c.id) + '"' + (on ? " checked" : "") + (c.dup || s.colorRestoreSaving ? " disabled" : "") + ' style="width:16px; height:16px; margin:2px 0 0; flex:none;" />' +
+              '<div style="min-width:0;">' +
+                '<div style="color:var(--text-faint); overflow-wrap:anywhere;">' + esc(c.oldName) + ' <span style="display:inline-block; font-size:11.5px; padding:1px 7px; border-radius:6px; background:var(--bg-subtle); color:var(--text-faint); font-weight:600; text-decoration:line-through;">สี: ' + esc(c.word) + '</span></div>' +
+                '<div style="overflow-wrap:anywhere;">→ ' + esc(c.name) +
+                  (c.dup ? ' <span style="font-size:11.5px; color:oklch(0.45 0.1 80);">มีชื่อนี้อยู่แล้ว ข้าม</span>' : '') +
+                '</div>' +
+              '</div>' +
+            '</label>';
+          }).join("") +
+        '</div>' +
+        (s.colorRestoreError ? '<div style="font-size:12.5px; color:var(--danger-red); background:var(--danger-red-bg); padding:8px 10px; border-radius:7px; margin-bottom:12px; overflow-wrap:anywhere;">' + esc(s.colorRestoreError) + '</div>' : '') +
+        '<button type="button" data-action="save-color-restore"' + (restoreReady ? "" : " disabled") + ' style="min-height:40px; display:inline-flex; align-items:center; padding:9px 16px; border:none; border-radius:8px; background:' + (restoreReady ? "var(--navy-action)" : "oklch(0.85 0.01 60)") + '; color:#fff; font-size:13px; font-weight:700; cursor:' + (restoreReady ? "pointer" : "not-allowed") + '; font-family:inherit;">' + (s.colorRestoreSaving ? "กำลังบันทึก…" : "คืนสีเข้าชื่อ " + restoreCount + " รายการ") + '</button>'
+      : '<div style="font-size:13px; color:var(--text-muted);">ไม่มีสินค้าที่ต้องคืนสีเข้าชื่อแล้ว</div>') +
     '</div>';
   }
 
@@ -4260,10 +4383,12 @@ Dashboard.prototype.renderPricePage = function () {
         '<div style="padding:14px 15px 16px; display:flex; flex-direction:column; gap:8px; flex:1;">' +
           '<div>' +
             '<div style="font-weight:600; font-size:14.5px; line-height:1.35;">' + esc(p.name) + '</div>' +
-            productColorLineHtml(p.color) +
+            (p.colorLabel ? productColorLineHtml(p.color) : '') +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
-            (hasAddColor(p) && !p.colorLabel ? addColorHtml(p, true) : '') +
+            (isSingleColor(p) && !p.colorLabel ? singleToggleHtml(p) :
+              hasAddColor(p) && !p.colorLabel ? addColorHtml(p, true) : '') +
           '</div>' +
+          (isSingleColor(p) && !p.colorLabel && singleExpanded(p) ? singleColorHtml(p, false) : '') +
           (p.hasMultiPrice ? priceTiersHtml(p) :
           '<div style="display:flex; align-items:baseline; gap:7px; margin-top:2px;">' +
             '<span style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; color:var(--navy-action);">฿' + p.priceDisplay + '</span>' +
@@ -4388,9 +4513,10 @@ Dashboard.prototype.renderPricePage = function () {
           '<div' + (p.image ? ' data-action="view-product-image" data-image="' + esc(p.image) + '" data-name="' + esc(productLabel(p)) + '"' : '') + ' style="width:40px; height:40px; border-radius:8px; ' + listMediaStyle + ' flex:none; position:relative; overflow:hidden;' + (p.image ? ' cursor:pointer;' : '') + '">' + listMediaSvg + '</div>' +
           '<div>' +
             '<div style="font-weight:600; font-size:14px;">' + esc(p.name) + '</div>' +
-            productColorLineHtml(p.color) +
+            (p.colorLabel ? productColorLineHtml(p.color) : '') +
             (p.note ? '<div style="font-size:12px; color:var(--text-faint); margin-top:2px;">' + esc(p.note) + '</div>' : '') +
-            (hasAddColor(p) && !p.isEditing && s.addColorSourceId !== p.id ? addColorHtml(p, true) : '') +
+            (isSingleColor(p) && !p.colorLabel ? singleToggleHtml(p) :
+              hasAddColor(p) && !p.isEditing && s.addColorSourceId !== p.id ? addColorHtml(p, true) : '') +
           '</div>' +
         '</div>' +
         '<div><span style="font-size:12px; padding:3px 9px; border-radius:20px; background:var(--bg-subtle); color:var(--text-body);">' + esc(p.categoryLabel) + (p.subcat ? " · " + esc(p.subcat) : "") + '</span></div>' +
@@ -4399,8 +4525,35 @@ Dashboard.prototype.renderPricePage = function () {
         ) + '</div>' +
         '<div style="font-size:13px; color:var(--text-muted); text-align:right;">' + esc(p.unit) + '</div>' +
         editRow +
-        (hasAddColor(p) && s.addColorSourceId === p.id ? addColorHtml(p, false) : '') +
+        (isSingleColor(p) && !p.colorLabel ? (singleExpanded(p) ? singleColorHtml(p, true) : '') :
+          hasAddColor(p) && s.addColorSourceId === p.id ? addColorHtml(p, false) : '') +
       '</div>';
+  }
+
+  // ---- single-color rows ----
+  // A product with its สี field set that isn't grouped with anything shows a
+  // collapsible "▶ 1 สี" like a group; expanding it lists the color (+ note)
+  // and "+ เพิ่มสี". The row's own ✏️/🗑️ still act on just this product.
+  // State shares expandedProductGroups under "s:<id>"; an open add-color
+  // form keeps it expanded.
+  function singleColorKey(p) { return "s:" + p.id; }
+  function isSingleColor(p) { return !p.isGroup && !!String(p.color || "").trim(); }
+  function singleExpanded(p) { return !!s.expandedProductGroups[singleColorKey(p)] || s.addColorSourceId === p.id; }
+
+  function singleToggleHtml(p) {
+    return groupToggleHtml({ key: singleColorKey(p), isExpanded: singleExpanded(p), members: [p] });
+  }
+
+  function singleColorHtml(p, inList) {
+    var line = '<div style="' + (inList ? "padding-left:52px;" : "") + ' display:flex; align-items:center; gap:10px; padding-top:5px; padding-bottom:5px; border-top:1px dashed var(--border-light); min-height:30px;">' +
+      '<div style="flex:1; min-width:0; font-size:13px;">' +
+        '<span style="font-weight:600; color:var(--text-body);">' + esc(p.color) + '</span>' +
+        (p.note ? '<span style="margin-left:6px; font-size:11.5px; color:var(--text-faint);">' + esc(p.note) + '</span>' : '') +
+      '</div>' +
+    '</div>';
+    var addColor = addColorHtml(p, true);
+    if (addColor) line += '<div style="' + (inList ? "padding-left:52px;" : "") + ' border-top:1px dashed var(--border-light); padding-top:2px; padding-bottom:4px;">' + addColor + '</div>';
+    return '<div style="' + (inList ? "grid-column:1 / -1; margin-top:4px;" : "margin-top:2px;") + '">' + line + '</div>';
   }
 
   // ---- color-group rows (see computeProductRows) ----
@@ -4535,7 +4688,7 @@ Dashboard.prototype.renderPricePage = function () {
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
     '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-bottom:28px;">' + statCardsHtml + '</div>' +
     this.renderMobileCatBar() +
-    productsErrorBanner + importBanner + controls + colorSplitPanel + bulkBar + manageCategoriesPanel + addForm + resultCount + body + paginationBar +
+    productsErrorBanner + importBanner + controls + colorSplitPanel + colorRestorePanel + bulkBar + manageCategoriesPanel + addForm + resultCount + body + paginationBar +
   '</div>';
 };
 
