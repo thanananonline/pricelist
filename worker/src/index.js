@@ -999,7 +999,11 @@ export default {
     }
 
     if (path === "/users" && method === "GET") {
-      if (!(await requireAuth(request, env))) return json({ error: "unauthorized" }, 401);
+      const user = await requireAuth(request, env);
+      if (!user) return json({ error: "unauthorized" }, 401);
+      // 403, not 401: the dashboard logs out on any 401, and a viewer with an
+      // old copy of the page still calls this - they should just get nothing.
+      if (user.role !== "admin") return json({ error: "forbidden" }, 403);
       const { results } = await env.DB.prepare("SELECT username, role FROM users").all();
       return json(results.map(publicUser));
     }

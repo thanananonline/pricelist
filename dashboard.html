@@ -929,7 +929,7 @@ Dashboard.prototype.handleSessionExpired = function () {
   clearLastActivity();
   this.setState({
     loggedIn: false, checkingSession: false, username: "", role: "", password: "",
-    users: [],
+    users: [], usersLoading: true, usersError: "",
     authError: "เซสชันหมดอายุหรือบัญชีนี้ถูกยกเลิก กรุณาเข้าสู่ระบบใหม่",
   });
 };
@@ -960,7 +960,7 @@ Dashboard.prototype._checkIdleTimeout = function () {
     clearLastActivity();
     this.setState({
       loggedIn: false, username: "", role: "", password: "",
-      users: [],
+      users: [], usersLoading: true, usersError: "",
       authError: "ไม่ได้ใช้งานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่",
     });
   }
@@ -976,12 +976,20 @@ Dashboard.prototype.loadContacts = function () {
   });
 };
 
+// The user list is admin-only (GET /users answers 403 otherwise), so viewers
+// never request it. A response that lands after logout or a switch to
+// another account is dropped rather than leaking into the next session.
 Dashboard.prototype.loadUsers = function () {
+  if (!this.isAdmin()) return;
   var self = this;
+  var requestedBy = this.state.username;
+  var stillSameAdmin = function () { return self.state.loggedIn && self.isAdmin() && self.state.username === requestedBy; };
   self.state.usersLoading = true;
   apiRequest("/users", { auth: true }).then(function (users) {
+    if (!stillSameAdmin()) return;
     self.setState({ users: users, usersLoading: false, usersError: "" });
   }).catch(function () {
+    if (!stillSameAdmin()) return;
     self.setState({ usersLoading: false, usersError: "โหลดข้อมูลผู้ใช้ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
   });
 };
@@ -1967,7 +1975,7 @@ Dashboard.prototype.onSubmitAuth = function () {
 Dashboard.prototype.onLogout = function () {
   clearSessionToken();
   clearLastActivity();
-  this.setState({ loggedIn: false, username: "", role: "", password: "", users: [] });
+  this.setState({ loggedIn: false, username: "", role: "", password: "", users: [], usersLoading: true, usersError: "" });
 };
 
 /* ---- products ---- */
@@ -3805,6 +3813,10 @@ Dashboard.prototype.renderToast = function () {
 
 Dashboard.prototype.renderDashboard = function () {
   var s = this.state;
+  var isAdmin = this.isAdmin();
+  // "จัดการผู้ใช้" is admin-only; a viewer left on it (e.g. after an admin
+  // logged out in this tab) goes back to the start page.
+  if (s.page === "users" && !isAdmin) s.page = "price";
   var page = s.page;
   var navItem = function (label, icon, pageKey, active) {
     var bg = active ? "var(--accent-orange)" : "transparent";
@@ -3830,7 +3842,7 @@ Dashboard.prototype.renderDashboard = function () {
       navItem("เอกสาร MiT", "📄", "mit", page === "mit") +
       navItem("คำนวณราคาสินค้า", "🧮", "calc", page === "calc") +
       (page === "calc" ? this.renderCalcSidebar() : "") +
-      navItem("จัดการผู้ใช้", "👥", "users", page === "users") +
+      (isAdmin ? navItem("จัดการผู้ใช้", "👥", "users", page === "users") : "") +
       navItem("ติดต่อเรา", "☎️", "contact", page === "contact") +
     '</div>';
 
@@ -4902,7 +4914,7 @@ Dashboard.prototype.renderUsersPage = function () {
     '</div>';
   }
 
-  var userRows = s.users.map(function (u) {
+  var userRows = !isAdmin ? "" : s.users.map(function (u) {
     var roleLabel = u.role === "admin" ? "ผู้ดูแลระบบ" : "ดูอย่างเดียว";
     var roleBg = u.role === "admin" ? "var(--navy-action-soft)" : "var(--bg-subtle)";
     var roleColor = u.role === "admin" ? "var(--navy-action)" : "var(--text-muted)";
