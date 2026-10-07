@@ -3537,13 +3537,32 @@ Dashboard.prototype.render = function () {
   var selStart = active && "selectionStart" in active ? active.selectionStart : null;
   var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
 
+  // Inner scroll boxes marked data-keep-scroll="<name>" keep their position
+  // across the innerHTML swap below. Only boxes in the DOM right now are
+  // remembered, so a box that was closed and reopened starts at the top;
+  // names that include what's on show (category, item id) reset when it
+  // changes.
+  var keptScroll = {};
+  var scrollEls = this.root.querySelectorAll("[data-keep-scroll]");
+  for (var i = 0; i < scrollEls.length; i++) {
+    keptScroll[scrollEls[i].getAttribute("data-keep-scroll")] = { top: scrollEls[i].scrollTop, left: scrollEls[i].scrollLeft };
+  }
+
   this.root.innerHTML = this.state.checkingSession ? this.renderSessionCheck() : (this.state.loggedIn ? this.renderDashboard() : this.renderLogin());
   this._applyFileMoving();
+
+  scrollEls = this.root.querySelectorAll("[data-keep-scroll]");
+  for (var j = 0; j < scrollEls.length; j++) {
+    var kept = keptScroll[scrollEls[j].getAttribute("data-keep-scroll")];
+    if (kept) { scrollEls[j].scrollTop = kept.top; scrollEls[j].scrollLeft = kept.left; }
+  }
 
   if (focusId) {
     var el = document.getElementById(focusId);
     if (el) {
-      el.focus();
+      // preventScroll: the scroll boxes (and the page) are already where
+      // they should be; focusing mustn't drag them to the element.
+      el.focus({ preventScroll: true });
       if (selStart != null && "setSelectionRange" in el) {
         try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
       }
@@ -3779,7 +3798,7 @@ Dashboard.prototype.renderMoveFolderModal = function () {
         '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">' + (isFile ? 'ย้ายไฟล์' : 'ย้ายโฟลเดอร์') + ' "' + esc(mv.name) + '"</div>' +
       '</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">เลือกโฟลเดอร์ปลายทาง</div>' +
-      '<div style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
+      '<div data-keep-scroll="move-target-' + (isFile ? 'file-' + esc(mv.fileId) : 'folder-' + esc(mv.id)) + '" style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
       (mv.error ? '<div style="font-size:13px; color:var(--danger-red); background:var(--danger-red-bg); padding:8px 12px; border-radius:8px;">' + esc(mv.error) + '</div>' : '') +
       '<div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">' +
         '<button data-action="cancel-move-folder"' + (mv.saving ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:' + (mv.saving ? 'default' : 'pointer') + '; font-family:inherit;">ยกเลิก</button>' +
@@ -3859,7 +3878,7 @@ Dashboard.prototype.renderImportSubcatConfirmModal = function () {
       '</div>' +
       '<div style="font-size:13.5px; color:var(--text-body); line-height:1.6;">' +
         'ไฟล์ที่นำเข้ามีหมวดหมู่ย่อยที่ยังไม่มีในระบบ ' + c.combos.length + ' รายการ ต้องการสร้างใหม่ หรือข้ามแถวที่ใช้หมวดหมู่ย่อยเหล่านี้?' +
-        '<div style="max-height:220px; overflow-y:auto; margin-top:10px;">' + rowsHtml + '</div>' +
+        '<div data-keep-scroll="import-subcat-confirm" style="max-height:220px; overflow-y:auto; margin-top:10px;">' + rowsHtml + '</div>' +
       '</div>' +
       '<div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; margin-top:4px;">' +
         '<button type="button" data-action="cancel-import-subcat-confirm" style="min-height:44px; display:inline-flex; align-items:center;padding:12px 16px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">ยกเลิกการนำเข้า</button>' +
@@ -4052,11 +4071,11 @@ Dashboard.prototype.renderPricePage = function () {
       '<div style="font-size:14px; font-weight:700; margin-bottom:4px;">แยกสีออกจากชื่อสินค้า · ' + esc(this.catLabel(s.category)) + '</div>' +
       '<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">ย้ายคำว่า "สี…" ในชื่อไปไว้ในช่องสี สีที่ราคาเท่ากันจะรวมเป็นแถวเดียว เอาเครื่องหมายถูกออกเพื่อข้ามรายการนั้น</div>' +
       (colorSplitList.length ?
-        '<div style="display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin-bottom:12px;">' +
+        '<div data-keep-scroll="color-split-' + esc(s.category) + '-' + esc(s.subcat || "") + '" style="display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin-bottom:12px;">' +
           colorSplitList.map(function (c) {
             var on = !c.dup && !s.colorSplitSkip[c.id];
             return '<label style="display:flex; align-items:flex-start; gap:10px; padding:7px 4px; border-bottom:1px solid var(--border-light); font-size:13px; cursor:' + (c.dup ? "default" : "pointer") + ';' + (c.dup ? " opacity:.6;" : "") + '">' +
-              '<input type="checkbox" data-action="toggle-color-split-item" data-id="' + esc(c.id) + '"' + (on ? " checked" : "") + (c.dup ? " disabled" : "") + ' style="width:16px; height:16px; margin:2px 0 0; flex:none;" />' +
+              '<input type="checkbox" id="color-split-item-' + esc(c.id) + '" data-action="toggle-color-split-item" data-id="' + esc(c.id) + '"' + (on ? " checked" : "") + (c.dup ? " disabled" : "") + ' style="width:16px; height:16px; margin:2px 0 0; flex:none;" />' +
               '<div style="min-width:0;">' +
                 '<div style="color:var(--text-faint); text-decoration:line-through; overflow-wrap:anywhere;">' + esc(c.oldName) + '</div>' +
                 '<div style="overflow-wrap:anywhere;">' + esc(c.name) + ' <span style="display:inline-block; font-size:11.5px; padding:1px 7px; border-radius:6px; background:var(--bg-subtle); color:var(--text-body); font-weight:600;">สี: ' + esc(c.color) + '</span>' +
