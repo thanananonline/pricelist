@@ -50,6 +50,12 @@
   a:hover { color: #23236A; }
   button, input, select { font-family: inherit; }
   .folder-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+  /* Drag a PDF onto a subfolder card to move it there (admin only). These
+     classes are toggled straight on the DOM while dragging - never via
+     setState, since a re-render would destroy the dragged element. */
+  .folder-card.drop-target { border-color: var(--navy-action) !important; background: var(--navy-action-soft) !important; box-shadow: 0 0 0 3px var(--navy-action-soft), 0 6px 18px rgba(0,0,0,.08); }
+  .dragging-file { opacity: .4; }
+  [draggable="true"][data-file-id] { cursor: grab; }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
   /* icon-only แก้ไข/ลบ ในแถวตารางสินค้า: พื้นโปร่งใส เส้นขอบบาง, ปุ่มลบ
@@ -824,6 +830,11 @@ function Dashboard(root) {
   root.addEventListener("input", function (e) { self.handleFieldChange(e); });
   root.addEventListener("change", function (e) { self.handleChange(e); });
   root.addEventListener("keydown", function (e) { self.handleFieldNavKeyDown(e); });
+  root.addEventListener("dragstart", function (e) { self.handleFileDragStart(e); });
+  root.addEventListener("dragover", function (e) { self.handleFileDragOver(e); });
+  root.addEventListener("dragleave", function (e) { self.handleFileDragLeave(e); });
+  root.addEventListener("drop", function (e) { self.handleFileDrop(e); });
+  root.addEventListener("dragend", function () { self.endFileDrag(); });
 
   this.render();
 
@@ -1683,7 +1694,11 @@ Dashboard.prototype.handleClick = function (e) {
       });
       break;
     case "cancel-move-folder": if (this.state.folderMove && !this.state.folderMove.saving) this.setState({ folderMove: null }); break;
-    case "confirm-move-folder": this.moveFolder(); break;
+    case "confirm-move-folder":
+      if (this.state.folderMove && this.state.folderMove.fileId) this.confirmMoveFile();
+      else this.moveFolder();
+      break;
+    case "request-move-file": this.setState({ folderMove: { kind: d.kind, fileId: d.fileId, folderId: d.folderId, name: d.name || "", targetId: null, saving: false, error: "" } }); break;
     case "cancel-edit-folder": this.cancelEditFolder(); break;
     case "save-edit-folder": this.saveEditFolder(d.kind, d.id); break;
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
@@ -2982,6 +2997,137 @@ Dashboard.prototype.saveEditFile = function (kind, folderId, fileId) {
     });
 };
 
+// Shared by drag-and-drop and the "ย้าย" picker. Only touches state once the
+// server confirms; on failure the returned promise rejects and the caller
+// shows the error where it belongs.
+Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId) {
+  var k = this._folderKeys(kind);
+  var self = this;
+  return apiRequest("/files/" + encodeURIComponent(fileId), { method: "PUT", auth: true, body: { folderId: toFolderId } })
+    .then(function () {
+      var fileName = "";
+      var targetName = "";
+      self.setState(function (s) {
+        var folders = s[k.stateKey];
+        var from = folders.find(function (f) { return f.id === fromFolderId; });
+        var file = from && from.files.find(function (x) { return x.id === fileId; });
+        var target = folders.find(function (f) { return f.id === toFolderId; });
+        targetName = target ? target.name : "";
+        if (!file || !target) return {};
+        fileName = file.name;
+        var patch = {};
+        patch[k.stateKey] = folders.map(function (f) {
+          if (f.id === fromFolderId) return Object.assign({}, f, { files: f.files.filter(function (x) { return x.id !== fileId; }) });
+          if (f.id === toFolderId) return Object.assign({}, f, { files: f.files.concat([file]) });
+          return f;
+        });
+        if (s.editingFileId === fileId) {
+          patch.editingFileId = null;
+          patch.editFileKind = "";
+          patch.editFileFolderId = "";
+          patch.editFileName = "";
+          patch.fileEditError = "";
+        }
+        return patch;
+      });
+      if (fileName) self.showToast('ย้าย "' + fileName + '" ไปไว้ใน "' + targetName + '" แล้ว');
+    });
+};
+
+Dashboard.prototype.confirmMoveFile = function () {
+  var mv = this.state.folderMove;
+  if (!mv || !mv.fileId || mv.saving || !mv.targetId) return;
+  var self = this;
+  this.setState({ folderMove: Object.assign({}, mv, { saving: true, error: "" }) });
+  this.moveFile(mv.kind, mv.fileId, mv.folderId, mv.targetId)
+    .then(function () {
+      self.setState(function (s) {
+        return s.folderMove && s.folderMove.fileId === mv.fileId ? { folderMove: null } : {};
+      });
+    })
+    .catch(function (err) {
+      self.setState(function (s) {
+        if (!s.folderMove || s.folderMove.fileId !== mv.fileId) return {};
+        return { folderMove: Object.assign({}, s.folderMove, { saving: false, error: "ย้ายไฟล์ไม่สำเร็จ: " + err.message }) };
+      });
+    });
+};
+
+/* ---- drag a file onto a subfolder card ----
+   The page re-renders wholesale on setState, which would destroy the dragged
+   row, so everything during a drag lives on the instance (this._dragFile,
+   this._dropCard) and on DOM classes. render() is held off while dragging. */
+
+Dashboard.prototype.handleFileDragStart = function (e) {
+  var el = e.target.closest && e.target.closest('[draggable="true"][data-file-id]');
+  if (!el || !this.isAdmin()) return;
+  this._dragFile = { kind: el.dataset.kind, fileId: el.dataset.fileId, folderId: el.dataset.folderId, el: el };
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", el.dataset.fileId); // Firefox won't start a drag without data
+  el.classList.add("dragging-file");
+};
+
+Dashboard.prototype._fileDropCard = function (e) {
+  var drag = this._dragFile;
+  if (!drag) return null;
+  var card = e.target.closest && e.target.closest(".folder-card");
+  if (!card || card.dataset.kind !== drag.kind || card.dataset.id === drag.folderId) return null;
+  return card;
+};
+
+Dashboard.prototype._setDropCard = function (card) {
+  if (this._dropCard === card) return;
+  if (this._dropCard) this._dropCard.classList.remove("drop-target");
+  this._dropCard = card;
+  if (card) card.classList.add("drop-target");
+};
+
+Dashboard.prototype.handleFileDragOver = function (e) {
+  // Leave anything that isn't our own file drag (e.g. files dragged in from
+  // the desktop) to the browser's default handling.
+  var card = this._fileDropCard(e);
+  if (!card) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  this._setDropCard(card);
+};
+
+Dashboard.prototype.handleFileDragLeave = function (e) {
+  if (!this._dragFile || !this._dropCard) return;
+  var card = e.target.closest && e.target.closest(".folder-card");
+  if (card !== this._dropCard) return;
+  // Moving between the card's own children fires dragleave too - ignore it.
+  if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+  this._setDropCard(null);
+};
+
+Dashboard.prototype.handleFileDrop = function (e) {
+  var card = this._fileDropCard(e);
+  if (!card) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var drag = this._dragFile;
+  var toFolderId = card.dataset.id;
+  this.endFileDrag();
+  var self = this;
+  this.moveFile(drag.kind, drag.fileId, drag.folderId, toFolderId).catch(function (err) {
+    self.showToast("ย้ายไฟล์ไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
+// Runs on dragend (drop, drop outside, Esc) - always clears every trace.
+Dashboard.prototype.endFileDrag = function () {
+  var drag = this._dragFile;
+  if (!drag) return;
+  this._setDropCard(null);
+  if (drag.el) drag.el.classList.remove("dragging-file");
+  this._dragFile = null;
+  if (this._renderDeferred) {
+    this._renderDeferred = false;
+    this.render();
+  }
+};
+
 Dashboard.prototype.openFolder = function (kind, id) {
   var k = this._folderKeys(kind);
   var patch = {};
@@ -3201,6 +3347,9 @@ Dashboard.prototype.saveEditContact = function (id) {
 /* ---------- render ---------- */
 
 Dashboard.prototype.render = function () {
+  // Re-rendering mid-drag would destroy the dragged file row and cancel the
+  // drag (e.g. a toast timer firing). Hold the render until endFileDrag.
+  if (this._dragFile) { this._renderDeferred = true; return; }
   var active = document.activeElement;
   var focusId = active && active.id ? active.id : null;
   var selStart = active && "selectionStart" in active ? active.selectionStart : null;
@@ -3408,9 +3557,13 @@ Dashboard.prototype.renderMoveFolderModal = function () {
   if (!mv) return "";
   var k = this._folderKeys(mv.kind);
   var folders = (k && s[k.stateKey]) || [];
-  var moving = folders.find(function (f) { return f.id === mv.id; });
-  var currentParent = (moving && moving.parentId) || "";
-  var excluded = folderSubtreeIds(folders, mv.id);
+  // Same picker moves either a folder (mv.id) or a file (mv.fileId). A file
+  // must always live in a folder, so it gets no "ชั้นบนสุด" option, and it
+  // can go into any folder of this page except the one it's already in.
+  var isFile = !!mv.fileId;
+  var moving = isFile ? null : folders.find(function (f) { return f.id === mv.id; });
+  var currentParent = isFile ? mv.folderId : ((moving && moving.parentId) || "");
+  var excluded = isFile ? [] : folderSubtreeIds(folders, mv.id);
 
   var option = function (targetId, label, depth) {
     var isCurrent = targetId === currentParent;
@@ -3425,7 +3578,7 @@ Dashboard.prototype.renderMoveFolderModal = function () {
     return '<button type="button" data-action="select-move-target" data-target="' + esc(targetId) + '"' + (mv.saving ? ' disabled' : '') + ' style="' + style + '">' + inner + '</button>';
   };
 
-  var rows = [option("", "📂 ชั้นบนสุด", 0)];
+  var rows = isFile ? [] : [option("", "📂 ชั้นบนสุด", 0)];
   var walk = function (parentId, depth) {
     folderChildren(folders, parentId).forEach(function (f) {
       if (excluded.indexOf(f.id) !== -1) return;
@@ -3433,14 +3586,14 @@ Dashboard.prototype.renderMoveFolderModal = function () {
       walk(f.id, depth + 1);
     });
   };
-  walk(null, 1);
+  walk(null, isFile ? 0 : 1);
 
-  var canConfirm = mv.targetId !== null && !mv.saving;
+  var canConfirm = (isFile ? !!mv.targetId : mv.targetId !== null) && !mv.saving;
   return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
     '<div style="background:#fff; border-radius:16px; padding:24px 22px; max-width:440px; width:100%; max-height:calc(100vh - 40px); box-sizing:border-box; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:14px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
-        '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">📁</div>' +
-        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">ย้ายโฟลเดอร์ "' + esc(mv.name) + '"</div>' +
+        '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">' + (isFile ? '📕' : '📁') + '</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">' + (isFile ? 'ย้ายไฟล์' : 'ย้ายโฟลเดอร์') + ' "' + esc(mv.name) + '"</div>' +
       '</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">เลือกโฟลเดอร์ปลายทาง</div>' +
       '<div style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
@@ -4369,6 +4522,14 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   var subfoldersHtml = subfolders.length ?
     '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px; margin-bottom:24px;">' + subfolders.map(renderFolderCard).join("") + '</div>' : '';
 
+  // Admins can drag a file onto a subfolder card (see handleFileDragStart).
+  var dragAttrs = function (f) {
+    return isAdmin ? ' draggable="true" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '"' : '';
+  };
+  var moveFileBtn = function (f, style) {
+    return '<button data-action="request-move-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="' + style + '">ย้าย</button>';
+  };
+
   var fileViewGrid = s[k.viewKey] === "grid";
   var fileViewActiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
   var fileViewInactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:var(--text-muted);";
@@ -4409,9 +4570,10 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           '</div>' +
         '</div>';
       }
-      return '<div style="position:relative; background:#fff; border:1px solid var(--border); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+      return '<div' + dragAttrs(f) + ' style="position:relative; background:#fff; border:1px solid var(--border); border-radius:14px; padding:22px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
         (isAdmin ? '<div style="position:absolute; top:2px; right:2px; display:flex;">' +
           '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12px; font-family:inherit;">แก้ไข</button>' +
+          moveFileBtn(f, "min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12px; font-family:inherit;") +
           '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--danger-red); cursor:pointer; font-size:12px; font-family:inherit;">ลบ</button>' +
         '</div>' : '') +
         '<div style="width:52px; height:52px; border-radius:10px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:24px; flex:none;">📕</div>' +
@@ -4435,7 +4597,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           (s.fileEditError ? '<div style="width:100%; font-size:11.5px; color:var(--danger-red);">' + esc(s.fileEditError) + '</div>' : '') +
         '</div>';
       }
-      return '<div class="pdf-file-row" style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid var(--border-light);">' +
+      return '<div class="pdf-file-row"' + dragAttrs(f) + ' style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid var(--border-light);">' +
         '<div class="pdf-file-meta" style="display:flex; align-items:center; gap:14px;">' +
           '<div style="width:38px; height:38px; border-radius:8px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
           '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:var(--text-faint);">' + esc(f.sizeLabel) + '</div></div>' +
@@ -4445,6 +4607,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           '<button type="button" data-action="download-file" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;box-sizing:border-box; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:8px; border:none; background:var(--bg-subtle); cursor:pointer; font-family:inherit; color:inherit;">ดาวน์โหลด</button>' +
           shareButtonHtml(f.id, f.name, 8, s.sharingFileId === f.id) +
           (isAdmin ? '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' : '') +
+          (isAdmin ? moveFileBtn(f, "min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;") : '') +
           (isAdmin ? '<button data-action="request-remove-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-height:44px; display:inline-flex; align-items:center;padding:10px 14px; border:none; background:transparent; color:var(--danger-red); cursor:pointer; font-size:13px; font-family:inherit;">ลบ</button>' : '') +
         '</div>' +
       '</div>';

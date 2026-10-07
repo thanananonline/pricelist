@@ -899,11 +899,25 @@ export default {
       const id = decodeURIComponent(fileIdMatch[1]);
       let body;
       try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const hasName = Object.prototype.hasOwnProperty.call(body, "name");
+      const hasFolder = Object.prototype.hasOwnProperty.call(body, "folderId");
+      if (!hasName && !hasFolder) return json({ error: "name or folderId is required" }, 400);
       const name = String(body.name || "").trim();
-      if (!name) return json({ error: "name is required" }, 400);
-      const res = await env.DB.prepare("UPDATE files SET name = ? WHERE id = ?").bind(name, id).run();
-      if (!res.meta || res.meta.changes === 0) return json({ error: "not found" }, 404);
-      return json({ id: id, name: name });
+      if (hasName && !name) return json({ error: "name is required" }, 400);
+      const file = await env.DB.prepare("SELECT id, kind, name, folder_id FROM files WHERE id = ?").bind(id).first();
+      if (!file) return json({ error: "not found" }, 404);
+      let folderId = file.folder_id;
+      if (hasFolder) {
+        folderId = String(body.folderId || "");
+        if (!folderId) return json({ error: "folderId is required" }, 400);
+        const folder = await env.DB.prepare("SELECT kind FROM folders WHERE id = ?").bind(folderId).first();
+        if (!folder) return json({ error: "folder not found" }, 404);
+        if (folder.kind !== file.kind) return json({ error: "folder kind mismatch" }, 400);
+      }
+      // Only the DB row moves; r2_key stays as-is so the stored object is still found.
+      const newName = hasName ? name : file.name;
+      await env.DB.prepare("UPDATE files SET name = ?, folder_id = ? WHERE id = ?").bind(newName, folderId, id).run();
+      return json({ id: id, name: newName, folderId: folderId });
     }
 
     if (fileIdMatch && method === "DELETE") {
