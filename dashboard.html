@@ -96,6 +96,11 @@
     .folder-card.drop-target .folder-icon-open, .folder-card.drop-success, .folder-card.drop-failed { animation: none; transform: none; }
     .folder-plus-one { display: none; }
   }
+  /* "เลือกหลายรายการ" on folder pages: the row/card itself toggles, so no
+     text selection on (shift+)click; the checkbox sits in a 44px hit box */
+  .file-selectable[data-file-id] { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .file-select-box { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; }
+  .file-select-check { width: 20px; height: 20px; margin: 0; cursor: pointer; accent-color: var(--navy-action); }
   .product-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
   .cat-sidebar-btn:hover { background: rgba(255,255,255,.08) !important; }
   /* icon-only แก้ไข/ลบ ในแถวตารางสินค้า: พื้นโปร่งใส เส้นขอบบาง, ปุ่มลบ
@@ -758,6 +763,14 @@ function Dashboard(root) {
     fileDeleteConfirm: null,
     folderDeleteConfirm: null,
     folderMove: null,
+    // "เลือกหลายรายการ" for PDF files on a folder page - separate from the
+    // products' selectMode/selectedProductIds. fileSelectScope is
+    // "<kind>:<folderId>" of the folder it was turned on in; any other
+    // folder renders as not selecting (see _fileSelectOn).
+    fileSelectMode: false,
+    fileSelectScope: "",
+    selectedFileIds: [],
+    fileBulkDelete: null,
     editingFolderId: null,
     editFolderKind: "",
     editFolderName: "",
@@ -1606,6 +1619,7 @@ Dashboard.prototype.handleClick = function (e) {
           patch[navFolderKeys.activeKey] = null;
           patch[navFolderKeys.searchKey] = "";
         }
+        Object.assign(patch, fileSelectReset());
         // On the mobile drawer, picking a page should also close it; on the
         // desktop rail, leave the open/closed choice as the user set it.
         if (window.innerWidth <= 700) patch.sidebarOpen = false;
@@ -1795,10 +1809,38 @@ Dashboard.prototype.handleClick = function (e) {
       break;
     case "cancel-move-folder": if (this.state.folderMove && !this.state.folderMove.saving) this.setState({ folderMove: null }); break;
     case "confirm-move-folder":
-      if (this.state.folderMove && this.state.folderMove.fileId) this.confirmMoveFile();
+      if (this.state.folderMove && this.state.folderMove.fileIds) this.confirmMoveFiles();
+      else if (this.state.folderMove && this.state.folderMove.fileId) this.confirmMoveFile();
       else this.moveFolder();
       break;
     case "request-move-file": this.setState({ folderMove: { kind: d.kind, fileId: d.fileId, folderId: d.folderId, name: d.name || "", targetId: null, saving: false, error: "" } }); break;
+    case "toggle-file-select-mode":
+      var fsmScope = d.kind + ":" + d.folderId;
+      this.setState(function (s2) {
+        return s2.fileSelectMode ? fileSelectReset() : { fileSelectMode: true, fileSelectScope: fsmScope, selectedFileIds: [] };
+      });
+      this._fileSelectAnchor = null;
+      break;
+    case "toggle-select-file": this.toggleFileSelection(d.kind, d.fileId, e.shiftKey); break;
+    case "toggle-select-all-files":
+      var allVisibleFileIds = this._visibleFolderFiles(d.kind).map(function (f) { return f.id; });
+      this.setState(function (s2) {
+        var allOn = allVisibleFileIds.length > 0 && allVisibleFileIds.every(function (id) { return s2.selectedFileIds.indexOf(id) !== -1; });
+        return { selectedFileIds: allOn ? [] : allVisibleFileIds };
+      });
+      break;
+    case "request-bulk-move-files":
+      var bulkMoveKeys = this._folderKeys(d.kind);
+      var bulkMoveFrom = this.state[bulkMoveKeys.stateKey].find(function (f) { return f.id === d.folderId; });
+      var bulkMoveSel = this.state.selectedFileIds;
+      var bulkMoveIds = ((bulkMoveFrom && bulkMoveFrom.files) || []).map(function (f) { return f.id; }).filter(function (id) { return bulkMoveSel.indexOf(id) !== -1; });
+      if (bulkMoveIds.length) {
+        this.setState({ folderMove: { kind: d.kind, fileIds: bulkMoveIds, folderId: d.folderId, name: "", targetId: null, saving: false, error: "", progress: null } });
+      }
+      break;
+    case "request-bulk-delete-files": this.requestBulkDeleteFiles(d.kind, d.folderId); break;
+    case "cancel-bulk-delete-files": if (this.state.fileBulkDelete && !this.state.fileBulkDelete.deleting) this.setState({ fileBulkDelete: null }); break;
+    case "confirm-bulk-delete-files": this.confirmBulkDeleteFiles(); break;
     case "cancel-edit-folder": this.cancelEditFolder(); break;
     case "save-edit-folder": this.saveEditFolder(d.kind, d.id); break;
     case "request-remove-file": this.setState({ fileDeleteConfirm: { kind: d.kind, folderId: d.folderId, fileId: d.fileId, name: d.name || "" } }); break;
@@ -3162,8 +3204,10 @@ Dashboard.prototype.saveEditFile = function (kind, folderId, fileId) {
 
 // Shared by drag-and-drop and the "ย้าย" picker. Only touches state once the
 // server confirms; on failure the returned promise rejects and the caller
-// shows the error where it belongs.
-Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId) {
+// shows the error where it belongs. opts.quiet skips the per-file toast and
+// card effect (moveFiles shows one for the whole batch).
+Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId, opts) {
+  opts = opts || {};
   var k = this._folderKeys(kind);
   var self = this;
   return apiRequest("/files/" + encodeURIComponent(fileId), { method: "PUT", auth: true, body: { folderId: toFolderId } })
@@ -3184,6 +3228,7 @@ Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId)
           if (f.id === toFolderId) return Object.assign({}, f, { files: f.files.concat([file]) });
           return f;
         });
+        if (s.selectedFileIds.indexOf(fileId) !== -1) patch.selectedFileIds = s.selectedFileIds.filter(function (id) { return id !== fileId; });
         if (s.editingFileId === fileId) {
           patch.editingFileId = null;
           patch.editFileKind = "";
@@ -3193,7 +3238,7 @@ Dashboard.prototype.moveFile = function (kind, fileId, fromFolderId, toFolderId)
         }
         return patch;
       });
-      if (fileName) {
+      if (fileName && !opts.quiet) {
         self.showToast('ย้าย "' + fileName + '" ไปไว้ใน "' + targetName + '" แล้ว');
         self._playFolderCardEffect(toFolderId, "drop-success");
       }
@@ -3219,6 +3264,81 @@ Dashboard.prototype.confirmMoveFile = function () {
     });
 };
 
+// Moves several files one after another (PUT /files/:id each, via
+// moveFile) and never rejects: resolves { moved, failed } where failed
+// holds { id, name, message }. onProgress(done, total) runs after each file.
+// Afterwards the moved ids leave the selection; if nothing failed, select
+// mode ends. Toast/+N effect for the batch are shown here.
+Dashboard.prototype.moveFiles = function (kind, fromFolderId, fileIds, toFolderId, onProgress) {
+  var self = this;
+  var k = this._folderKeys(kind);
+  var from = this.state[k.stateKey].find(function (f) { return f.id === fromFolderId; });
+  var nameOf = {};
+  ((from && from.files) || []).forEach(function (f) { nameOf[f.id] = f.name; });
+  var target = this.state[k.stateKey].find(function (f) { return f.id === toFolderId; });
+  var targetName = target ? target.name : "";
+  var moved = [], failed = [];
+  var chain = Promise.resolve();
+  fileIds.forEach(function (id, i) {
+    chain = chain.then(function () {
+      return self.moveFile(kind, id, fromFolderId, toFolderId, { quiet: true }).then(function () {
+        moved.push(id);
+      }, function (err) {
+        failed.push({ id: id, name: nameOf[id] || id, message: err.message });
+      }).then(function () {
+        if (onProgress) onProgress(i + 1, fileIds.length);
+      });
+    });
+  });
+  return chain.then(function () {
+    self._finishFileBulk(moved, failed);
+    if (moved.length) {
+      self.showToast("ย้าย " + moved.length + ' ไฟล์ไปไว้ใน "' + targetName + '" แล้ว');
+      self._playFolderCardEffect(toFolderId, "drop-success", moved.length);
+    }
+    return { moved: moved, failed: failed };
+  });
+};
+
+// After a bulk move/delete: drop the done ids from the selection and, when
+// everything went through, leave select mode.
+Dashboard.prototype._finishFileBulk = function (doneIds, failed) {
+  this.setState(function (s) {
+    if (!failed.length) return fileSelectReset();
+    return { selectedFileIds: s.selectedFileIds.filter(function (id) { return doneIds.indexOf(id) === -1; }) };
+  });
+};
+
+function fileBulkFailureText(verb, failed) {
+  return verb + "ไม่สำเร็จ " + failed.length + " ไฟล์: " + failed.map(function (f) { return '"' + f.name + '"'; }).join(", ") +
+    " (" + failed[0].message + ")";
+}
+
+Dashboard.prototype.confirmMoveFiles = function () {
+  var mv = this.state.folderMove;
+  if (!mv || !mv.fileIds || mv.saving || !mv.targetId) return;
+  var self = this;
+  var total = mv.fileIds.length;
+  this.setState({ folderMove: Object.assign({}, mv, { saving: true, error: "", progress: { done: 0, total: total } }) });
+  this.moveFiles(mv.kind, mv.folderId, mv.fileIds, mv.targetId, function (done) {
+    self.setState(function (s) {
+      return s.folderMove && s.folderMove.fileIds === mv.fileIds ? { folderMove: Object.assign({}, s.folderMove, { progress: { done: done, total: total } }) } : {};
+    });
+  }).then(function (res) {
+    self.setState(function (s) {
+      if (!s.folderMove || s.folderMove.fileIds !== mv.fileIds) return {};
+      if (!res.failed.length) return { folderMove: null };
+      // Keep the picker open on just the files that didn't move, so the
+      // admin can retry or cancel; they stay selected too.
+      return { folderMove: Object.assign({}, s.folderMove, {
+        fileIds: res.failed.map(function (f) { return f.id; }),
+        saving: false, progress: null,
+        error: fileBulkFailureText("ย้าย", res.failed),
+      }) };
+    });
+  });
+};
+
 /* ---- drag a file onto a subfolder card ----
    The page re-renders wholesale on setState, which would destroy the dragged
    row, so everything during a drag lives on the instance (this._dragFile,
@@ -3227,7 +3347,19 @@ Dashboard.prototype.confirmMoveFile = function () {
 Dashboard.prototype.handleFileDragStart = function (e) {
   var el = e.target.closest && e.target.closest('[draggable="true"][data-file-id]');
   if (!el || !this.isAdmin() || el.classList.contains("file-moving")) return;
-  this._dragFile = { kind: el.dataset.kind, fileId: el.dataset.fileId, folderId: el.dataset.folderId, el: el };
+  this._dragFile = { kind: el.dataset.kind, fileId: el.dataset.fileId, folderId: el.dataset.folderId, el: el, els: [el] };
+  // Dragging one of several selected files carries the whole selection.
+  var s = this.state;
+  if (this._fileSelectOn(el.dataset.kind, el.dataset.folderId) && s.selectedFileIds.length > 1 && s.selectedFileIds.indexOf(el.dataset.fileId) !== -1) {
+    var k = this._folderKeys(el.dataset.kind);
+    var folder = s[k.stateKey].find(function (f) { return f.id === el.dataset.folderId; });
+    var ids = ((folder && folder.files) || []).map(function (f) { return f.id; }).filter(function (id) { return s.selectedFileIds.indexOf(id) !== -1; });
+    if (ids.length > 1) {
+      this._dragFile.fileIds = ids;
+      var rowEls = this.root.querySelectorAll('[draggable="true"][data-file-id]');
+      this._dragFile.els = Array.prototype.filter.call(rowEls, function (r) { return ids.indexOf(r.dataset.fileId) !== -1; });
+    }
+  }
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData("text/plain", el.dataset.fileId); // Firefox won't start a drag without data
   // A small "📕 name" chip follows the cursor instead of a snapshot of the
@@ -3235,7 +3367,7 @@ Dashboard.prototype.handleFileDragStart = function (e) {
   // off-screen and thrown away right after.
   if (e.dataTransfer.setDragImage) {
     var chip = document.createElement("div");
-    chip.textContent = "📕 " + (el.dataset.name || "");
+    chip.textContent = "📕 " + (this._dragFile.fileIds ? this._dragFile.fileIds.length + " ไฟล์" : (el.dataset.name || ""));
     chip.style.cssText = "position:fixed; top:-1000px; left:-1000px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; " +
       "padding:8px 14px; background:#fff; color:var(--text-strong); border:1px solid var(--border); border-radius:10px; " +
       "box-shadow:0 8px 20px rgba(0,0,0,.18); font-family:'IBM Plex Sans Thai', sans-serif; font-size:13px; font-weight:600;";
@@ -3243,7 +3375,7 @@ Dashboard.prototype.handleFileDragStart = function (e) {
     e.dataTransfer.setDragImage(chip, 16, 16);
     setTimeout(function () { chip.remove(); }, 0);
   }
-  el.classList.add("dragging-file");
+  this._dragFile.els.forEach(function (r) { r.classList.add("dragging-file"); });
   this.root.classList.add("file-dragging");
 };
 
@@ -3295,10 +3427,26 @@ Dashboard.prototype.handleFileDrop = function (e) {
   // row back in; _applyFileMoving keeps it hidden across any re-render
   // until the API answers.
   this._movingFileIds = this._movingFileIds || {};
+  var self = this;
+  if (drag.fileIds) {
+    drag.fileIds.forEach(function (id) { self._movingFileIds[id] = true; });
+    this.endFileDrag();
+    this._applyFileMoving();
+    this.moveFiles(drag.kind, drag.folderId, drag.fileIds, toFolderId).then(function (res) {
+      drag.fileIds.forEach(function (id) { delete self._movingFileIds[id]; });
+      self._applyFileMoving();
+      if (!res.failed.length) return;
+      var k = self._folderKeys(drag.kind);
+      var patch = {};
+      patch[k.errorKey] = fileBulkFailureText("ย้าย", res.failed);
+      self.setState(patch);
+      if (!res.moved.length) self._playFolderCardEffect(toFolderId, "drop-failed");
+    });
+    return;
+  }
   this._movingFileIds[drag.fileId] = true;
   this.endFileDrag();
   this._applyFileMoving();
-  var self = this;
   this.moveFile(drag.kind, drag.fileId, drag.folderId, toFolderId).then(function () {
     delete self._movingFileIds[drag.fileId];
   }, function (err) {
@@ -3319,13 +3467,13 @@ Dashboard.prototype._applyFileMoving = function () {
   }
 };
 
-// One-shot "drop-success" (bounce + green "+1") or "drop-failed" (shake) on
+// One-shot "drop-success" (bounce + green "+1", or "+N" for movedCount files) or "drop-failed" (shake) on
 // a folder card. Deferred to the next frame so it lands on the DOM left by
 // the last of the re-renders that follow a move (state, toast, modal close);
 // cleared on animationend so the next render doesn't replay it. The timer
 // is a fallback for when animations are off (reduced motion) and
 // animationend never fires.
-Dashboard.prototype._playFolderCardEffect = function (folderId, cls) {
+Dashboard.prototype._playFolderCardEffect = function (folderId, cls, movedCount) {
   var root = this.root;
   requestAnimationFrame(function () {
     var card = root.querySelector('.folder-card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(folderId) : folderId) + '"]');
@@ -3336,7 +3484,7 @@ Dashboard.prototype._playFolderCardEffect = function (folderId, cls) {
       if (count) {
         badge = document.createElement("span");
         badge.className = "folder-plus-one";
-        badge.textContent = "+1";
+        badge.textContent = "+" + (movedCount || 1);
         count.appendChild(badge);
       }
     }
@@ -3366,7 +3514,7 @@ Dashboard.prototype.endFileDrag = function () {
   var drag = this._dragFile;
   if (!drag) return;
   this._setDropCard(null);
-  if (drag.el) drag.el.classList.remove("dragging-file");
+  (drag.els || []).forEach(function (r) { r.classList.remove("dragging-file"); });
   this.root.classList.remove("file-dragging");
   this._dragFile = null;
   if (this._renderDeferred) {
@@ -3380,7 +3528,7 @@ Dashboard.prototype.openFolder = function (kind, id) {
   var patch = {};
   patch[k.activeKey] = id;
   patch[k.searchKey] = "";
-  this.setState(patch);
+  this.setState(Object.assign(patch, fileSelectReset()));
 };
 
 // "← กลับ" climbs one level: to the parent folder, or the folder list at the top.
@@ -3393,7 +3541,7 @@ Dashboard.prototype.closeFolder = function (kind) {
   var patch = {};
   patch[k.activeKey] = parentExists ? parentId : null;
   patch[k.searchKey] = "";
-  this.setState(patch);
+  this.setState(Object.assign(patch, fileSelectReset()));
 };
 
 Dashboard.prototype.setFileView = function (kind, view) {
@@ -3452,10 +3600,11 @@ Dashboard.prototype.uploadFiles = function (kind, fileList) {
   });
 };
 
-Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
+// DELETE /files/:id, then drop it from state. Rejects on failure.
+Dashboard.prototype._deleteFile = function (kind, folderId, fileId) {
   var k = this._folderKeys(kind);
   var self = this;
-  apiRequest("/files/" + encodeURIComponent(fileId), { method: "DELETE", auth: true })
+  return apiRequest("/files/" + encodeURIComponent(fileId), { method: "DELETE", auth: true })
     .then(function () {
       self.setState(function (s) {
         var patch = {};
@@ -3463,14 +3612,114 @@ Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
           if (f.id !== folderId) return f;
           return Object.assign({}, f, { files: f.files.filter(function (x) { return x.id !== fileId; }) });
         });
+        if (s.selectedFileIds.indexOf(fileId) !== -1) patch.selectedFileIds = s.selectedFileIds.filter(function (id) { return id !== fileId; });
         return patch;
       });
-    })
+    });
+};
+
+Dashboard.prototype.removeFile = function (kind, folderId, fileId) {
+  var k = this._folderKeys(kind);
+  var self = this;
+  this._deleteFile(kind, folderId, fileId)
     .catch(function (err) {
       var patch = {};
       patch[k.errorKey] = "ลบไฟล์ไม่สำเร็จ: " + err.message;
       self.setState(patch);
     });
+};
+
+/* ---- select several files (folder pages) ---- */
+
+function fileSelectReset() {
+  return { fileSelectMode: false, fileSelectScope: "", selectedFileIds: [], fileBulkDelete: null };
+}
+
+Dashboard.prototype._fileSelectOn = function (kind, folderId) {
+  return this.isAdmin() && this.state.fileSelectMode && this.state.fileSelectScope === kind + ":" + folderId;
+};
+
+// Files of the open folder that match the current search, in on-screen order.
+Dashboard.prototype._visibleFolderFiles = function (kind) {
+  var k = this._folderKeys(kind);
+  var s = this.state;
+  var active = s[k.stateKey].find(function (f) { return f.id === s[k.activeKey]; });
+  if (!active) return [];
+  var queryTerms = (s[k.searchKey] || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return queryTerms.length ? active.files.filter(function (f) {
+    var name = f.name.toLowerCase();
+    return queryTerms.every(function (term) { return name.indexOf(term) !== -1; });
+  }) : active.files;
+};
+
+// Plain click toggles one file. Shift+click selects every visible file
+// between the last-clicked one and this one.
+Dashboard.prototype.toggleFileSelection = function (kind, fileId, shift) {
+  var visibleIds = this._visibleFolderFiles(kind).map(function (f) { return f.id; });
+  var anchor = this._fileSelectAnchor;
+  var from = shift && anchor ? visibleIds.indexOf(anchor) : -1;
+  var to = visibleIds.indexOf(fileId);
+  this._fileSelectAnchor = fileId;
+  if (shift) {
+    var sel = window.getSelection && window.getSelection();
+    if (sel && sel.removeAllRanges) sel.removeAllRanges();
+  }
+  this.setState(function (s) {
+    if (from !== -1 && to !== -1) {
+      var range = visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1);
+      return { selectedFileIds: s.selectedFileIds.concat(range.filter(function (id) { return s.selectedFileIds.indexOf(id) === -1; })) };
+    }
+    var on = s.selectedFileIds.indexOf(fileId) !== -1;
+    return { selectedFileIds: on ? s.selectedFileIds.filter(function (id) { return id !== fileId; }) : s.selectedFileIds.concat([fileId]) };
+  });
+};
+
+Dashboard.prototype.requestBulkDeleteFiles = function (kind, folderId) {
+  var s = this.state;
+  var k = this._folderKeys(kind);
+  var folder = s[k.stateKey].find(function (f) { return f.id === folderId; });
+  if (!folder) return;
+  var files = folder.files.filter(function (f) { return s.selectedFileIds.indexOf(f.id) !== -1; });
+  if (!files.length) return;
+  this.setState({ fileBulkDelete: {
+    kind: kind, folderId: folderId,
+    ids: files.map(function (f) { return f.id; }),
+    names: files.map(function (f) { return f.name; }),
+    deleting: false, done: 0,
+  } });
+};
+
+Dashboard.prototype.confirmBulkDeleteFiles = function () {
+  var bd = this.state.fileBulkDelete;
+  if (!bd || bd.deleting) return;
+  var self = this;
+  var k = this._folderKeys(bd.kind);
+  this.setState({ fileBulkDelete: Object.assign({}, bd, { deleting: true, done: 0 }) });
+  var deleted = [], failed = [];
+  var chain = Promise.resolve();
+  bd.ids.forEach(function (id, i) {
+    chain = chain.then(function () {
+      return self._deleteFile(bd.kind, bd.folderId, id).then(function () {
+        deleted.push(id);
+      }, function (err) {
+        failed.push({ id: id, name: bd.names[i], message: err.message });
+      }).then(function () {
+        self.setState(function (s) {
+          return s.fileBulkDelete ? { fileBulkDelete: Object.assign({}, s.fileBulkDelete, { done: i + 1 }) } : {};
+        });
+      });
+    });
+  });
+  chain.then(function () {
+    self.setState({ fileBulkDelete: null });
+    self._finishFileBulk(deleted, failed);
+    if (failed.length) {
+      var patch = {};
+      patch[k.errorKey] = fileBulkFailureText("ลบ", failed);
+      self.setState(patch);
+    }
+    if (deleted.length) self.showToast("ลบ " + deleted.length + " ไฟล์แล้ว");
+  });
 };
 
 /* ---- users ---- */
@@ -3788,6 +4037,29 @@ Dashboard.prototype.renderDeleteConfirmModal = function () {
   var catc = s.categoryDeleteConfirm;
   var bc = s.bulkDeleteConfirm;
   var gdc = s.groupDeleteConfirm;
+  var fbd = s.fileBulkDelete;
+  if (fbd) {
+    var fbdShown = fbd.names.slice(0, 5);
+    var fbdMore = fbd.names.length - fbdShown.length;
+    return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
+      '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div style="width:40px; height:40px; border-radius:10px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">🗑️</div>' +
+          '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px;">ลบ ' + fbd.ids.length + ' ไฟล์ออกถาวร?</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px; color:var(--text-body); line-height:1.6;">' +
+          '<ul style="margin:0; padding-left:20px; overflow-wrap:anywhere;">' + fbdShown.map(function (n) { return '<li><strong>' + esc(n) + '</strong></li>'; }).join("") + '</ul>' +
+          (fbdMore > 0 ? '<div style="margin-top:4px; color:var(--text-muted);">และอีก ' + fbdMore + ' ไฟล์</div>' : '') +
+          '<div style="margin-top:8px;">การลบไม่สามารถย้อนกลับได้</div>' +
+        '</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px; flex-wrap:wrap;">' +
+          '<button data-action="cancel-bulk-delete-files"' + (fbd.deleting ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:' + (fbd.deleting ? 'default' : 'pointer') + '; font-family:inherit;">ยกเลิก</button>' +
+          '<button data-action="confirm-bulk-delete-files"' + (fbd.deleting ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--danger-red); color:#fff; border-radius:9px; font-size:14px; font-weight:700; cursor:' + (fbd.deleting ? 'default' : 'pointer') + '; opacity:' + (fbd.deleting ? '.7' : '1') + '; font-family:inherit;">' +
+            (fbd.deleting ? 'กำลังลบ ' + Math.min(fbd.done + 1, fbd.ids.length) + '/' + fbd.ids.length + '...' : 'ลบ ' + fbd.ids.length + ' ไฟล์') + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
   if (gdc) {
     return '<div style="position:fixed; inset:0; background:rgba(20,15,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;">' +
       '<div style="background:#fff; border-radius:16px; padding:28px 26px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px;">' +
@@ -3859,7 +4131,8 @@ Dashboard.prototype.renderMoveFolderModal = function () {
   // Same picker moves either a folder (mv.id) or a file (mv.fileId). A file
   // must always live in a folder, so it gets no "ชั้นบนสุด" option, and it
   // can go into any folder of this page except the one it's already in.
-  var isFile = !!mv.fileId;
+  // mv.fileIds (several selected files, all from mv.folderId) works the same.
+  var isFile = !!(mv.fileId || mv.fileIds);
   var moving = isFile ? null : folders.find(function (f) { return f.id === mv.id; });
   var currentParent = isFile ? mv.folderId : ((moving && moving.parentId) || "");
   var excluded = isFile ? [] : folderSubtreeIds(folders, mv.id);
@@ -3892,14 +4165,14 @@ Dashboard.prototype.renderMoveFolderModal = function () {
     '<div style="background:#fff; border-radius:16px; padding:24px 22px; max-width:440px; width:100%; max-height:calc(100vh - 40px); box-sizing:border-box; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:14px;">' +
       '<div style="display:flex; align-items:center; gap:12px;">' +
         '<div style="width:40px; height:40px; border-radius:10px; background:var(--navy-action-soft); display:flex; align-items:center; justify-content:center; font-size:19px; flex:none;">' + (isFile ? '📕' : '📁') + '</div>' +
-        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">' + (isFile ? 'ย้ายไฟล์' : 'ย้ายโฟลเดอร์') + ' "' + esc(mv.name) + '"</div>' +
+        '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:17px; min-width:0; overflow-wrap:break-word; word-break:break-word;">' + (mv.fileIds ? 'ย้าย ' + mv.fileIds.length + ' ไฟล์' : (isFile ? 'ย้ายไฟล์' : 'ย้ายโฟลเดอร์') + ' "' + esc(mv.name) + '"') + '</div>' +
       '</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">เลือกโฟลเดอร์ปลายทาง</div>' +
-      '<div data-keep-scroll="move-target-' + (isFile ? 'file-' + esc(mv.fileId) : 'folder-' + esc(mv.id)) + '" style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
+      '<div data-keep-scroll="move-target-' + (mv.fileIds ? 'files' : isFile ? 'file-' + esc(mv.fileId) : 'folder-' + esc(mv.id)) + '" style="flex:1 1 auto; min-height:0; max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:4px; display:flex; flex-direction:column; gap:2px;">' + rows.join("") + '</div>' +
       (mv.error ? '<div style="font-size:13px; color:var(--danger-red); background:var(--danger-red-bg); padding:8px 12px; border-radius:8px;">' + esc(mv.error) + '</div>' : '') +
       '<div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">' +
         '<button data-action="cancel-move-folder"' + (mv.saving ? ' disabled' : '') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:9px; font-size:14px; font-weight:600; cursor:' + (mv.saving ? 'default' : 'pointer') + '; font-family:inherit;">ยกเลิก</button>' +
-        '<button data-action="confirm-move-folder"' + (canConfirm ? '' : ' disabled') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:14px; font-weight:700; font-family:inherit; cursor:' + (canConfirm ? 'pointer' : 'default') + '; opacity:' + (canConfirm ? '1' : '.5') + ';">' + (mv.saving ? 'กำลังย้าย...' : 'ย้ายมาที่นี่') + '</button>' +
+        '<button data-action="confirm-move-folder"' + (canConfirm ? '' : ' disabled') + ' style="min-height:44px; display:inline-flex; align-items:center;padding:12px 20px; border:none; background:var(--navy-action); color:#fff; border-radius:9px; font-size:14px; font-weight:700; font-family:inherit; cursor:' + (canConfirm ? 'pointer' : 'default') + '; opacity:' + (canConfirm ? '1' : '.5') + ';">' + (mv.saving ? (mv.progress ? 'กำลังย้าย ' + Math.min(mv.progress.done + 1, mv.progress.total) + '/' + mv.progress.total + '...' : 'กำลังย้าย...') : 'ย้ายมาที่นี่') + '</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -4946,6 +5219,18 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     return '<button data-action="request-move-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="' + style + '">ย้าย</button>';
   };
 
+  // "เลือกหลายรายการ": in select mode the whole row/card toggles (its own
+  // buttons still win, being the closer data-action), with a checkbox in
+  // front. dragAttrs already carries data-kind/data-file-id.
+  var selectOn = this._fileSelectOn(kind, active.id);
+  var isSelected = function (f) { return selectOn && s.selectedFileIds.indexOf(f.id) !== -1; };
+  var selectAttrs = function (f) {
+    return selectOn ? ' data-action="toggle-select-file"' : '';
+  };
+  var fileCheckbox = function (f) {
+    return '<input type="checkbox" id="file-select-' + esc(f.id) + '" class="file-select-check"' + (isSelected(f) ? ' checked' : '') + ' aria-label="เลือก ' + esc(f.name) + '" />';
+  };
+
   var fileViewGrid = s[k.viewKey] === "grid";
   var fileViewActiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:#fff; color:oklch(0.3 0.01 60); box-shadow:0 1px 3px rgba(0,0,0,.08);";
   var fileViewInactiveBtn = "min-height:44px; display:inline-flex; align-items:center;padding:10px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; background:transparent; color:var(--text-muted);";
@@ -4960,13 +5245,30 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       (s[k.searchKey] ? '<button type="button" data-action="clear-field" data-field="' + k.searchKey + '" aria-label="ล้างคำค้นหา" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; background:transparent; color:var(--text-muted); font-size:15px; line-height:1; cursor:pointer; padding:0;">✕</button>' : '') +
     '</div>' +
     fileViewToggle +
+    (isAdmin && !selectOn ? '<button type="button" class="toolbar-btn" data-action="toggle-file-select-mode" data-kind="' + kind + '" data-folder-id="' + active.id + '">☑️ <span>เลือกหลายรายการ</span></button>' : '') +
   '</div>';
 
-  var queryTerms = (s[k.searchKey] || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
-  var visibleFiles = queryTerms.length ? active.files.filter(function (f) {
-    var name = f.name.toLowerCase();
-    return queryTerms.every(function (term) { return name.indexOf(term) !== -1; });
-  }) : active.files;
+  var visibleFiles = this._visibleFolderFiles(kind);
+
+  var fileBulkBar = "";
+  if (selectOn && active.files.length > 0) {
+    var inFolderSelected = active.files.filter(isSelected).length;
+    var allVisibleSelected = visibleFiles.length > 0 && visibleFiles.every(isSelected);
+    var bulkBtn = function (action, label, enabled, bg) {
+      return '<button type="button" data-action="' + action + '" data-kind="' + kind + '" data-folder-id="' + active.id + '"' + (enabled ? '' : ' disabled') +
+        ' style="min-height:44px; display:inline-flex; align-items:center; padding:9px 16px; border:none; border-radius:8px; background:' + (enabled ? bg : 'oklch(0.85 0.01 60)') + '; color:#fff; font-size:13px; font-weight:700; cursor:' + (enabled ? 'pointer' : 'not-allowed') + '; font-family:inherit; white-space:nowrap;">' + label + '</button>';
+    };
+    var outlineBtn = 'min-height:44px; display:inline-flex; align-items:center; padding:9px 16px; border:1px solid var(--navy-action-soft-border); border-radius:8px; background:#fff; color:oklch(0.4 0.1 275); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;';
+    fileBulkBar = '<div style="background:oklch(0.95 0.05 275); border:1px solid var(--navy-action-soft-border); border-radius:12px; padding:10px 14px; margin-bottom:16px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px;">' +
+      '<div style="font-size:13.5px; color:var(--text-body);">เลือกแล้ว <strong>' + inFolderSelected + '</strong> ไฟล์</div>' +
+      '<button type="button" data-action="toggle-select-all-files" data-kind="' + kind + '"' + (visibleFiles.length ? '' : ' disabled') + ' style="' + outlineBtn + '">' + (allVisibleSelected ? 'ไม่เลือกทั้งหมด' : 'เลือกทั้งหมด (' + visibleFiles.length + ')') + '</button>' +
+      '<div style="margin-left:auto; display:flex; flex-wrap:wrap; gap:8px;">' +
+        bulkBtn("request-bulk-move-files", "📁 ย้าย", inFolderSelected > 0, "var(--navy-action)") +
+        bulkBtn("request-bulk-delete-files", "🗑️ ลบ", inFolderSelected > 0, "var(--danger-red)") +
+        '<button type="button" data-action="toggle-file-select-mode" data-kind="' + kind + '" data-folder-id="' + active.id + '" style="' + outlineBtn + '">✕ ยกเลิก</button>' +
+      '</div>' +
+    '</div>';
+  }
 
   var filesBody;
   if (active.files.length === 0) {
@@ -4986,7 +5288,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           '</div>' +
         '</div>';
       }
-      return '<div' + dragAttrs(f) + ' style="position:relative; background:#fff; border:1px solid var(--border); border-radius:14px; padding:' + (isAdmin ? '4px 16px 16px' : '16px') + '; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+      return '<div' + dragAttrs(f) + selectAttrs(f) + ' class="' + (selectOn ? 'file-selectable' : '') + '" style="position:relative; background:' + (isSelected(f) ? 'var(--navy-action-soft)' : '#fff') + '; border:1px solid ' + (isSelected(f) ? 'var(--navy-action-soft-border)' : 'var(--border)') + '; border-radius:14px; padding:' + (isAdmin ? '4px 16px 16px' : '16px') + '; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;">' +
+        (selectOn ? '<div class="file-select-box" style="position:absolute; top:4px; left:4px; z-index:2;">' + fileCheckbox(f) + '</div>' : '') +
         (isAdmin ? '<div style="align-self:stretch; display:flex; justify-content:flex-end; margin:-2px -14px -4px 0;">' +
           '<button data-action="start-edit-file" data-kind="' + kind + '" data-folder-id="' + active.id + '" data-file-id="' + f.id + '" data-name="' + esc(f.name) + '" style="min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; padding:0 6px; white-space:nowrap; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12px; font-family:inherit;">แก้ไข</button>' +
           moveFileBtn(f, "min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; padding:0 6px; white-space:nowrap; border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:12px; font-family:inherit;") +
@@ -5013,8 +5316,9 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
           (s.fileEditError ? '<div style="width:100%; font-size:11.5px; color:var(--danger-red);">' + esc(s.fileEditError) + '</div>' : '') +
         '</div>';
       }
-      return '<div class="pdf-file-row"' + dragAttrs(f) + ' style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid var(--border-light);">' +
+      return '<div class="pdf-file-row' + (selectOn ? ' file-selectable' : '') + '"' + dragAttrs(f) + selectAttrs(f) + ' style="display:flex; flex-direction:column; gap:10px; padding:14px 20px; border-top:1px solid var(--border-light);' + (isSelected(f) ? ' background:var(--navy-action-soft);' : '') + '">' +
         '<div class="pdf-file-meta" style="display:flex; align-items:center; gap:14px;">' +
+          (selectOn ? '<div class="file-select-box" style="margin:-10px -8px -10px -12px;">' + fileCheckbox(f) + '</div>' : '') +
           '<div style="width:38px; height:38px; border-radius:8px; background:var(--danger-red-bg); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;">📕</div>' +
           '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</div><div style="font-size:11.5px; color:var(--text-faint);">' + esc(f.sizeLabel) + '</div></div>' +
         '</div>' +
@@ -5052,7 +5356,7 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
     '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
       '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--bg-subtle); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       folderHeader +
-    '</div>' + errorBanner + uploadBox + subfoldersHtml + (active.files.length > 0 ? searchBox : "") + filesBody +
+    '</div>' + errorBanner + uploadBox + subfoldersHtml + (active.files.length > 0 ? searchBox : "") + fileBulkBar + filesBody +
   '</div>';
 };
 
