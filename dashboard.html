@@ -200,7 +200,19 @@
     form[data-form="add-product"] { grid-template-columns: 1fr !important; }
     form[data-form="add-contact"] > div:first-child { grid-template-columns: 1fr !important; }
     form[data-form="add-category"] { flex-wrap: wrap !important; }
+    /* new-folder input + button stay on one line (input shrinks) */
+    form[data-form="add-folder"] { flex-wrap: nowrap !important; }
+    form[data-form="add-folder"] input { min-width: 0; }
+    /* folder page admin toolbar: full-width upload button, then the
+       new-folder form on its own full-width row under it */
+    .folder-toolbar { flex-direction: column; align-items: stretch !important; }
+    .folder-toolbar-upload { width: 100%; justify-content: center; }
+    .folder-toolbar form[data-form="add-folder"] { flex: none !important; width: 100%; max-width: none !important; }
+  }
+  /* really narrow phones: let the button drop to its own full-width line */
+  @media (max-width: 319px) {
     form[data-form="add-folder"] { flex-wrap: wrap !important; }
+    form[data-form="add-folder"] button { width: 100%; justify-content: center; }
   }
 
   /* PDF file cards, list view (folder pages: BOQ/pricelist/etc. + Company
@@ -5182,8 +5194,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
   var addFolderForm = function (style) {
     return isAdmin ?
       '<form data-form="add-folder" data-kind="' + kind + '" style="display:flex; gap:10px; ' + style + '">' +
-        '<input id="field-new' + (kind.charAt(0).toUpperCase() + kind.slice(1)) + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; padding:11px 14px; border-radius:10px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; outline:none;" />' +
-        '<button type="submit" style="min-height:44px; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
+        '<input id="field-new' + (kind.charAt(0).toUpperCase() + kind.slice(1)) + 'FolderName" type="text" placeholder="ชื่อโฟลเดอร์ใหม่..." data-bind="' + k.nameKey + '" value="' + esc(s[k.nameKey]) + '" style="flex:1; min-width:0; min-height:44px; box-sizing:border-box; padding:11px 14px; border-radius:10px; border:1px solid var(--border-input); font-size:14px; font-family:inherit; outline:none;" />' +
+        '<button type="submit" style="min-height:44px; box-sizing:border-box; flex:none; display:inline-flex; align-items:center;padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; white-space:nowrap;">+ เพิ่มโฟลเดอร์</button>' +
       '</form>' : '';
   };
 
@@ -5199,8 +5211,8 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
 
   var uploadAction = 'data-action="upload-file" data-kind="' + kind + '"';
   var uploadBox = isAdmin ?
-    '<div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:24px;">' +
-      '<label style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' +
+    '<div class="folder-toolbar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:24px;">' +
+      '<label class="folder-toolbar-upload" style="min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; padding:11px 18px; border:none; border-radius:10px; background:var(--navy-action); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;">' +
         '<input type="file" accept="application/pdf" multiple ' + uploadAction + ' style="display:none;" />' +
         '📄 เพิ่มไฟล์ PDF' +
       '</label>' +
@@ -5343,18 +5355,18 @@ Dashboard.prototype.renderFolderPage = function (kind, title, subtitle) {
       (s.folderEditError ? '<div style="width:100%; font-size:11.5px; color:var(--danger-red);">' + esc(s.folderEditError) + '</div>' : '') +
     '</div>';
   } else {
-    folderHeader = '<div style="flex:1; display:flex; align-items:center; gap:8px;">' +
-      '<div><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:20px;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:var(--text-muted);">' + (active.parentId ?
+    folderHeader = '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:8px;">' +
+      '<div style="flex:1; min-width:0;"><div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:20px; line-height:1.3; overflow-wrap:anywhere;">' + esc(active.name) + '</div><div style="font-size:12.5px; color:var(--text-muted);">' + (active.parentId ?
         esc(folderPath(folders, active.id).map(function (f) { return f.name; }).join(" › ")) :
         'ไฟล์ PDF ในโฟลเดอร์นี้') + '</div></div>' +
-      (isAdmin ? '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
-        '<button data-action="request-move-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">ย้าย</button>' : '') +
+      (isAdmin ? '<div style="display:flex; gap:2px; flex:none;">' + '<button data-action="start-edit-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">แก้ไข</button>' +
+        '<button data-action="request-move-folder" data-kind="' + kind + '" data-id="' + active.id + '" data-name="' + esc(active.name) + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:transparent; color:var(--navy-action); cursor:pointer; font-size:13px; font-family:inherit;">ย้าย</button></div>' : '') +
     '</div>';
   }
 
   return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
-    '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' +
-      '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center;border:none; background:var(--bg-subtle); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
+    '<div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">' +
+      '<button data-action="close-folder" data-kind="' + kind + '" style="min-height:44px; display:inline-flex; align-items:center; flex:none; white-space:nowrap; border:none; background:var(--bg-subtle); border-radius:8px; padding:10px 16px; font-size:13px; cursor:pointer; font-family:inherit;">← กลับ</button>' +
       folderHeader +
     '</div>' + errorBanner + uploadBox + subfoldersHtml + (active.files.length > 0 ? searchBox : "") + fileBulkBar + filesBody +
   '</div>';
