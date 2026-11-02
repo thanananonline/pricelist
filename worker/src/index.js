@@ -144,6 +144,34 @@ function dohManholeToJson(p) {
   };
 }
 
+function plankGirderStandardToJson(s) {
+  return {
+    key: s.key,
+    label: s.label,
+    drawings: s.drawings,
+    section: s.section,
+    note: s.note,
+    sortOrder: s.sort_order,
+  };
+}
+
+function plankGirderProductToJson(p) {
+  return {
+    id: p.id,
+    standardKey: p.standard_key,
+    lengthM: p.length_m,
+    heightM: p.height_m,
+    weightTon: p.weight_ton,
+    priceInt: p.price_int,
+    priceExtBarrier: p.price_ext_barrier,
+    priceExtSidewalk100: p.price_ext_sidewalk100,
+    priceExtSidewalk150: p.price_ext_sidewalk150,
+    perTripTrailer18: p.per_trip_trailer18,
+    perTrip10Wheel: p.per_trip_10wheel,
+    sortOrder: p.sort_order,
+  };
+}
+
 // Re-checks against D1 (not just the token signature/expiry) so a deleted
 // user's still-valid token stops working immediately instead of waiting out
 // the token's 30-day lifetime.
@@ -812,6 +840,56 @@ export default {
         delivered_disc5: deliveredDisc5,
         delivered_disc10: deliveredDisc10,
       })));
+    }
+
+    if (path === "/plank-girder" && method === "GET") {
+      if (!(await requireAuth(request, env))) return json({ error: "unauthorized" }, 401);
+      const standardsRes = await env.DB.prepare("SELECT * FROM plank_girder_standards ORDER BY sort_order ASC").all();
+      const productsRes = await env.DB.prepare("SELECT * FROM plank_girder_products ORDER BY sort_order ASC").all();
+      return json({
+        standards: standardsRes.results.map(plankGirderStandardToJson),
+        products: productsRes.results.map(plankGirderProductToJson),
+      });
+    }
+
+    const plankGirderProductMatch = path.match(/^\/plank-girder-products\/([^/]+)$/);
+    if (plankGirderProductMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(plankGirderProductMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM plank_girder_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const priceInt = body.priceInt !== undefined ? Number(body.priceInt) : existing.price_int;
+      const priceExtBarrier = body.priceExtBarrier !== undefined ? Number(body.priceExtBarrier) : existing.price_ext_barrier;
+      const priceExtSidewalk150 = body.priceExtSidewalk150 !== undefined ? Number(body.priceExtSidewalk150) : existing.price_ext_sidewalk150;
+      // ทล. rows have no 1.00 ม. sidewalk beam, so their NULL stays NULL.
+      const priceExtSidewalk100 = existing.price_ext_sidewalk100 !== null && body.priceExtSidewalk100 !== undefined ? Number(body.priceExtSidewalk100) : existing.price_ext_sidewalk100;
+      if ([priceInt, priceExtBarrier, priceExtSidewalk150, priceExtSidewalk100].some(function (n) { return n !== null && isNaN(n); })) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE plank_girder_products SET price_int=?, price_ext_barrier=?, price_ext_sidewalk100=?, price_ext_sidewalk150=? WHERE id=?")
+        .bind(priceInt, priceExtBarrier, priceExtSidewalk100, priceExtSidewalk150, id).run();
+
+      return json(plankGirderProductToJson(Object.assign({}, existing, {
+        price_int: priceInt,
+        price_ext_barrier: priceExtBarrier,
+        price_ext_sidewalk100: priceExtSidewalk100,
+        price_ext_sidewalk150: priceExtSidewalk150,
+      })));
+    }
+
+    const plankGirderStandardMatch = path.match(/^\/plank-girder-standards\/([^/]+)$/);
+    if (plankGirderStandardMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const key = decodeURIComponent(plankGirderStandardMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM plank_girder_standards WHERE key = ?").bind(key).first();
+      if (!existing) return json({ error: "not found" }, 404);
+      const note = String(body.note || "");
+      await env.DB.prepare("UPDATE plank_girder_standards SET note=? WHERE key=?").bind(note, key).run();
+      return json(plankGirderStandardToJson(Object.assign({}, existing, { note: note })));
     }
 
     if (path === "/page-notes" && method === "GET") {

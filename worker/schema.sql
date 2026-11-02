@@ -218,3 +218,29 @@ CREATE TABLE IF NOT EXISTS doh_manhole_products (
   delivered_disc10 REAL NOT NULL,
   spec_text TEXT
 );
+
+-- Plank Girder price list (see migrations/0025_add_plank_girder_pricing.sql).
+-- Both the prices and each standard's note require login to read.
+CREATE TABLE IF NOT EXISTS plank_girder_standards (
+  key TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  drawings TEXT NOT NULL,
+  section TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS plank_girder_products (
+  id TEXT PRIMARY KEY,
+  standard_key TEXT NOT NULL,
+  length_m REAL NOT NULL,
+  height_m REAL NOT NULL,
+  weight_ton REAL NOT NULL,
+  price_int REAL NOT NULL,
+  price_ext_barrier REAL NOT NULL,
+  price_ext_sidewalk100 REAL,
+  price_ext_sidewalk150 REAL NOT NULL,
+  per_trip_trailer18 INTEGER,
+  per_trip_10wheel INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);

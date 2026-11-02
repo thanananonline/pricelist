@@ -1,0 +1,216 @@
+{
+  "category": "ราคาผลิตภัณฑ์คอนกรีต",
+  "group": "Plank Girder (คานสะพานสำเร็จรูป)",
+  "source": "ตารางราคา Plank Girder — ฉบับฝ่ายขาย",
+  "price_date": "2026-11-02",
+  "price_date_note": "ราคา ณ วันที่ 02/11/2026",
+  "unit": "บาท/ตัว",
+  "currency": "THB",
+  "price_includes_vat": false,
+  "vat_rate": 0.07,
+  "vat_rounding": "ราคารวม VAT = round(ราคาก่อน VAT × 1.07) เป็นจำนวนเต็ม (ตรงกับ PDF ทุกตัว)",
+  "standards": [
+    {
+      "key": "doh",
+      "label": "มาตรฐานกรมทางหลวง (ทล.)",
+      "drawings": "PG-101 ถึง PG-104",
+      "section": "หน้าตัดกว้าง 0.99 ม. สูง h ตามความยาว • ลวดอัดแรง PC Strand 12.7 มม. ตามแบบ",
+      "price_columns": {
+        "int": "คานตัวใน (INT)",
+        "ext_barrier": "คานตัวริม + Barrier (EXT-B)",
+        "ext_sidewalk150": "คานตัวริม + Sidewalk 1.50 ม. (EXT-SW)"
+      },
+      "notes": [
+        "ราคารับเอง ณ โรงงาน (บาท/ตัว) ไม่รวมค่าขนส่ง ค่าติดตั้ง และค่าทดสอบ — ราคาตั้งเบื้องต้นสำหรับฝ่ายขาย",
+        "จำนวนส่งต่อเที่ยวเป็นค่าประมาณจากน้ำหนักคานเทียบพิกัดบรรทุก (เทรลเลอร์ 18 ล้อ ~28 ตัน / รถ 10 ล้อ ~12 ตัน) — รถ 10 ล้อ บรรทุกได้เฉพาะคาน 5 ม. • ยืนยันจำนวนจริงกับฝ่ายขนส่งก่อนนัดส่ง",
+        "ค่าขนส่งคิดเพิ่มตามระยะทางและจำนวนเที่ยว • ไม่รวมค่าติดตั้ง ค่าทดสอบ และงานหน้างาน (เช่น Diaphragm / Topping / Barrier / ทางเท้า)",
+        "ความยาว ความสูง และจำนวนลวดอัดแรงเป็นไปตามแบบมาตรฐานของแต่ละหน่วยงาน • งานหัวเฉียง ความยาวพิเศษ หรือแบบนอกมาตรฐาน สอบถามราคาเพิ่มเติม",
+        "ราคาเบื้องต้น อาจเปลี่ยนแปลงตามราคาวัสดุ กรุณายืนยันราคากับฝ่ายประมาณราคาก่อนเสนอลูกค้า",
+        "แบบ ทล. ไม่มีความยาว 11 ม.",
+        "คานยาว 12 ม. มีรูกลวง 3×Ø0.15 ม. ตามแบบมาตรฐาน"
+      ],
+      "items": [
+        {
+          "length_m": 5.0,
+          "height_m": 0.18,
+          "weight_ton": 2.14,
+          "int": 10400,
+          "ext_barrier": 13000,
+          "ext_sidewalk150": 11500,
+          "per_trip_trailer18": 13,
+          "per_trip_10wheel": 5
+        },
+        {
+          "length_m": 6.0,
+          "height_m": 0.21,
+          "weight_ton": 2.99,
+          "int": 13100,
+          "ext_barrier": 16200,
+          "ext_sidewalk150": 14300,
+          "per_trip_trailer18": 9,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 7.0,
+          "height_m": 0.24,
+          "weight_ton": 3.99,
+          "int": 15400,
+          "ext_barrier": 19100,
+          "ext_sidewalk150": 16800,
+          "per_trip_trailer18": 7,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 8.0,
+          "height_m": 0.28,
+          "weight_ton": 5.32,
+          "int": 18800,
+          "ext_barrier": 23000,
+          "ext_sidewalk150": 20400,
+          "per_trip_trailer18": 5,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 9.0,
+          "height_m": 0.31,
+          "weight_ton": 6.63,
+          "int": 22600,
+          "ext_barrier": 27300,
+          "ext_sidewalk150": 24300,
+          "per_trip_trailer18": 4,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 10.0,
+          "height_m": 0.35,
+          "weight_ton": 8.32,
+          "int": 25900,
+          "ext_barrier": 31100,
+          "ext_sidewalk150": 27800,
+          "per_trip_trailer18": 3,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 12.0,
+          "height_m": 0.45,
+          "weight_ton": 11.43,
+          "int": 33200,
+          "ext_barrier": 39500,
+          "ext_sidewalk150": 35400,
+          "per_trip_trailer18": 2,
+          "per_trip_10wheel": null
+        }
+      ]
+    },
+    {
+      "key": "dor",
+      "label": "มาตรฐานกรมทางหลวงชนบท (ทช.)",
+      "drawings": "สพ-0605/61 ถึง 0608/61 และ สพ-0508/68",
+      "section": "หน้าตัดกว้าง 0.99 ม. สูง h ตามความยาว • ลวดอัดแรง PC Strand 9.5 มม. ตามแบบ",
+      "price_columns": {
+        "int": "คานตัวใน (INT)",
+        "ext_barrier": "คานตัวริม + Barrier (EXT-B)",
+        "ext_sidewalk100": "คานตัวริม + ทางเท้า 1.00 ม. (EXT-S1.00)",
+        "ext_sidewalk150": "คานตัวริม + ทางเท้า 1.50 ม. (EXT-S1.50)"
+      },
+      "notes": [
+        "ราคารับเอง ณ โรงงาน (บาท/ตัว) ไม่รวมค่าขนส่ง ค่าติดตั้ง และค่าทดสอบ — ราคาตั้งเบื้องต้นสำหรับฝ่ายขาย",
+        "จำนวนส่งต่อเที่ยวเป็นค่าประมาณจากน้ำหนักคานเทียบพิกัดบรรทุก (เทรลเลอร์ 18 ล้อ ~28 ตัน / รถ 10 ล้อ ~12 ตัน) — รถ 10 ล้อ บรรทุกได้เฉพาะคาน 5 ม. • ยืนยันจำนวนจริงกับฝ่ายขนส่งก่อนนัดส่ง",
+        "ค่าขนส่งคิดเพิ่มตามระยะทางและจำนวนเที่ยว • ไม่รวมค่าติดตั้ง ค่าทดสอบ และงานหน้างาน (เช่น Diaphragm / Topping / Barrier / ทางเท้า)",
+        "ความยาว ความสูง และจำนวนลวดอัดแรงเป็นไปตามแบบมาตรฐานของแต่ละหน่วยงาน • งานหัวเฉียง ความยาวพิเศษ หรือแบบนอกมาตรฐาน สอบถามราคาเพิ่มเติม",
+        "ราคาเบื้องต้น อาจเปลี่ยนแปลงตามราคาวัสดุ กรุณายืนยันราคากับฝ่ายประมาณราคาก่อนเสนอลูกค้า",
+        "คานตัวริมทางเท้า 1.00 และ 1.50 ม. ใช้เหล็กเสริมในคานชุดเดียวกัน ราคาจึงเท่ากัน (ต่างกันที่ตำแหน่งเหล็กยื่นรับขอบทางเท้า)"
+      ],
+      "items": [
+        {
+          "length_m": 5.0,
+          "height_m": 0.16,
+          "weight_ton": 1.9,
+          "int": 9000,
+          "ext_barrier": 10100,
+          "ext_sidewalk100": 9600,
+          "ext_sidewalk150": 9600,
+          "per_trip_trailer18": 14,
+          "per_trip_10wheel": 6
+        },
+        {
+          "length_m": 6.0,
+          "height_m": 0.19,
+          "weight_ton": 2.71,
+          "int": 11400,
+          "ext_barrier": 12700,
+          "ext_sidewalk100": 12200,
+          "ext_sidewalk150": 12200,
+          "per_trip_trailer18": 10,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 7.0,
+          "height_m": 0.22,
+          "weight_ton": 3.66,
+          "int": 13900,
+          "ext_barrier": 15500,
+          "ext_sidewalk100": 14800,
+          "ext_sidewalk150": 14800,
+          "per_trip_trailer18": 7,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 8.0,
+          "height_m": 0.25,
+          "weight_ton": 4.75,
+          "int": 17000,
+          "ext_barrier": 18800,
+          "ext_sidewalk100": 18000,
+          "ext_sidewalk150": 18000,
+          "per_trip_trailer18": 5,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 9.0,
+          "height_m": 0.31,
+          "weight_ton": 6.63,
+          "int": 22000,
+          "ext_barrier": 24200,
+          "ext_sidewalk100": 23300,
+          "ext_sidewalk150": 23300,
+          "per_trip_trailer18": 4,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 10.0,
+          "height_m": 0.35,
+          "weight_ton": 8.32,
+          "int": 25900,
+          "ext_barrier": 28500,
+          "ext_sidewalk100": 27400,
+          "ext_sidewalk150": 27400,
+          "per_trip_trailer18": 3,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 11.0,
+          "height_m": 0.42,
+          "weight_ton": 10.98,
+          "int": 30300,
+          "ext_barrier": 33400,
+          "ext_sidewalk100": 32100,
+          "ext_sidewalk150": 32100,
+          "per_trip_trailer18": 2,
+          "per_trip_10wheel": null
+        },
+        {
+          "length_m": 12.0,
+          "height_m": 0.45,
+          "weight_ton": 12.83,
+          "int": 33900,
+          "ext_barrier": 37500,
+          "ext_sidewalk100": 36000,
+          "ext_sidewalk150": 36000,
+          "per_trip_trailer18": 2,
+          "per_trip_10wheel": null
+        }
+      ]
+    }
+  ]
+}

@@ -919,6 +919,17 @@ function Dashboard(root) {
     dohManholeEditDeliveredList: "",
     dohManholeEditDeliveredDisc5: "",
     dohManholeEditDeliveredDisc10: "",
+    plankGirderStandards: [],
+    plankGirderProducts: [],
+    plankGirderLoading: true,
+    plankGirderError: "",
+    plankGirderEditingId: null,
+    plankGirderEditInt: "",
+    plankGirderEditExtBarrier: "",
+    plankGirderEditExtSidewalk100: "",
+    plankGirderEditExtSidewalk150: "",
+    plankGirderEditingNoteKey: null,
+    plankGirderEditNoteText: "",
     pageNotes: {},
     pageNotesLoading: true,
     pageNotesError: "",
@@ -976,7 +987,10 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadContacts();
 };
 
-var DOH_MANHOLE_LOGGED_OUT_STATE = { dohManholeProducts: [], dohManholeProductsLoading: true, dohManholeProductsError: "", dohManholeEditingId: null };
+var LOGIN_ONLY_PRICES_LOGGED_OUT_STATE = {
+  dohManholeProducts: [], dohManholeProductsLoading: true, dohManholeProductsError: "", dohManholeEditingId: null,
+  plankGirderStandards: [], plankGirderProducts: [], plankGirderLoading: true, plankGirderError: "", plankGirderEditingId: null, plankGirderEditingNoteKey: null, plankGirderEditNoteText: "",
+};
 
 Dashboard.prototype.restoreSession = function (attempt) {
   var self = this;
@@ -986,6 +1000,7 @@ Dashboard.prototype.restoreSession = function (attempt) {
     self.setState({ loggedIn: true, checkingSession: false, username: res.username, role: res.role });
     self.loadUsers();
     self.loadDohManholeProducts();
+    self.loadPlankGirder();
   }).catch(function (err) {
     // A genuine 401 (bad/expired token, or the account no longer exists) is
     // already handled by handleSessionExpired via the apiRequest hook.
@@ -1007,7 +1022,7 @@ Dashboard.prototype.restoreSession = function (attempt) {
 Dashboard.prototype.handleSessionExpired = function () {
   clearSessionToken();
   clearLastActivity();
-  this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
+  this.setState(LOGIN_ONLY_PRICES_LOGGED_OUT_STATE);
   this.setState({
     loggedIn: false, checkingSession: false, username: "", role: "", password: "",
     users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
@@ -1039,7 +1054,7 @@ Dashboard.prototype._checkIdleTimeout = function () {
   if (Date.now() - getLastActivity() > SESSION_IDLE_LIMIT_MS) {
     clearSessionToken();
     clearLastActivity();
-    this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
+    this.setState(LOGIN_ONLY_PRICES_LOGGED_OUT_STATE);
     this.setState({
       loggedIn: false, username: "", role: "", password: "",
       users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
@@ -1483,7 +1498,7 @@ Dashboard.prototype.saveManholeEdit = function (id) {
 // manhole list above. Only the six base (ก่อน VAT) prices are stored -- the
 // VAT-inclusive prices are derived in renderDohManholePage. Unlike the other
 // price lists this endpoint requires login, so it's loaded after login/session
-// restore (not on page load) and cleared again by DOH_MANHOLE_LOGGED_OUT_STATE.
+// restore (not on page load) and cleared again by LOGIN_ONLY_PRICES_LOGGED_OUT_STATE.
 Dashboard.prototype.loadDohManholeProducts = function () {
   var self = this;
   self.state.dohManholeProductsLoading = true;
@@ -1559,6 +1574,83 @@ Dashboard.prototype.copyDohManholeSpec = function (id) {
   } else {
     fallback();
   }
+};
+
+// Plank Girder prices and notes live in D1 (plank_girder_products and
+// plank_girder_standards, see migrations/0025_add_plank_girder_pricing.sql).
+// Like บ่อพักกรมทางหลวง the endpoint requires login, so it's loaded after
+// login/session restore and cleared by LOGIN_ONLY_PRICES_LOGGED_OUT_STATE. The
+// notes stay out of page_notes because GET /page-notes is public.
+Dashboard.prototype.loadPlankGirder = function () {
+  var self = this;
+  self.state.plankGirderLoading = true;
+  apiRequest("/plank-girder", { auth: true }).then(function (res) {
+    if (!self.state.loggedIn) return;
+    self.setState({ plankGirderStandards: res.standards, plankGirderProducts: res.products, plankGirderLoading: false, plankGirderError: "" });
+  }).catch(function (err) {
+    // 401 is already handled by handleSessionExpired via the apiRequest hook.
+    if (err.status === 401) return;
+    self.setState({ plankGirderLoading: false, plankGirderError: "โหลดข้อมูลตารางราคา Plank Girder ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startPlankGirderEdit = function (id) {
+  var p = this.state.plankGirderProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var patch = { plankGirderEditingId: id };
+  PLANK_GIRDER_PRICE_COLUMNS[p.standardKey].forEach(function (c) { patch[c.editKey] = String(p[c.key]); });
+  this.setState(patch);
+};
+
+Dashboard.prototype.savePlankGirderEdit = function (id) {
+  var s = this.state;
+  var p = s.plankGirderProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var body = {};
+  var valid = PLANK_GIRDER_PRICE_COLUMNS[p.standardKey].every(function (c) {
+    body[c.key] = parseFloat(s[c.editKey]);
+    return !isNaN(body[c.key]);
+  });
+  if (!valid) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/plank-girder-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: body,
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var plankGirderProducts = s2.plankGirderProducts.map(function (x) { return x.id === id ? updated : x; });
+      return { plankGirderProducts: plankGirderProducts, plankGirderEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
+Dashboard.prototype.startPlankGirderNoteEdit = function (key) {
+  var std = this.state.plankGirderStandards.find(function (x) { return x.key === key; });
+  if (!std) return;
+  this.setState({ plankGirderEditingNoteKey: key, plankGirderEditNoteText: std.note });
+};
+
+Dashboard.prototype.savePlankGirderNoteEdit = function (key) {
+  var note = this.state.plankGirderEditNoteText;
+  var self = this;
+  apiRequest("/plank-girder-standards/" + encodeURIComponent(key), {
+    method: "PUT", auth: true,
+    body: { note: note },
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var plankGirderStandards = s2.plankGirderStandards.map(function (x) { return x.key === key ? updated : x; });
+      return { plankGirderStandards: plankGirderStandards, plankGirderEditingNoteKey: null };
+    });
+    self.showToast("บันทึกหมายเหตุสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
 };
 
 // Free-text "หมายเหตุ" note shown above the table on each product price
@@ -1779,7 +1871,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
     case "discount-set-category":
-      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null, manholeEditingId: null, dohManholeEditingId: null };
+      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null, manholeEditingId: null, dohManholeEditingId: null, plankGirderEditingId: null, plankGirderEditingNoteKey: null };
       if (d.category === "pile_i") discountCategoryPatch.pileGroup = "I";
       else if (d.category === "pile_sq") discountCategoryPatch.pileGroup = "SQ";
       else if (d.category === "pile_hex") discountCategoryPatch.pileGroup = "HEX";
@@ -1815,6 +1907,13 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-doh-manhole": this.setState({ dohManholeEditingId: null }); break;
     case "save-edit-doh-manhole": this.saveDohManholeEdit(d.id); break;
     case "copy-doh-manhole-spec": this.copyDohManholeSpec(d.id); break;
+    case "reload-plank-girder": this.loadPlankGirder(); break;
+    case "start-edit-plank-girder": this.startPlankGirderEdit(d.id); break;
+    case "cancel-edit-plank-girder": this.setState({ plankGirderEditingId: null }); break;
+    case "save-edit-plank-girder": this.savePlankGirderEdit(d.id); break;
+    case "start-edit-plank-girder-note": this.startPlankGirderNoteEdit(d.key); break;
+    case "cancel-edit-plank-girder-note": this.setState({ plankGirderEditingNoteKey: null }); break;
+    case "save-edit-plank-girder-note": this.savePlankGirderNoteEdit(d.key); break;
     case "start-edit-page-note": this.startPageNoteEdit(d.key); break;
     case "cancel-edit-page-note": this.setState({ editingPageNoteKey: null }); break;
     case "save-edit-page-note": this.savePageNoteEdit(d.key); break;
@@ -2188,6 +2287,7 @@ Dashboard.prototype.onSubmitAuth = function () {
       self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", authError: "" });
       self.loadUsers();
       self.loadDohManholeProducts();
+      self.loadPlankGirder();
     })
     .catch(function () {
       self.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
@@ -2197,7 +2297,7 @@ Dashboard.prototype.onSubmitAuth = function () {
 Dashboard.prototype.onLogout = function () {
   clearSessionToken();
   clearLastActivity();
-  this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
+  this.setState(LOGIN_ONLY_PRICES_LOGGED_OUT_STATE);
   this.setState({ loggedIn: false, username: "", role: "", password: "", users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false });
 };
 
@@ -5218,6 +5318,7 @@ var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "manhole", label: "บ่อพักสำเร็จรูป" },
   { value: "doh_manhole", label: "บ่อพักกรมทางหลวง" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
+  { value: "plank_girder", label: "Plank Girder" },
   { value: "fence", label: "รั้วสำเร็จรูป TNN" },
   { value: "concrete_mix", label: "คอนกรีตผสมเสร็จ" },
   { value: "pile_i", label: "เสาเข็ม I" },
@@ -5958,6 +6059,7 @@ Dashboard.prototype.renderDiscountPage = function () {
     tabButton("manhole", "บ่อพักสำเร็จรูป", "🕳️") +
     tabButton("doh_manhole", "บ่อพักกรมทางหลวง", "🛣️") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
+    tabButton("plank_girder", "Plank Girder", "🌉") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
     tabButton("concrete_mix", "คอนกรีตผสมเสร็จ", "🚚") +
     tabButton("pile_i", "เสาเข็ม I", "🏗️") +
@@ -5973,6 +6075,8 @@ Dashboard.prototype.renderDiscountPage = function () {
     ? '<div id="doh-manhole-container">' + this.renderDohManholePage() + '</div>'
     : cat === "plank"
     ? '<div id="plank-container">' + this.renderPlankPage() + '</div>'
+    : cat === "plank_girder"
+    ? '<div id="plank-girder-container">' + this.renderPlankGirderPage() + '</div>'
     : cat === "fence"
     ? '<div id="fence-container">' + this.renderFencePage() + '</div>'
     : cat === "concrete_mix"
@@ -6375,6 +6479,24 @@ var DOH_MANHOLE_PRICE_GROUPS = [
 ];
 var DOH_MANHOLE_PRICE_COLUMNS = DOH_MANHOLE_PRICE_GROUPS[0].columns.concat(DOH_MANHOLE_PRICE_GROUPS[1].columns);
 
+// Plank Girder keys its price columns by standard: ทล. has one sidewalk beam,
+// ทช. has two, and 1.50 ม. is labelled differently in each source table.
+function plankGirderVat(base) { return Math.round(base * 107 / 100); }
+
+var PLANK_GIRDER_PRICE_COLUMNS = {
+  doh: [
+    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน (INT)" },
+    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier (EXT-B)" },
+    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + Sidewalk 1.50 ม. (EXT-SW)" },
+  ],
+  dor: [
+    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน (INT)" },
+    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier (EXT-B)" },
+    { key: "priceExtSidewalk100", editKey: "plankGirderEditExtSidewalk100", label: "คานตัวริม + ทางเท้า 1.00 ม. (EXT-S1.00)" },
+    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + ทางเท้า 1.50 ม. (EXT-S1.50)" },
+  ],
+};
+
 Dashboard.prototype.renderPilePage = function () {
   var s = this.state;
 
@@ -6733,6 +6855,142 @@ Dashboard.prototype.renderDohManholePage = function () {
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาก่อน VAT ทั้ง 6 ช่อง ราคารวม VAT คำนวณให้อัตโนมัติ" : "ตัวเลขใหญ่ = ราคาก่อน VAT, ตัวเล็ก = ราคารวม VAT 7%") + '</div>' +
     '</div>' +
     this.renderPageNoteBlock("doh_manhole") + table +
+  '</div>';
+};
+
+// Same note look as renderPageNoteBlock, but saved on plank_girder_standards
+// so it stays behind login.
+Dashboard.prototype.renderPlankGirderNote = function (std) {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+
+  if (s.plankGirderEditingNoteKey === std.key) {
+    return '<div style="margin-bottom:14px; background:#fff; border:1px solid var(--navy-border); border-radius:10px; padding:12px 14px;">' +
+      '<textarea id="field-plankGirderEditNoteText" data-bind="plankGirderEditNoteText" rows="8" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:7px; border:1px solid oklch(0.8 0.02 60); font-size:12.5px; font-family:inherit; resize:vertical;">' + esc(s.plankGirderEditNoteText) + '</textarea>' +
+      '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">' +
+        '<button data-action="cancel-edit-plank-girder-note" style="min-height:34px; padding:7px 14px; border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body); border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit;">ยกเลิก</button>' +
+        '<button data-action="save-edit-plank-girder-note" data-key="' + esc(std.key) + '" style="min-height:34px; padding:7px 14px; border:none; background:var(--navy-action); color:#fff; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;">บันทึก</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (!std.note && !isAdmin) return "";
+
+  return '<div style="margin-bottom:14px; font-size:12.5px; color:var(--text-muted); line-height:1.7; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
+    '<div style="white-space:pre-line;">' + (std.note ? esc(std.note) : '<span style="color:oklch(0.7 0.01 60);">ยังไม่มีหมายเหตุ</span>') + '</div>' +
+    (isAdmin ? '<button data-action="start-edit-plank-girder-note" data-key="' + esc(std.key) + '" title="แก้ไขหมายเหตุ" style="flex:0 0 auto; min-height:28px; min-width:28px; border:none; background:var(--bg-subtle); border-radius:6px; padding:4px; font-size:12px; cursor:pointer; font-family:inherit;">✏️</button>' : '') +
+  '</div>';
+};
+
+Dashboard.prototype.renderPlankGirderTable = function (std) {
+  var s = this.state;
+  var isAdmin = this.isAdmin();
+  var columns = PLANK_GIRDER_PRICE_COLUMNS[std.key];
+  var products = s.plankGirderProducts.filter(function (p) { return p.standardKey === std.key; });
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
+  var colWidths = "76px 56px 64px repeat(" + columns.length + ", minmax(112px,1fr)) 68px 68px";
+  var minWidth = 76 + 56 + 64 + columns.length * 112 + 68 + 68;
+  // The length column stays visible while the wide table scrolls sideways; it
+  // needs an opaque background so scrolled cells don't show through it.
+  var stickyStyle = "position:sticky; left:0; z-index:1; box-shadow:2px 0 4px rgba(0,0,0,.06);";
+  var priceBg = "#F4F9FE";
+  var tripBg = "#F5F9EF";
+  var headerStyle = "padding:10px 8px; box-sizing:border-box;";
+  var numCell = function (text, bg) {
+    return '<div style="' + groupCellStyle(bg, "font-size:12px; text-align:right;") + '">' + text + '</div>';
+  };
+  var tripText = function (n) { return n === null ? "–" : fmt(n); };
+
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:var(--bg-subtle-2); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' +
+    '<div style="grid-row:span 2; background:var(--bg-subtle-2); ' + headerStyle + stickyStyle + '">ความยาว (ม.)</div>' +
+    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">สูง h (ม.)</div>' +
+    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">น้ำหนัก (ตัน/ตัว)</div>' +
+    '<div style="grid-column:span ' + columns.length + '; text-align:center; background-color:#85B7EB; color:#042C53; ' + headerStyle + '">ราคา (บาท/ตัว)</div>' +
+    '<div style="grid-column:span 2; text-align:center; background-color:#97C459; color:#173404; ' + headerStyle + '">จำนวนส่งต่อเที่ยว (ตัว/เที่ยว)</div>' +
+    columns.map(function (c) {
+      return '<div style="text-align:right; background-color:#85B7EB; color:#042C53; ' + headerStyle + '">' + c.label + '</div>';
+    }).join("") +
+    '<div style="text-align:right; background-color:#97C459; color:#173404; ' + headerStyle + '">เทรลเลอร์ 18 ล้อ</div>' +
+    '<div style="text-align:right; background-color:#97C459; color:#173404; ' + headerStyle + '">รถ 10 ล้อ</div>' +
+  '</div>';
+
+  var rows = products.map(function (p) {
+    var isEditingThis = s.plankGirderEditingId === p.id;
+
+    var priceCells = columns.map(function (c) {
+      if (isEditingThis) {
+        var raw = s[c.editKey];
+        var parsed = parseFloat(raw);
+        return '<div style="' + groupCellStyle(priceBg) + '">' +
+          '<input id="field-' + c.editKey + '" type="text" inputmode="decimal" data-bind="' + c.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />' +
+          '<div style="font-size:10.5px; color:var(--text-muted); text-align:right; margin-top:3px;">รวม VAT ' + (isNaN(parsed) ? "-" : fmt(plankGirderVat(parsed))) + '</div>' +
+        '</div>';
+      }
+      return '<div style="' + groupCellStyle(priceBg, "padding:10px 6px; text-align:right;") + '">' +
+        '<div style="font-size:14px; font-weight:700; color:#111111; line-height:1.3;">' + fmt(p[c.key]) + '</div>' +
+        '<div style="font-size:10.5px; color:var(--text-muted); white-space:nowrap;">รวม VAT ' + fmt(plankGirderVat(p[c.key])) + '</div>' +
+      '</div>';
+    }).join("");
+
+    var smallBtn = "min-height:30px; padding:3px 8px; border-radius:6px; font-size:11.5px; cursor:pointer; font-family:inherit; line-height:1.2;";
+    var buttons = "";
+    if (isAdmin) {
+      buttons = isEditingThis
+        ? '<button data-action="save-edit-plank-girder" data-id="' + esc(p.id) + '" title="บันทึก" style="' + smallBtn + ' border:none; background:var(--navy-action); color:#fff;">✓</button>' +
+          '<button data-action="cancel-edit-plank-girder" title="ยกเลิก" style="' + smallBtn + ' border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body);">✕</button>'
+        : '<button data-action="start-edit-plank-girder" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="' + smallBtn + ' border:none; background:var(--bg-subtle);">✏️</button>';
+      buttons = '<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:6px;">' + buttons + '</div>';
+    }
+
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid var(--border-light); align-items:stretch; background:#fff;">' +
+      '<div style="' + groupCellStyle("#fff", stickyStyle) + '">' +
+        '<div style="font-size:12.5px; font-weight:700; line-height:1.3;">' + fmtN(p.lengthM, 2) + '</div>' +
+        buttons +
+      '</div>' +
+      numCell(fmtN(p.heightM, 2)) +
+      numCell(fmtN(p.weightTon, 2)) +
+      priceCells +
+      numCell(tripText(p.perTripTrailer18), tripBg) +
+      numCell(tripText(p.perTrip10Wheel), tripBg) +
+    '</div>';
+  }).join("");
+
+  return '<div style="margin-bottom:32px;">' +
+    '<div style="margin-bottom:12px;">' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:16px; color:var(--navy-topbar); margin-bottom:4px;">' + esc(std.label) + '</div>' +
+      '<div style="font-size:12.5px; color:var(--text-body); line-height:1.6;">แบบ ' + esc(std.drawings) + '</div>' +
+      '<div style="font-size:12.5px; color:var(--text-body); line-height:1.6;">' + esc(std.section) + '</div>' +
+    '</div>' +
+    this.renderPlankGirderNote(std) +
+    '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow-x:auto; -webkit-overflow-scrolling:touch;">' +
+      '<div style="min-width:' + minWidth + 'px;">' + tableHeader + rows + '</div>' +
+    '</div>' +
+  '</div>';
+};
+
+Dashboard.prototype.renderPlankGirderPage = function () {
+  var s = this.state;
+
+  if (s.plankGirderLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.plankGirderError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.plankGirderError) + '</div>' +
+      '<button data-action="reload-plank-girder" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  if (!s.plankGirderProducts.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);">ยังไม่มีข้อมูลราคา Plank Girder</div>';
+  }
+
+  var self = this;
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคา Plank Girder (คานสะพานสำเร็จรูป)</div>' +
+      '<div style="font-size:13px; color:var(--text-muted);">' + (this.isAdmin() ? "หน่วยราคา บาท/ตัว แก้ไขได้ที่ราคาก่อน VAT ราคารวม VAT คำนวณให้อัตโนมัติ" : "หน่วยราคา บาท/ตัว ตัวเลขใหญ่ = ราคาก่อน VAT, ตัวเล็ก = ราคารวม VAT 7%") + '</div>' +
+    '</div>' +
+    s.plankGirderStandards.map(function (std) { return self.renderPlankGirderTable(std); }).join("") +
   '</div>';
 };
 
