@@ -779,6 +779,7 @@ export default {
     }
 
     if (path === "/doh-manhole-products" && method === "GET") {
+      if (!(await requireAuth(request, env))) return json({ error: "unauthorized" }, 401);
       const productsRes = await env.DB.prepare("SELECT * FROM doh_manhole_products ORDER BY sort_order ASC").all();
       return json(productsRes.results.map(dohManholeToJson));
     }

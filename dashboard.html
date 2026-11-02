@@ -967,7 +967,6 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadPileProducts();
   this.loadBoxCulvertProducts();
   this.loadManholeProducts();
-  this.loadDohManholeProducts();
   this.loadPageNotes();
   this.loadFolders("concrete");
   this.loadFolders("tis");
@@ -977,6 +976,8 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadContacts();
 };
 
+var DOH_MANHOLE_LOGGED_OUT_STATE = { dohManholeProducts: [], dohManholeProductsLoading: true, dohManholeProductsError: "", dohManholeEditingId: null };
+
 Dashboard.prototype.restoreSession = function (attempt) {
   var self = this;
   attempt = attempt || 0;
@@ -984,6 +985,7 @@ Dashboard.prototype.restoreSession = function (attempt) {
     self.markActivity();
     self.setState({ loggedIn: true, checkingSession: false, username: res.username, role: res.role });
     self.loadUsers();
+    self.loadDohManholeProducts();
   }).catch(function (err) {
     // A genuine 401 (bad/expired token, or the account no longer exists) is
     // already handled by handleSessionExpired via the apiRequest hook.
@@ -1005,6 +1007,7 @@ Dashboard.prototype.restoreSession = function (attempt) {
 Dashboard.prototype.handleSessionExpired = function () {
   clearSessionToken();
   clearLastActivity();
+  this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
   this.setState({
     loggedIn: false, checkingSession: false, username: "", role: "", password: "",
     users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
@@ -1036,6 +1039,7 @@ Dashboard.prototype._checkIdleTimeout = function () {
   if (Date.now() - getLastActivity() > SESSION_IDLE_LIMIT_MS) {
     clearSessionToken();
     clearLastActivity();
+    this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
     this.setState({
       loggedIn: false, username: "", role: "", password: "",
       users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false,
@@ -1477,13 +1481,18 @@ Dashboard.prototype.saveManholeEdit = function (id) {
 // บ่อพักกรมทางหลวง prices live in D1 (doh_manhole_products, see
 // migrations/0023_add_doh_manhole_pricing.sql), separate from the precast
 // manhole list above. Only the six base (ก่อน VAT) prices are stored -- the
-// VAT-inclusive prices are derived in renderDohManholePage.
+// VAT-inclusive prices are derived in renderDohManholePage. Unlike the other
+// price lists this endpoint requires login, so it's loaded after login/session
+// restore (not on page load) and cleared again by DOH_MANHOLE_LOGGED_OUT_STATE.
 Dashboard.prototype.loadDohManholeProducts = function () {
   var self = this;
   self.state.dohManholeProductsLoading = true;
-  apiRequest("/doh-manhole-products").then(function (dohManholeProducts) {
+  apiRequest("/doh-manhole-products", { auth: true }).then(function (dohManholeProducts) {
+    if (!self.state.loggedIn) return;
     self.setState({ dohManholeProducts: dohManholeProducts, dohManholeProductsLoading: false, dohManholeProductsError: "" });
-  }).catch(function () {
+  }).catch(function (err) {
+    // 401 is already handled by handleSessionExpired via the apiRequest hook.
+    if (err.status === 401) return;
     self.setState({ dohManholeProductsLoading: false, dohManholeProductsError: "โหลดข้อมูลตารางราคาบ่อพักกรมทางหลวงไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
   });
 };
@@ -2178,6 +2187,7 @@ Dashboard.prototype.onSubmitAuth = function () {
       self.markActivity();
       self.setState({ loggedIn: true, username: res.username, role: res.role, password: "", authError: "" });
       self.loadUsers();
+      self.loadDohManholeProducts();
     })
     .catch(function () {
       self.setState({ authError: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
@@ -2187,6 +2197,7 @@ Dashboard.prototype.onSubmitAuth = function () {
 Dashboard.prototype.onLogout = function () {
   clearSessionToken();
   clearLastActivity();
+  this.setState(DOH_MANHOLE_LOGGED_OUT_STATE);
   this.setState({ loggedIn: false, username: "", role: "", password: "", users: [], usersLoading: true, usersError: "", myPasswordOpen: false, myPasswordCurrent: "", myPasswordNew: "", myPasswordConfirm: "", myPasswordError: "", myPasswordSaving: false });
 };
 
