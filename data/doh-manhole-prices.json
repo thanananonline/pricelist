@@ -1,0 +1,834 @@
+{
+  "category": "ราคาผลิตภัณฑ์คอนกรีต",
+  "group": "บ่อพัก คสล. สำเร็จรูป มาตรฐานกรมทางหลวง",
+  "source": "บัญชีราคาขายบ่อพักกรมทางหลวง (เอกสารภายในฝ่ายขาย)",
+  "standards": "Type A–G (DS-701…707) • Sidewalk Drop Inlet • Catch Basin (DR-ST-021) • Drop Inlet in Median Type A–D (DS-401…404)",
+  "effective_date": "2569-10-30",
+  "effective_note": "มีผลตั้งแต่ 30 ต.ค. 2569 จนกว่าจะมีประกาศราคาใหม่",
+  "currency": "THB",
+  "unit": "บาท/ใบ",
+  "price_includes_vat": false,
+  "vat_rate": 0.07,
+  "vat_rounding": "ราคารวม VAT = ราคาก่อน VAT × 1.07 แสดงทศนิยม 2 ตำแหน่ง (ตรงกับใน PDF ทุกตัว)",
+  "price_columns": {
+    "pickup.list": "รับเอง ณ โรงงาน — ราคาตั้ง",
+    "pickup.disc5": "รับเอง ณ โรงงาน — ลด 5%",
+    "pickup.disc10": "รับเอง ณ โรงงาน — ลด 10%",
+    "delivered.list": "พร้อมจัดส่ง ≤ 70 กม. — ราคาตั้ง",
+    "delivered.disc5": "พร้อมจัดส่ง ≤ 70 กม. — ลด 5%",
+    "delivered.disc10": "พร้อมจัดส่ง ≤ 70 กม. — ลด 10%"
+  },
+  "field_notes": {
+    "outer_w_m/outer_l_m/outer_h_m": "ขนาดภายนอก ก×ย×ส (ม.)",
+    "wall_m/floor_m": "ความหนาผนัง / พื้น (ม.)",
+    "weight_kg": "น้ำหนัก กก./ใบ",
+    "per_trip": "ใบ/เที่ยว รถ 10 ล้อ",
+    "cover": "ฝา คสล. ครบชุด ขายเพิ่มต่อบ่อ (เฉพาะ Type B)",
+    "spec_text": "ข้อความสเปกสำหรับส่งลูกค้า (คัดลอกได้)"
+  },
+  "notes": [
+    "รับเอง ณ โรงงาน ไม่รวมค่าขนส่ง",
+    "พร้อมจัดส่ง = ราคาบ่อ + ค่าขนส่งเฉลี่ยเต็มคันรถ 10 ล้อ ระยะไม่เกิน 70 กม. จากโรงงาน (ไป-กลับ 140 กม. ค่าเที่ยว 6,100 บาท + จ่ายเพิ่ม 15% = 7,015 บาท/เที่ยว ÷ ใบ/เที่ยว)",
+    "ส่วนลด 5% / 10% คิดจากราคาบ่อเท่านั้น ค่าขนส่งไม่ลด",
+    "ส่วนลดเกิน 10% ต้องขออนุมัติผู้บริหารก่อนเสนอราคา",
+    "ใบ/เที่ยว คิดจากน้ำหนักเทียบพิกัดบรรทุก 12.5 ตัน ของรถ 10 ล้อ — ราคาพร้อมจัดส่งคิดที่บรรทุกเต็มคัน",
+    "ระยะทางเกิน 70 กม. ต้องคิดค่าขนส่งใหม่ตามระยะทางจริง",
+    "ราคาเฉพาะตัวบ่อสำเร็จรูป ไม่รวมเหล็กฉากปากบ่อ ฝา ตะแกรง ปากบ่อส่วนบน และงานติดตั้งหน้างาน",
+    "ยืนราคาต่อลูกค้า 30 วันนับจากวันเสนอราคา"
+  ],
+  "items": [
+    {
+      "no": 1,
+      "group": "Type A (DS-701)",
+      "name": "Type A (DS-701)",
+      "outer_w_m": 0.85,
+      "outer_l_m": 0.85,
+      "outer_h_m": 1.5,
+      "wall_m": 0.125,
+      "floor_m": 0.2,
+      "weight_kg": 1393,
+      "per_trip": 8,
+      "pickup": {
+        "list": 4572,
+        "disc5": 4343,
+        "disc10": 4115
+      },
+      "delivered": {
+        "list": 5639,
+        "disc5": 5410,
+        "disc10": 5182
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type A) ขนาด 85x85x150 cm. T13 cm. (พื้นก้นบ่อหนา 20 cm.) เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø60 cm. 1 ทาง"
+    },
+    {
+      "no": 2,
+      "group": "Type B (DS-702)",
+      "name": "Type B ท่อ Ø0.40",
+      "outer_w_m": 1.1,
+      "outer_l_m": 1.1,
+      "outer_h_m": 1.3,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 1918,
+      "per_trip": 6,
+      "pickup": {
+        "list": 7729,
+        "disc5": 7343,
+        "disc10": 6956
+      },
+      "delivered": {
+        "list": 9153,
+        "disc5": 8767,
+        "disc10": 8380
+      },
+      "cover": {
+        "pieces": 2,
+        "piece_width_m": 0.445,
+        "length_m": 0.89,
+        "thickness_m": 0.2,
+        "weight_kg": 380,
+        "per_trip": 32,
+        "pickup": {
+          "list": 1939,
+          "disc5": 1842,
+          "disc10": 1745
+        },
+        "delivered": {
+          "list": 2206,
+          "disc5": 2109,
+          "disc10": 2012
+        },
+        "spec_text": "ฝา คสล. สำเร็จรูป Type B ตาม DS-702 2 ชิ้น × 0.445 ม. (ยาว 0.89 หนา 0.20) เหล็ก 5-RB12 บน+ล่าง / 11-RB9 บน+ล่าง + เหล็กฉาก L50×50×4 ปลายฝา"
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type B) ขนาด 110x110x130 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เจาะรูท่อ Ø40 cm. 2 ทาง"
+    },
+    {
+      "no": 3,
+      "group": "Type B (DS-702)",
+      "name": "Type B ท่อ Ø0.60",
+      "outer_w_m": 1.1,
+      "outer_l_m": 1.1,
+      "outer_h_m": 1.4,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 1942,
+      "per_trip": 6,
+      "pickup": {
+        "list": 7791,
+        "disc5": 7401,
+        "disc10": 7012
+      },
+      "delivered": {
+        "list": 9215,
+        "disc5": 8825,
+        "disc10": 8436
+      },
+      "cover": {
+        "pieces": 2,
+        "piece_width_m": 0.445,
+        "length_m": 0.89,
+        "thickness_m": 0.2,
+        "weight_kg": 380,
+        "per_trip": 32,
+        "pickup": {
+          "list": 1939,
+          "disc5": 1842,
+          "disc10": 1745
+        },
+        "delivered": {
+          "list": 2206,
+          "disc5": 2109,
+          "disc10": 2012
+        },
+        "spec_text": "ฝา คสล. สำเร็จรูป Type B ตาม DS-702 2 ชิ้น × 0.445 ม. (ยาว 0.89 หนา 0.20) เหล็ก 5-RB12 บน+ล่าง / 11-RB9 บน+ล่าง + เหล็กฉาก L50×50×4 ปลายฝา"
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type B) ขนาด 110x110x140 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เจาะรูท่อ Ø60 cm. 2 ทาง"
+    },
+    {
+      "no": 4,
+      "group": "Type B (DS-702)",
+      "name": "Type B ท่อ Ø0.80",
+      "outer_w_m": 1.1,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.6,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2345,
+      "per_trip": 5,
+      "pickup": {
+        "list": 9198,
+        "disc5": 8738,
+        "disc10": 8278
+      },
+      "delivered": {
+        "list": 10906,
+        "disc5": 10446,
+        "disc10": 9986
+      },
+      "cover": {
+        "pieces": 3,
+        "piece_width_m": 0.363,
+        "length_m": 0.89,
+        "thickness_m": 0.2,
+        "weight_kg": 466,
+        "per_trip": 26,
+        "pickup": {
+          "list": 2607,
+          "disc5": 2477,
+          "disc10": 2346
+        },
+        "delivered": {
+          "list": 2935,
+          "disc5": 2805,
+          "disc10": 2674
+        },
+        "spec_text": "ฝา คสล. สำเร็จรูป Type B ตาม DS-702 3 ชิ้น × 0.363 ม. (ยาว 0.89 หนา 0.20) เหล็ก 5-RB12 บน+ล่าง / 11-RB9 บน+ล่าง + เหล็กฉาก L50×50×4 ปลายฝา"
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type B) ขนาด 110x130x160 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เจาะรูท่อ Ø80 cm. 2 ทาง"
+    },
+    {
+      "no": 5,
+      "group": "Type C (DS-703)",
+      "name": "Type C ท่อ Ø1.00",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.55,
+      "outer_h_m": 1.8,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3015,
+      "per_trip": 4,
+      "pickup": {
+        "list": 9492,
+        "disc5": 9017,
+        "disc10": 8543
+      },
+      "delivered": {
+        "list": 11627,
+        "disc5": 11152,
+        "disc10": 10678
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type C) ขนาด 155x120x180 cm. T15 cm. เหล็ก RB9@15+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน RB9@10x1ชั้น + ชั้นล่าง RB9@20x1ชั้น เจาะรูท่อ Ø100 cm. 2 ทาง"
+    },
+    {
+      "no": 6,
+      "group": "Type C (DS-703)",
+      "name": "Type C ท่อ Ø1.20",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.8,
+      "outer_h_m": 1.95,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3462,
+      "per_trip": 3,
+      "pickup": {
+        "list": 10970,
+        "disc5": 10422,
+        "disc10": 9873
+      },
+      "delivered": {
+        "list": 13817,
+        "disc5": 13269,
+        "disc10": 12720
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type C) ขนาด 180x120x195 cm. T15 cm. เหล็ก RB9@15+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน RB9@10x1ชั้น + ชั้นล่าง RB9@20x1ชั้น เจาะรูท่อ Ø120 cm. 2 ทาง"
+    },
+    {
+      "no": 7,
+      "group": "Type D (DS-704)",
+      "name": "Type D ท่อ Ø0.60",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.1,
+      "outer_h_m": 1.4,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2201,
+      "per_trip": 5,
+      "pickup": {
+        "list": 7536,
+        "disc5": 7159,
+        "disc10": 6782
+      },
+      "delivered": {
+        "list": 9244,
+        "disc5": 8867,
+        "disc10": 8490
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type D) ขนาด 110x130x140 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เหล็กพื้นก้นบ่อ ชั้นที่ 1 RB9@10x1ชั้น + ชั้นที่ 2 RB9@20x1ชั้น เจาะรูท่อ Ø60 cm. 2 ทาง"
+    },
+    {
+      "no": 8,
+      "group": "Type D (DS-704)",
+      "name": "Type D ท่อ Ø0.80",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.6,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2648,
+      "per_trip": 4,
+      "pickup": {
+        "list": 9192,
+        "disc5": 8732,
+        "disc10": 8273
+      },
+      "delivered": {
+        "list": 11327,
+        "disc5": 10867,
+        "disc10": 10408
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type D) ขนาด 130x130x160 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เหล็กพื้นก้นบ่อ ชั้นที่ 1 RB9@10x1ชั้น + ชั้นที่ 2 RB9@20x1ชั้น เจาะรูท่อ Ø80 cm. 2 ทาง"
+    },
+    {
+      "no": 9,
+      "group": "Type D (DS-704)",
+      "name": "Type D ท่อ Ø1.00",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.55,
+      "outer_h_m": 1.8,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3189,
+      "per_trip": 3,
+      "pickup": {
+        "list": 10581,
+        "disc5": 10052,
+        "disc10": 9523
+      },
+      "delivered": {
+        "list": 13428,
+        "disc5": 12899,
+        "disc10": 12370
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type D) ขนาด 155x130x180 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เหล็กพื้นก้นบ่อ ชั้นที่ 1 RB9@10x1ชั้น + ชั้นที่ 2 RB9@20x1ชั้น เจาะรูท่อ Ø100 cm. 2 ทาง"
+    },
+    {
+      "no": 10,
+      "group": "Type D (DS-704)",
+      "name": "Type D ท่อ Ø1.20",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.8,
+      "outer_h_m": 1.95,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3657,
+      "per_trip": 3,
+      "pickup": {
+        "list": 12150,
+        "disc5": 11543,
+        "disc10": 10935
+      },
+      "delivered": {
+        "list": 14997,
+        "disc5": 14390,
+        "disc10": 13782
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type D) ขนาด 180x130x195 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เหล็กพื้นก้นบ่อ ชั้นที่ 1 RB9@10x1ชั้น + ชั้นที่ 2 RB9@20x1ชั้น เจาะรูท่อ Ø120 cm. 2 ทาง"
+    },
+    {
+      "no": 11,
+      "group": "Type E (DS-705)",
+      "name": "Type E Box 1.20×1.20",
+      "outer_w_m": 1.2,
+      "outer_l_m": 2.0,
+      "outer_h_m": 1.95,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3002,
+      "per_trip": 4,
+      "pickup": {
+        "list": 10501,
+        "disc5": 9976,
+        "disc10": 9451
+      },
+      "delivered": {
+        "list": 12636,
+        "disc5": 12111,
+        "disc10": 11586
+      },
+      "spec_text": "บ่อพัก Box Culvert คสล. สำเร็จรูป (กรมทาง Type E) ขนาด 200x120x195 cm. T15 cm. เหล็ก DB12@20+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน DB12@20x1ชั้น + ชั้นล่าง RB9@20x1ชั้น ช่องเปิด Box 150x150 cm. 2 ช่อง"
+    },
+    {
+      "no": 12,
+      "group": "Type E (DS-705)",
+      "name": "Type E Box 1.50×1.50",
+      "outer_w_m": 1.2,
+      "outer_l_m": 2.3,
+      "outer_h_m": 2.25,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3499,
+      "per_trip": 3,
+      "pickup": {
+        "list": 12319,
+        "disc5": 11703,
+        "disc10": 11087
+      },
+      "delivered": {
+        "list": 15166,
+        "disc5": 14550,
+        "disc10": 13934
+      },
+      "spec_text": "บ่อพัก Box Culvert คสล. สำเร็จรูป (กรมทาง Type E) ขนาด 230x120x225 cm. T15 cm. เหล็ก DB12@20+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน DB12@20x1ชั้น + ชั้นล่าง RB9@20x1ชั้น ช่องเปิด Box 180x180 cm. 2 ช่อง"
+    },
+    {
+      "no": 13,
+      "group": "Type F (DS-706)",
+      "name": "Type F Box 1.20×1.20",
+      "outer_w_m": 1.3,
+      "outer_l_m": 2.1,
+      "outer_h_m": 1.95,
+      "wall_m": 0.2,
+      "floor_m": 0.2,
+      "weight_kg": 4332,
+      "per_trip": 2,
+      "pickup": {
+        "list": 20028,
+        "disc5": 19027,
+        "disc10": 18025
+      },
+      "delivered": {
+        "list": 24299,
+        "disc5": 23298,
+        "disc10": 22296
+      },
+      "spec_text": "บ่อพัก Box Culvert คสล. สำเร็จรูป (กรมทาง Type F) ขนาด 210x130x195 cm. T20 cm. เหล็ก DB16@20+DB12@20x2ชั้น เหล็กพื้นก้นบ่อ DB16@20x2ชั้น (ขวาง Box, ขนานด้านยาว) + DB12@20x2ชั้น (ตามแนว Box, ขนานด้านกว้าง) ช่องเปิด Box 145x145 cm. 2 ช่อง"
+    },
+    {
+      "no": 14,
+      "group": "Type F (DS-706)",
+      "name": "Type F Box 1.50×1.50",
+      "outer_w_m": 1.3,
+      "outer_l_m": 2.4,
+      "outer_h_m": 2.3,
+      "wall_m": 0.2,
+      "floor_m": 0.2,
+      "weight_kg": 5040,
+      "per_trip": 2,
+      "pickup": {
+        "list": 22603,
+        "disc5": 21473,
+        "disc10": 20343
+      },
+      "delivered": {
+        "list": 26874,
+        "disc5": 25744,
+        "disc10": 24614
+      },
+      "spec_text": "บ่อพัก Box Culvert คสล. สำเร็จรูป (กรมทาง Type F) ขนาด 240x130x230 cm. T20 cm. เหล็ก DB16@20+DB12@20x2ชั้น เหล็กพื้นก้นบ่อ DB16@20x2ชั้น (ขวาง Box, ขนานด้านยาว) + DB12@20x2ชั้น (ตามแนว Box, ขนานด้านกว้าง) ช่องเปิด Box 180x180 cm. 2 ช่อง"
+    },
+    {
+      "no": 15,
+      "group": "Type G (DS-707)",
+      "name": "Type G ท่อ Ø1.00",
+      "outer_w_m": 1.4,
+      "outer_l_m": 1.65,
+      "outer_h_m": 1.0,
+      "wall_m": 0.2,
+      "floor_m": 0.2,
+      "weight_kg": 2767,
+      "per_trip": 4,
+      "pickup": {
+        "list": 13077,
+        "disc5": 12423,
+        "disc10": 11769
+      },
+      "delivered": {
+        "list": 15212,
+        "disc5": 14558,
+        "disc10": 13904
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type G) ขนาด 165x140x100 cm. T20 cm. เหล็ก DB16@20+DB12@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน DB16@20x1ชั้น + ชั้นล่าง DB12@20x1ชั้น ร่องครึ่งวงกลมรับท่อ Ø100 cm. 2 ร่อง"
+    },
+    {
+      "no": 16,
+      "group": "Type G (DS-707)",
+      "name": "Type G ท่อ Ø1.20",
+      "outer_w_m": 1.4,
+      "outer_l_m": 1.9,
+      "outer_h_m": 1.1,
+      "wall_m": 0.2,
+      "floor_m": 0.2,
+      "weight_kg": 3240,
+      "per_trip": 3,
+      "pickup": {
+        "list": 15602,
+        "disc5": 14822,
+        "disc10": 14042
+      },
+      "delivered": {
+        "list": 18449,
+        "disc5": 17669,
+        "disc10": 16889
+      },
+      "spec_text": "บ่อพัก คสล. สำเร็จรูป (กรมทาง Type G) ขนาด 190x140x110 cm. T20 cm. เหล็ก DB16@20+DB12@20x2ชั้น เหล็กพื้นก้นบ่อ ชั้นบน DB16@20x1ชั้น + ชั้นล่าง DB12@20x1ชั้น ร่องครึ่งวงกลมรับท่อ Ø120 cm. 2 ร่อง"
+    },
+    {
+      "no": 17,
+      "group": "Sidewalk Drop Inlet (DS-707)",
+      "name": "Sidewalk Drop Inlet",
+      "outer_w_m": 0.84,
+      "outer_l_m": 0.84,
+      "outer_h_m": 1.0,
+      "wall_m": 0.12,
+      "floor_m": 0.12,
+      "weight_kg": 897,
+      "per_trip": 13,
+      "pickup": {
+        "list": 2242,
+        "disc5": 2130,
+        "disc10": 2018
+      },
+      "delivered": {
+        "list": 2899,
+        "disc5": 2787,
+        "disc10": 2675
+      },
+      "spec_text": "บ่อรับน้ำทางเท้า (Sidewalk Drop Inlet) คสล. สำเร็จรูป ขนาด 84x84x100 cm. T12 cm. เหล็ก RB9@20+RB9@20x1ชั้น เจาะรูท่อ Ø40 cm. 1 ทาง"
+    },
+    {
+      "no": 18,
+      "group": "Catch Basin (DR-ST-021)",
+      "name": "Catch Basin ท่อ Ø0.40",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.0,
+      "outer_h_m": 1.1,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 1432,
+      "per_trip": 8,
+      "pickup": {
+        "list": 4490,
+        "disc5": 4266,
+        "disc10": 4041
+      },
+      "delivered": {
+        "list": 5557,
+        "disc5": 5333,
+        "disc10": 5108
+      },
+      "spec_text": "บ่อพักรับน้ำ (Catch Basin) คสล. สำเร็จรูป ขนาด 100x100x110 cm. T15 cm. เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø40 cm. 2 ทาง"
+    },
+    {
+      "no": 19,
+      "group": "Drop Inlet Type A (DS-401)",
+      "name": "Drop Inlet Type A ท่อ Ø0.30",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.0,
+      "outer_h_m": 1.2,
+      "wall_m": 0.12,
+      "floor_m": 0.12,
+      "weight_kg": 1363,
+      "per_trip": 9,
+      "pickup": {
+        "list": 4424,
+        "disc5": 4203,
+        "disc10": 3982
+      },
+      "delivered": {
+        "list": 5373,
+        "disc5": 5152,
+        "disc10": 4931
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type A) คสล. สำเร็จรูป ขนาด 100x100x120 cm. T12 cm. เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø30 cm. 1 ทาง"
+    },
+    {
+      "no": 20,
+      "group": "Drop Inlet Type A (DS-401)",
+      "name": "Drop Inlet Type A ท่อ Ø0.40",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.0,
+      "outer_h_m": 1.2,
+      "wall_m": 0.12,
+      "floor_m": 0.12,
+      "weight_kg": 1347,
+      "per_trip": 9,
+      "pickup": {
+        "list": 4391,
+        "disc5": 4171,
+        "disc10": 3952
+      },
+      "delivered": {
+        "list": 5340,
+        "disc5": 5120,
+        "disc10": 4901
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type A) คสล. สำเร็จรูป ขนาด 100x100x120 cm. T12 cm. เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø40 cm. 1 ทาง"
+    },
+    {
+      "no": 21,
+      "group": "Drop Inlet Type B (DS-402)",
+      "name": "Drop Inlet Type B ท่อ Ø0.30",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.05,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 1739,
+      "per_trip": 7,
+      "pickup": {
+        "list": 6729,
+        "disc5": 6393,
+        "disc10": 6056
+      },
+      "delivered": {
+        "list": 7949,
+        "disc5": 7613,
+        "disc10": 7276
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type B) คสล. สำเร็จรูป ขนาด 130x100x105 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ RB9@20x2ชั้น (ขนานด้านกว้าง) + RB9@10x2ชั้น (ขนาน ด้านยาว) เจาะรูท่อ Ø30 cm. 1 ทาง"
+    },
+    {
+      "no": 22,
+      "group": "Drop Inlet Type B (DS-402)",
+      "name": "Drop Inlet Type B ท่อ Ø0.40",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.15,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 1863,
+      "per_trip": 6,
+      "pickup": {
+        "list": 7195,
+        "disc5": 6835,
+        "disc10": 6476
+      },
+      "delivered": {
+        "list": 8619,
+        "disc5": 8259,
+        "disc10": 7900
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type B) คสล. สำเร็จรูป ขนาด 130x100x115 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ RB9@20x2ชั้น (ขนานด้านกว้าง) + RB9@10x2ชั้น (ขนาน ด้านยาว) เจาะรูท่อ Ø40 cm. 1 ทาง"
+    },
+    {
+      "no": 23,
+      "group": "Drop Inlet Type B (DS-402)",
+      "name": "Drop Inlet Type B ท่อ Ø0.60",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.4,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2166,
+      "per_trip": 5,
+      "pickup": {
+        "list": 8075,
+        "disc5": 7671,
+        "disc10": 7268
+      },
+      "delivered": {
+        "list": 9783,
+        "disc5": 9379,
+        "disc10": 8976
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type B) คสล. สำเร็จรูป ขนาด 130x100x140 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ RB9@20x2ชั้น (ขนานด้านกว้าง) + RB9@10x2ชั้น (ขนาน ด้านยาว) เจาะรูท่อ Ø60 cm. 1 ทาง"
+    },
+    {
+      "no": 24,
+      "group": "Drop Inlet Type B (DS-402)",
+      "name": "Drop Inlet Type B ท่อ Ø0.80",
+      "outer_w_m": 1.0,
+      "outer_l_m": 1.3,
+      "outer_h_m": 1.65,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2447,
+      "per_trip": 5,
+      "pickup": {
+        "list": 8892,
+        "disc5": 8447,
+        "disc10": 8003
+      },
+      "delivered": {
+        "list": 10600,
+        "disc5": 10155,
+        "disc10": 9711
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type B) คสล. สำเร็จรูป ขนาด 130x100x165 cm. T15 cm. เหล็ก RB9@10+RB9@20x2ชั้น เหล็กพื้นก้นบ่อ RB9@20x2ชั้น (ขนานด้านกว้าง) + RB9@10x2ชั้น (ขนาน ด้านยาว) เจาะรูท่อ Ø80 cm. 1 ทาง"
+    },
+    {
+      "no": 25,
+      "group": "Drop Inlet Type C (DS-403)",
+      "name": "Drop Inlet Type C ท่อ Ø0.60",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.1,
+      "outer_h_m": 1.35,
+      "wall_m": 0.15,
+      "floor_m": 0.2,
+      "weight_kg": 2323,
+      "per_trip": 5,
+      "pickup": {
+        "list": 6437,
+        "disc5": 6115,
+        "disc10": 5793
+      },
+      "delivered": {
+        "list": 8145,
+        "disc5": 7823,
+        "disc10": 7501
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type C) คสล. สำเร็จรูป ขนาด 110x130x135 cm. T15 cm. (พื้นก้นบ่อหนา 20 cm.) เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø60 cm. 1 ทาง"
+    },
+    {
+      "no": 26,
+      "group": "Drop Inlet Type C (DS-403)",
+      "name": "Drop Inlet Type C ท่อ Ø0.80",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.35,
+      "outer_h_m": 1.6,
+      "wall_m": 0.15,
+      "floor_m": 0.2,
+      "weight_kg": 3030,
+      "per_trip": 4,
+      "pickup": {
+        "list": 8031,
+        "disc5": 7629,
+        "disc10": 7228
+      },
+      "delivered": {
+        "list": 10166,
+        "disc5": 9764,
+        "disc10": 9363
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type C) คสล. สำเร็จรูป ขนาด 135x130x160 cm. T15 cm. (พื้นก้นบ่อหนา 20 cm.) เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø80 cm. 1 ทาง"
+    },
+    {
+      "no": 27,
+      "group": "Drop Inlet Type C (DS-403)",
+      "name": "Drop Inlet Type C ท่อ Ø1.00",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.55,
+      "outer_h_m": 1.85,
+      "wall_m": 0.15,
+      "floor_m": 0.2,
+      "weight_kg": 3714,
+      "per_trip": 3,
+      "pickup": {
+        "list": 9605,
+        "disc5": 9125,
+        "disc10": 8645
+      },
+      "delivered": {
+        "list": 12452,
+        "disc5": 11972,
+        "disc10": 11492
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type C) คสล. สำเร็จรูป ขนาด 155x130x185 cm. T15 cm. (พื้นก้นบ่อหนา 20 cm.) เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø100 cm. 1 ทาง"
+    },
+    {
+      "no": 28,
+      "group": "Drop Inlet Type C (DS-403)",
+      "name": "Drop Inlet Type C ท่อ Ø1.20",
+      "outer_w_m": 1.3,
+      "outer_l_m": 1.8,
+      "outer_h_m": 2.1,
+      "wall_m": 0.15,
+      "floor_m": 0.2,
+      "weight_kg": 4546,
+      "per_trip": 2,
+      "pickup": {
+        "list": 11740,
+        "disc5": 11153,
+        "disc10": 10566
+      },
+      "delivered": {
+        "list": 16011,
+        "disc5": 15424,
+        "disc10": 14837
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type C) คสล. สำเร็จรูป ขนาด 180x130x210 cm. T15 cm. (พื้นก้นบ่อหนา 20 cm.) เหล็ก RB9@20+RB9@20x2ชั้น เจาะรูท่อ Ø120 cm. 1 ทาง"
+    },
+    {
+      "no": 29,
+      "group": "Drop Inlet Type D (DS-404)",
+      "name": "Drop Inlet Type D ท่อ Ø0.60",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.1,
+      "outer_h_m": 1.35,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2101,
+      "per_trip": 5,
+      "pickup": {
+        "list": 6878,
+        "disc5": 6534,
+        "disc10": 6190
+      },
+      "delivered": {
+        "list": 8586,
+        "disc5": 8242,
+        "disc10": 7898
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type D) คสล. สำเร็จรูป ขนาด 110x120x135 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เจาะรูท่อ Ø60 cm. 1 ทาง"
+    },
+    {
+      "no": 30,
+      "group": "Drop Inlet Type D (DS-404)",
+      "name": "Drop Inlet Type D ท่อ Ø0.80",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.35,
+      "outer_h_m": 1.6,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 2751,
+      "per_trip": 4,
+      "pickup": {
+        "list": 8856,
+        "disc5": 8413,
+        "disc10": 7970
+      },
+      "delivered": {
+        "list": 10991,
+        "disc5": 10548,
+        "disc10": 10105
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type D) คสล. สำเร็จรูป ขนาด 135x120x160 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เจาะรูท่อ Ø80 cm. 1 ทาง"
+    },
+    {
+      "no": 31,
+      "group": "Drop Inlet Type D (DS-404)",
+      "name": "Drop Inlet Type D ท่อ Ø1.00",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.55,
+      "outer_h_m": 1.85,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 3386,
+      "per_trip": 3,
+      "pickup": {
+        "list": 10451,
+        "disc5": 9928,
+        "disc10": 9406
+      },
+      "delivered": {
+        "list": 13298,
+        "disc5": 12775,
+        "disc10": 12253
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type D) คสล. สำเร็จรูป ขนาด 155x120x185 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เจาะรูท่อ Ø100 cm. 1 ทาง"
+    },
+    {
+      "no": 32,
+      "group": "Drop Inlet Type D (DS-404)",
+      "name": "Drop Inlet Type D ท่อ Ø1.20",
+      "outer_w_m": 1.2,
+      "outer_l_m": 1.8,
+      "outer_h_m": 2.1,
+      "wall_m": 0.15,
+      "floor_m": 0.15,
+      "weight_kg": 4161,
+      "per_trip": 3,
+      "pickup": {
+        "list": 12781,
+        "disc5": 12142,
+        "disc10": 11503
+      },
+      "delivered": {
+        "list": 15628,
+        "disc5": 14989,
+        "disc10": 14350
+      },
+      "spec_text": "บ่อรับน้ำเกาะกลาง (Drop Inlet Type D) คสล. สำเร็จรูป ขนาด 180x120x210 cm. T15 cm. เหล็ก RB9@15+RB9@15x2ชั้น เจาะรูท่อ Ø120 cm. 1 ทาง "
+    }
+  ]
+}

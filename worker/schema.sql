@@ -188,3 +188,33 @@ CREATE TABLE IF NOT EXISTS manhole_products (
   price_wholesale REAL NOT NULL,
   price_retail REAL NOT NULL
 );
+
+-- บ่อพักกรมทางหลวง (DOH-standard precast manhole) price list (see
+-- migrations/0023_add_doh_manhole_pricing.sql): six independent ก่อน VAT prices
+-- per row; Type B cover add-ons are rows with parent_id set.
+CREATE TABLE IF NOT EXISTS doh_manhole_products (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT,
+  item_no INTEGER,
+  group_name TEXT NOT NULL,
+  name TEXT NOT NULL,
+  outer_w_m REAL,
+  outer_l_m REAL,
+  outer_h_m REAL,
+  wall_m REAL,
+  floor_m REAL,
+  cover_pieces INTEGER,
+  cover_piece_width_m REAL,
+  cover_length_m REAL,
+  cover_thickness_m REAL,
+  weight_kg REAL,
+  per_trip INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  pickup_list REAL NOT NULL,
+  pickup_disc5 REAL NOT NULL,
+  pickup_disc10 REAL NOT NULL,
+  delivered_list REAL NOT NULL,
+  delivered_disc5 REAL NOT NULL,
+  delivered_disc10 REAL NOT NULL,
+  spec_text TEXT
+);

@@ -115,6 +115,35 @@ async function getSession(request, env) {
   return await verifySessionToken(m[1], env);
 }
 
+function dohManholeToJson(p) {
+  return {
+    id: p.id,
+    parentId: p.parent_id,
+    itemNo: p.item_no,
+    groupName: p.group_name,
+    name: p.name,
+    outerWidthM: p.outer_w_m,
+    outerLengthM: p.outer_l_m,
+    outerHeightM: p.outer_h_m,
+    wallM: p.wall_m,
+    floorM: p.floor_m,
+    coverPieces: p.cover_pieces,
+    coverPieceWidthM: p.cover_piece_width_m,
+    coverLengthM: p.cover_length_m,
+    coverThicknessM: p.cover_thickness_m,
+    weightKg: p.weight_kg,
+    perTrip: p.per_trip,
+    sortOrder: p.sort_order,
+    pickupList: p.pickup_list,
+    pickupDisc5: p.pickup_disc5,
+    pickupDisc10: p.pickup_disc10,
+    deliveredList: p.delivered_list,
+    deliveredDisc5: p.delivered_disc5,
+    deliveredDisc10: p.delivered_disc10,
+    specText: p.spec_text,
+  };
+}
+
 // Re-checks against D1 (not just the token signature/expiry) so a deleted
 // user's still-valid token stops working immediately instead of waiting out
 // the token's 30-day lifetime.
@@ -747,6 +776,41 @@ export default {
         priceWholesale: wholesale,
         priceRetail: retail,
       });
+    }
+
+    if (path === "/doh-manhole-products" && method === "GET") {
+      const productsRes = await env.DB.prepare("SELECT * FROM doh_manhole_products ORDER BY sort_order ASC").all();
+      return json(productsRes.results.map(dohManholeToJson));
+    }
+
+    const dohManholeIdMatch = path.match(/^\/doh-manhole-products\/([^/]+)$/);
+    if (dohManholeIdMatch && (method === "PUT" || method === "PATCH")) {
+      if (!(await requireAdmin(request, env))) return json({ error: "unauthorized" }, 401);
+      const id = decodeURIComponent(dohManholeIdMatch[1]);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ error: "invalid json" }, 400); }
+      const existing = await env.DB.prepare("SELECT * FROM doh_manhole_products WHERE id = ?").bind(id).first();
+      if (!existing) return json({ error: "not found" }, 404);
+
+      const pickupList = body.pickupList !== undefined ? Number(body.pickupList) : existing.pickup_list;
+      const pickupDisc5 = body.pickupDisc5 !== undefined ? Number(body.pickupDisc5) : existing.pickup_disc5;
+      const pickupDisc10 = body.pickupDisc10 !== undefined ? Number(body.pickupDisc10) : existing.pickup_disc10;
+      const deliveredList = body.deliveredList !== undefined ? Number(body.deliveredList) : existing.delivered_list;
+      const deliveredDisc5 = body.deliveredDisc5 !== undefined ? Number(body.deliveredDisc5) : existing.delivered_disc5;
+      const deliveredDisc10 = body.deliveredDisc10 !== undefined ? Number(body.deliveredDisc10) : existing.delivered_disc10;
+      if ([pickupList, pickupDisc5, pickupDisc10, deliveredList, deliveredDisc5, deliveredDisc10].some(function (n) { return isNaN(n); })) return json({ error: "invalid price" }, 400);
+
+      await env.DB.prepare("UPDATE doh_manhole_products SET pickup_list=?, pickup_disc5=?, pickup_disc10=?, delivered_list=?, delivered_disc5=?, delivered_disc10=? WHERE id=?")
+        .bind(pickupList, pickupDisc5, pickupDisc10, deliveredList, deliveredDisc5, deliveredDisc10, id).run();
+
+      return json(dohManholeToJson(Object.assign({}, existing, {
+        pickup_list: pickupList,
+        pickup_disc5: pickupDisc5,
+        pickup_disc10: pickupDisc10,
+        delivered_list: deliveredList,
+        delivered_disc5: deliveredDisc5,
+        delivered_disc10: deliveredDisc10,
+      })));
     }
 
     if (path === "/page-notes" && method === "GET") {

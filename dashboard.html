@@ -909,6 +909,16 @@ function Dashboard(root) {
     manholeEditPickup: "",
     manholeEditWholesale: "",
     manholeEditRetail: "",
+    dohManholeProducts: [],
+    dohManholeProductsLoading: true,
+    dohManholeProductsError: "",
+    dohManholeEditingId: null,
+    dohManholeEditPickupList: "",
+    dohManholeEditPickupDisc5: "",
+    dohManholeEditPickupDisc10: "",
+    dohManholeEditDeliveredList: "",
+    dohManholeEditDeliveredDisc5: "",
+    dohManholeEditDeliveredDisc10: "",
     pageNotes: {},
     pageNotesLoading: true,
     pageNotesError: "",
@@ -957,6 +967,7 @@ Dashboard.prototype.componentDidMount = function () {
   this.loadPileProducts();
   this.loadBoxCulvertProducts();
   this.loadManholeProducts();
+  this.loadDohManholeProducts();
   this.loadPageNotes();
   this.loadFolders("concrete");
   this.loadFolders("tis");
@@ -1463,6 +1474,84 @@ Dashboard.prototype.saveManholeEdit = function (id) {
   });
 };
 
+// บ่อพักกรมทางหลวง prices live in D1 (doh_manhole_products, see
+// migrations/0023_add_doh_manhole_pricing.sql), separate from the precast
+// manhole list above. Only the six base (ก่อน VAT) prices are stored -- the
+// VAT-inclusive prices are derived in renderDohManholePage.
+Dashboard.prototype.loadDohManholeProducts = function () {
+  var self = this;
+  self.state.dohManholeProductsLoading = true;
+  apiRequest("/doh-manhole-products").then(function (dohManholeProducts) {
+    self.setState({ dohManholeProducts: dohManholeProducts, dohManholeProductsLoading: false, dohManholeProductsError: "" });
+  }).catch(function () {
+    self.setState({ dohManholeProductsLoading: false, dohManholeProductsError: "โหลดข้อมูลตารางราคาบ่อพักกรมทางหลวงไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่" });
+  });
+};
+
+Dashboard.prototype.startDohManholeEdit = function (id) {
+  var p = this.state.dohManholeProducts.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var patch = { dohManholeEditingId: id };
+  DOH_MANHOLE_PRICE_COLUMNS.forEach(function (c) { patch[c.editKey] = String(p[c.key]); });
+  this.setState(patch);
+};
+
+Dashboard.prototype.saveDohManholeEdit = function (id) {
+  var s = this.state;
+  var body = {};
+  var valid = DOH_MANHOLE_PRICE_COLUMNS.every(function (c) {
+    body[c.key] = parseFloat(s[c.editKey]);
+    return !isNaN(body[c.key]);
+  });
+  if (!valid) {
+    this.showToast("กรุณากรอกราคาให้ถูกต้อง", "error");
+    return;
+  }
+  var self = this;
+  apiRequest("/doh-manhole-products/" + encodeURIComponent(id), {
+    method: "PUT", auth: true,
+    body: body,
+  }).then(function (updated) {
+    self.setState(function (s2) {
+      var dohManholeProducts = s2.dohManholeProducts.map(function (p) { return p.id === id ? updated : p; });
+      return { dohManholeProducts: dohManholeProducts, dohManholeEditingId: null };
+    });
+    self.showToast("บันทึกราคาสำเร็จ");
+  }).catch(function (err) {
+    self.showToast("บันทึกไม่สำเร็จ: " + err.message, "error");
+  });
+};
+
+// navigator.clipboard needs a secure context and permission, so fall back to
+// a hidden textarea + execCommand when it's missing or rejected.
+Dashboard.prototype.copyDohManholeSpec = function (id) {
+  var p = this.state.dohManholeProducts.find(function (x) { return x.id === id; });
+  if (!p || !p.specText) return;
+  var self = this;
+  var text = p.specText;
+  var fallback = function () {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    if (ok) self.showToast("คัดลอกข้อความสเปกแล้ว");
+    else self.showToast("คัดลอกไม่สำเร็จ", "error");
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      self.showToast("คัดลอกข้อความสเปกแล้ว");
+    }).catch(fallback);
+  } else {
+    fallback();
+  }
+};
+
 // Free-text "หมายเหตุ" note shown above the table on each product price
 // page, keyed by page (see PAGE_NOTE_KEYS below and worker/migrations
 // for the page_notes table). Admin-editable via the pencil button
@@ -1681,7 +1770,7 @@ Dashboard.prototype.handleClick = function (e) {
     case "cancel-edit-pipe": this.setState({ pipeEditingId: null, pipeEditRows: [] }); break;
     case "save-edit-pipe": this.savePipeEdit(d.id); break;
     case "discount-set-category":
-      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null, manholeEditingId: null };
+      var discountCategoryPatch = { discountCategory: d.category, pipeEditingId: null, plankEditingId: null, fenceEditingId: null, concreteMixEditingId: null, pileEditingId: null, boxCulvertEditingId: null, manholeEditingId: null, dohManholeEditingId: null };
       if (d.category === "pile_i") discountCategoryPatch.pileGroup = "I";
       else if (d.category === "pile_sq") discountCategoryPatch.pileGroup = "SQ";
       else if (d.category === "pile_hex") discountCategoryPatch.pileGroup = "HEX";
@@ -1712,6 +1801,11 @@ Dashboard.prototype.handleClick = function (e) {
     case "start-edit-manhole": this.startManholeEdit(d.id); break;
     case "cancel-edit-manhole": this.setState({ manholeEditingId: null }); break;
     case "save-edit-manhole": this.saveManholeEdit(d.id); break;
+    case "reload-doh-manhole-products": this.loadDohManholeProducts(); break;
+    case "start-edit-doh-manhole": this.startDohManholeEdit(d.id); break;
+    case "cancel-edit-doh-manhole": this.setState({ dohManholeEditingId: null }); break;
+    case "save-edit-doh-manhole": this.saveDohManholeEdit(d.id); break;
+    case "copy-doh-manhole-spec": this.copyDohManholeSpec(d.id); break;
     case "start-edit-page-note": this.startPageNoteEdit(d.key); break;
     case "cancel-edit-page-note": this.setState({ editingPageNoteKey: null }); break;
     case "save-edit-page-note": this.savePageNoteEdit(d.key); break;
@@ -5111,6 +5205,7 @@ var DISCOUNT_SIDEBAR_ITEMS = [
   { value: "pipe", label: "ท่อคอนกรีต" },
   { value: "box_culvert", label: "ท่อเหลี่ยม (Box Culvert)" },
   { value: "manhole", label: "บ่อพักสำเร็จรูป" },
+  { value: "doh_manhole", label: "บ่อพักกรมทางหลวง" },
   { value: "plank", label: "แผ่นพื้นสำเร็จรูป" },
   { value: "fence", label: "รั้วสำเร็จรูป TNN" },
   { value: "concrete_mix", label: "คอนกรีตผสมเสร็จ" },
@@ -5850,6 +5945,7 @@ Dashboard.prototype.renderDiscountPage = function () {
     tabButton("pipe", "ท่อคอนกรีต", "🚰") +
     tabButton("box_culvert", "ท่อเหลี่ยม", "🟦") +
     tabButton("manhole", "บ่อพักสำเร็จรูป", "🕳️") +
+    tabButton("doh_manhole", "บ่อพักกรมทางหลวง", "🛣️") +
     tabButton("plank", "แผ่นพื้นสำเร็จรูป", "🧱") +
     tabButton("fence", "รั้วสำเร็จรูป TNN", "🚧") +
     tabButton("concrete_mix", "คอนกรีตผสมเสร็จ", "🚚") +
@@ -5862,6 +5958,8 @@ Dashboard.prototype.renderDiscountPage = function () {
     ? '<div id="box-culvert-container">' + this.renderBoxCulvertPage() + '</div>'
     : cat === "manhole"
     ? '<div id="manhole-container">' + this.renderManholePage() + '</div>'
+    : cat === "doh_manhole"
+    ? '<div id="doh-manhole-container">' + this.renderDohManholePage() + '</div>'
     : cat === "plank"
     ? '<div id="plank-container">' + this.renderPlankPage() + '</div>'
     : cat === "fence"
@@ -6248,6 +6346,24 @@ var MANHOLE_TIERS = [
   { key: "priceRetail", editKey: "manholeEditRetail", label: "ราคาปลีก", headerBg: "#EF9F27", headerText: "#412402", novatBg: "#FDF8EF", vatBg: "#FAEEDA" },
 ];
 
+// บ่อพักกรมทางหลวง VAT keeps 2 decimals (unlike the rounded manholeVat above)
+// because the source PDF prints รวม VAT that way, e.g. 4,572 -> 4,892.04.
+function dohManholeVat(base) { return Math.round(base * 107) / 100; }
+
+var DOH_MANHOLE_PRICE_GROUPS = [
+  { label: "รับเอง ณ โรงงาน (บาท/ใบ)", headerBg: "#85B7EB", headerText: "#042C53", cellBg: "#F4F9FE", columns: [
+    { key: "pickupList", editKey: "dohManholeEditPickupList", label: "ราคาตั้ง" },
+    { key: "pickupDisc5", editKey: "dohManholeEditPickupDisc5", label: "ลด 5%" },
+    { key: "pickupDisc10", editKey: "dohManholeEditPickupDisc10", label: "ลด 10%" },
+  ] },
+  { label: "พร้อมจัดส่ง ≤ 70 กม. (บาท/ใบ)", headerBg: "#97C459", headerText: "#173404", cellBg: "#F5F9EF", columns: [
+    { key: "deliveredList", editKey: "dohManholeEditDeliveredList", label: "ราคาตั้ง" },
+    { key: "deliveredDisc5", editKey: "dohManholeEditDeliveredDisc5", label: "ลด 5%" },
+    { key: "deliveredDisc10", editKey: "dohManholeEditDeliveredDisc10", label: "ลด 10%" },
+  ] },
+];
+var DOH_MANHOLE_PRICE_COLUMNS = DOH_MANHOLE_PRICE_GROUPS[0].columns.concat(DOH_MANHOLE_PRICE_GROUPS[1].columns);
+
 Dashboard.prototype.renderPilePage = function () {
   var s = this.state;
 
@@ -6491,6 +6607,122 @@ Dashboard.prototype.renderManholePage = function () {
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาฐาน 3 ระดับ (ไม่รวม VAT) ราคารวม VAT คำนวณให้อัตโนมัติ" : "ราคารับเอง/ส่ง/ปลีก ต่อใบ (บ่อพักแบบ 2 ทางตรง)") + '</div>' +
     '</div>' +
     note + table +
+  '</div>';
+};
+
+Dashboard.prototype.renderDohManholePage = function () {
+  var s = this.state;
+
+  if (s.dohManholeProductsLoading) {
+    return '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);">กำลังโหลดข้อมูล...</div>';
+  }
+  if (s.dohManholeProductsError) {
+    return '<div style="text-align:center; padding:60px 20px;">' +
+      '<div style="color:oklch(0.5 0.18 25); margin-bottom:12px;">' + esc(s.dohManholeProductsError) + '</div>' +
+      '<button data-action="reload-doh-manhole-products" style="min-height:44px; padding:9px 18px; border-radius:8px; border:1px solid oklch(0.8 0.01 60); background:#fff; cursor:pointer; font-family:inherit; font-size:13.5px;">ลองอีกครั้ง</button>' +
+    '</div>';
+  }
+  var products = s.dohManholeProducts;
+  if (!products.length) {
+    return '<div style="text-align:center; padding:60px 20px; color:var(--text-faint);">ยังไม่มีข้อมูลราคาบ่อพักกรมทางหลวง</div>';
+  }
+
+  var isAdmin = this.isAdmin();
+  var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
+  var colWidths = "36px 170px minmax(130px,1.2fr) minmax(76px,0.6fr) 60px 58px repeat(6, minmax(104px,1fr))";
+  // The name column stays visible while the wide table scrolls sideways; it
+  // needs an opaque background so scrolled cells don't show through it.
+  var stickyStyle = "position:sticky; left:0; z-index:1; box-shadow:2px 0 4px rgba(0,0,0,.06);";
+  var numCell = function (text) {
+    return '<div style="' + groupCellStyle(null, "font-size:12px; text-align:right;") + '">' + text + '</div>';
+  };
+
+  var headerStyle = "padding:10px 8px; box-sizing:border-box;";
+  var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:var(--bg-subtle-2); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' +
+    '<div style="grid-row:span 2; ' + headerStyle + '">ลำดับ</div>' +
+    '<div style="grid-row:span 2; background:var(--bg-subtle-2); ' + headerStyle + stickyStyle + '">แบบ / ขนาดท่อ</div>' +
+    '<div style="grid-row:span 2; ' + headerStyle + '">ขนาดภายนอก ก×ย×ส (ม.)</div>' +
+    '<div style="grid-row:span 2; ' + headerStyle + '">ผนัง/พื้น (ม.)</div>' +
+    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">น้ำหนัก กก./ใบ</div>' +
+    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">ใบ/เที่ยว 10 ล้อ</div>' +
+    DOH_MANHOLE_PRICE_GROUPS.map(function (g) {
+      return '<div style="grid-column:span 3; text-align:center; background-color:' + g.headerBg + '; color:' + g.headerText + '; ' + headerStyle + '">' + g.label + '</div>';
+    }).join("") +
+    DOH_MANHOLE_PRICE_GROUPS.map(function (g) {
+      return g.columns.map(function (c) {
+        return '<div style="text-align:right; background-color:' + g.headerBg + '; color:' + g.headerText + '; ' + headerStyle + '">' + c.label + '</div>';
+      }).join("");
+    }).join("") +
+  '</div>';
+
+  var lastGroup = null;
+  var rows = products.map(function (p) {
+    var isEditingThis = s.dohManholeEditingId === p.id;
+    var isCover = !!p.parentId;
+
+    var groupHeader = "";
+    if (p.groupName !== lastGroup) {
+      lastGroup = p.groupName;
+      groupHeader = '<div style="border-top:1px solid var(--border-light); background:var(--bg-subtle-2); padding:7px 10px; font-size:12.5px; font-weight:700; color:var(--navy-topbar);"><span style="position:sticky; left:10px;">' + esc(p.groupName) + '</span></div>';
+    }
+
+    var priceCells = DOH_MANHOLE_PRICE_GROUPS.map(function (g) {
+      return g.columns.map(function (c) {
+        if (isEditingThis) {
+          var raw = s[c.editKey];
+          var parsed = parseFloat(raw);
+          return '<div style="' + groupCellStyle(g.cellBg) + '">' +
+            '<input id="field-' + c.editKey + '" type="text" inputmode="decimal" data-bind="' + c.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />' +
+            '<div style="font-size:10.5px; color:var(--text-muted); text-align:right; margin-top:3px;">รวม VAT ' + (isNaN(parsed) ? "-" : fmtN(dohManholeVat(parsed), 2)) + '</div>' +
+          '</div>';
+        }
+        return '<div style="' + groupCellStyle(g.cellBg, "padding:10px 6px; text-align:right;") + '">' +
+          '<div style="font-size:14px; font-weight:700; color:#111111; line-height:1.3;">' + fmt(p[c.key]) + '</div>' +
+          '<div style="font-size:10.5px; color:var(--text-muted); white-space:nowrap;">รวม VAT ' + fmtN(dohManholeVat(p[c.key]), 2) + '</div>' +
+        '</div>';
+      }).join("");
+    }).join("");
+
+    var smallBtn = "min-height:30px; padding:3px 8px; border-radius:6px; font-size:11.5px; cursor:pointer; font-family:inherit; line-height:1.2;";
+    var buttons = '<button data-action="copy-doh-manhole-spec" data-id="' + esc(p.id) + '" title="คัดลอกข้อความสเปก" style="' + smallBtn + ' border:1px solid var(--border-input); background:#fff; color:var(--text-body);">📋 สเปก</button>';
+    if (isAdmin) {
+      buttons += isEditingThis
+        ? '<button data-action="save-edit-doh-manhole" data-id="' + esc(p.id) + '" title="บันทึก" style="' + smallBtn + ' border:none; background:var(--navy-action); color:#fff;">✓</button>' +
+          '<button data-action="cancel-edit-doh-manhole" title="ยกเลิก" style="' + smallBtn + ' border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body);">✕</button>'
+        : '<button data-action="start-edit-doh-manhole" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="' + smallBtn + ' border:none; background:var(--bg-subtle);">✏️</button>';
+    }
+
+    var rowBg = isCover ? "#FAFAF8" : "#fff";
+    var size = isCover
+      ? fmt(p.coverPieces) + " ชิ้น × " + fmtN(p.coverPieceWidthM, 3) + " ม. ยาว " + fmtN(p.coverLengthM, 2) + " หนา " + fmtN(p.coverThicknessM, 2) + " ม."
+      : fmtN(p.outerWidthM, 2) + " × " + fmtN(p.outerLengthM, 2) + " × " + fmtN(p.outerHeightM, 2);
+    var wallFloor = isCover ? "—" : fmtN(p.wallM, 3) + " / " + fmtN(p.floorM, 2);
+
+    return groupHeader + '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid var(--border-light); align-items:stretch; background:' + rowBg + ';">' +
+      '<div style="' + groupCellStyle(null, "font-size:12px; color:var(--text-muted); text-align:center;") + '">' + (isCover ? "—" : p.itemNo) + '</div>' +
+      '<div style="' + groupCellStyle(rowBg, stickyStyle) + '">' +
+        '<div style="font-size:12.5px; font-weight:' + (isCover ? "600" : "700") + '; line-height:1.3; margin-bottom:6px;">' + esc(p.name) + '</div>' +
+        '<div style="display:flex; gap:4px; flex-wrap:wrap;">' + buttons + '</div>' +
+      '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + size + '</div>' +
+      '<div style="' + groupCellStyle(null, "font-size:12px;") + '">' + wallFloor + '</div>' +
+      numCell(fmt(p.weightKg)) +
+      numCell(fmt(p.perTrip)) +
+      priceCells +
+    '</div>';
+  }).join("");
+
+  var table = '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow-x:auto; -webkit-overflow-scrolling:touch;">' +
+    '<div style="min-width:1154px;">' + tableHeader + rows + '</div>' +
+  '</div>';
+
+  return '<div class="page-content" style="padding:28px 32px 56px; max-width:1500px; margin:0 auto;">' +
+    '<div style="margin-bottom:20px;">' +
+      '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพัก คสล. สำเร็จรูป มาตรฐานกรมทางหลวง</div>' +
+      '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาก่อน VAT ทั้ง 6 ช่อง ราคารวม VAT คำนวณให้อัตโนมัติ" : "ตัวเลขใหญ่ = ราคาก่อน VAT, ตัวเล็ก = ราคารวม VAT 7%") + '</div>' +
+    '</div>' +
+    table +
+    '<div style="margin-top:14px;">' + this.renderPageNoteBlock("doh_manhole") + '</div>' +
   '</div>';
 };
 
