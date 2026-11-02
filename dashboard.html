@@ -6732,8 +6732,7 @@ Dashboard.prototype.renderDohManholePage = function () {
       '<div style="font-family:\'IBM Plex Sans Thai\'; font-weight:700; font-size:19px; margin-bottom:6px;">ตารางราคาบ่อพัก คสล. สำเร็จรูป มาตรฐานกรมทางหลวง</div>' +
       '<div style="font-size:13px; color:var(--text-muted);">' + (isAdmin ? "แก้ไขได้ที่ราคาก่อน VAT ทั้ง 6 ช่อง ราคารวม VAT คำนวณให้อัตโนมัติ" : "ตัวเลขใหญ่ = ราคาก่อน VAT, ตัวเล็ก = ราคารวม VAT 7%") + '</div>' +
     '</div>' +
-    table +
-    '<div style="margin-top:14px;">' + this.renderPageNoteBlock("doh_manhole") + '</div>' +
+    this.renderPageNoteBlock("doh_manhole") + table +
   '</div>';
 };
 
