@@ -6485,15 +6485,15 @@ function plankGirderVat(base) { return Math.round(base * 107 / 100); }
 
 var PLANK_GIRDER_PRICE_COLUMNS = {
   doh: [
-    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน (INT)" },
-    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier (EXT-B)" },
-    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + Sidewalk 1.50 ม. (EXT-SW)" },
+    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน", code: "INT" },
+    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier", code: "EXT-B" },
+    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + Sidewalk 1.50&nbsp;ม.", code: "EXT-SW" },
   ],
   dor: [
-    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน (INT)" },
-    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier (EXT-B)" },
-    { key: "priceExtSidewalk100", editKey: "plankGirderEditExtSidewalk100", label: "คานตัวริม + ทางเท้า 1.00 ม. (EXT-S1.00)" },
-    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + ทางเท้า 1.50 ม. (EXT-S1.50)" },
+    { key: "priceInt", editKey: "plankGirderEditInt", label: "คานตัวใน", code: "INT" },
+    { key: "priceExtBarrier", editKey: "plankGirderEditExtBarrier", label: "คานตัวริม + Barrier", code: "EXT-B" },
+    { key: "priceExtSidewalk100", editKey: "plankGirderEditExtSidewalk100", label: "คานตัวริม + ทางเท้า 1.00&nbsp;ม.", code: "EXT-S1.00" },
+    { key: "priceExtSidewalk150", editKey: "plankGirderEditExtSidewalk150", label: "คานตัวริม + ทางเท้า 1.50&nbsp;ม.", code: "EXT-S1.50" },
   ],
 };
 
@@ -6888,70 +6888,72 @@ Dashboard.prototype.renderPlankGirderTable = function (std) {
   var columns = PLANK_GIRDER_PRICE_COLUMNS[std.key];
   var products = s.plankGirderProducts.filter(function (p) { return p.standardKey === std.key; });
   var editInputStyle = "padding:5px 6px; border-radius:6px; border:1px solid var(--navy-border); font-size:12px; font-family:'IBM Plex Sans Thai'; width:100%; box-sizing:border-box;";
-  var colWidths = "76px 56px 64px repeat(" + columns.length + ", minmax(112px,1fr)) 68px 68px";
-  var minWidth = 76 + 56 + 64 + columns.length * 112 + 68 + 68;
+  // Fixed widths keep every price column equal and let the table be only as
+  // wide as its content. Admins need room for the edit buttons beside the length.
+  var lengthWidth = isAdmin ? 124 : 72;
+  var colWidths = lengthWidth + "px 64px 76px repeat(" + columns.length + ", 150px) 84px 84px";
+  var tableWidth = lengthWidth + 64 + 76 + columns.length * 150 + 84 + 84;
   // The length column stays visible while the wide table scrolls sideways; it
   // needs an opaque background so scrolled cells don't show through it.
   var stickyStyle = "position:sticky; left:0; z-index:1; box-shadow:2px 0 4px rgba(0,0,0,.06);";
-  var priceBg = "#F4F9FE";
-  var tripBg = "#F5F9EF";
-  var headerStyle = "padding:10px 8px; box-sizing:border-box;";
-  var numCell = function (text, bg) {
-    return '<div style="' + groupCellStyle(bg, "font-size:12px; text-align:right;") + '">' + text + '</div>';
+  var headerStyle = "padding:8px 6px; box-sizing:border-box; text-align:center; display:flex; align-items:center; justify-content:center;";
+  var noWrap = function (text) { return '<span style="white-space:nowrap;">' + text + '</span>'; };
+  var numCell = function (text) {
+    return '<div style="' + groupCellStyle(null, "padding:6px 8px; font-size:12px; text-align:center;") + '">' + text + '</div>';
   };
   var tripText = function (n) { return n === null ? "–" : fmt(n); };
 
   var tableHeader = '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; background:var(--bg-subtle-2); font-size:11px; font-weight:700; color:oklch(0.45 0.01 60); line-height:1.3;">' +
-    '<div style="grid-row:span 2; background:var(--bg-subtle-2); ' + headerStyle + stickyStyle + '">ความยาว (ม.)</div>' +
-    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">สูง h (ม.)</div>' +
-    '<div style="grid-row:span 2; text-align:right; ' + headerStyle + '">น้ำหนัก (ตัน/ตัว)</div>' +
-    '<div style="grid-column:span ' + columns.length + '; text-align:center; background-color:#85B7EB; color:#042C53; ' + headerStyle + '">ราคา (บาท/ตัว)</div>' +
-    '<div style="grid-column:span 2; text-align:center; background-color:#97C459; color:#173404; ' + headerStyle + '">จำนวนส่งต่อเที่ยว (ตัว/เที่ยว)</div>' +
+    '<div style="grid-row:span 2; background:var(--bg-subtle-2); ' + headerStyle + stickyStyle + '"><div>' + noWrap("ความยาว") + '<br>' + noWrap("(ม.)") + '</div></div>' +
+    '<div style="grid-row:span 2; ' + headerStyle + '"><div>' + noWrap("สูง h") + '<br>' + noWrap("(ม.)") + '</div></div>' +
+    '<div style="grid-row:span 2; ' + headerStyle + '"><div>' + noWrap("น้ำหนัก") + '<br>' + noWrap("(ตัน/ตัว)") + '</div></div>' +
+    '<div style="grid-column:span ' + columns.length + '; background-color:#85B7EB; color:#042C53; ' + headerStyle + '">ราคา (บาท/ตัว)</div>' +
+    '<div style="grid-column:span 2; background-color:#97C459; color:#173404; ' + headerStyle + '"><div>' + noWrap("จำนวนส่งต่อเที่ยว") + '<br>' + noWrap("(ตัว/เที่ยว)") + '</div></div>' +
     columns.map(function (c) {
-      return '<div style="text-align:right; background-color:#85B7EB; color:#042C53; ' + headerStyle + '">' + c.label + '</div>';
+      return '<div style="background-color:#85B7EB; color:#042C53; ' + headerStyle + '"><div>' + c.label + '<br>' + noWrap("(" + c.code + ")") + '</div></div>';
     }).join("") +
-    '<div style="text-align:right; background-color:#97C459; color:#173404; ' + headerStyle + '">เทรลเลอร์ 18 ล้อ</div>' +
-    '<div style="text-align:right; background-color:#97C459; color:#173404; ' + headerStyle + '">รถ 10 ล้อ</div>' +
+    '<div style="background-color:#97C459; color:#173404; ' + headerStyle + '"><div>' + noWrap("เทรลเลอร์") + '<br>' + noWrap("18 ล้อ") + '</div></div>' +
+    '<div style="background-color:#97C459; color:#173404; ' + headerStyle + '">' + noWrap("รถ 10 ล้อ") + '</div>' +
   '</div>';
 
-  var rows = products.map(function (p) {
+  var rows = products.map(function (p, index) {
     var isEditingThis = s.plankGirderEditingId === p.id;
+    var rowBg = index % 2 ? "#F3F5F8" : "#fff";
 
     var priceCells = columns.map(function (c) {
       if (isEditingThis) {
         var raw = s[c.editKey];
         var parsed = parseFloat(raw);
-        return '<div style="' + groupCellStyle(priceBg) + '">' +
-          '<input id="field-' + c.editKey + '" type="text" inputmode="decimal" data-bind="' + c.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + '" />' +
-          '<div style="font-size:10.5px; color:var(--text-muted); text-align:right; margin-top:3px;">รวม VAT ' + (isNaN(parsed) ? "-" : fmt(plankGirderVat(parsed))) + '</div>' +
+        return '<div style="' + groupCellStyle(null, "padding:6px 8px;") + '">' +
+          '<input id="field-' + c.editKey + '" type="text" inputmode="decimal" data-bind="' + c.editKey + '" value="' + esc(raw) + '" style="' + editInputStyle + ' text-align:center;" />' +
+          '<div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:3px;">รวม VAT ' + (isNaN(parsed) ? "-" : fmt(plankGirderVat(parsed))) + '</div>' +
         '</div>';
       }
-      return '<div style="' + groupCellStyle(priceBg, "padding:10px 6px; text-align:right;") + '">' +
+      return '<div style="' + groupCellStyle(null, "padding:6px; text-align:center;") + '">' +
         '<div style="font-size:14px; font-weight:700; color:#111111; line-height:1.3;">' + fmt(p[c.key]) + '</div>' +
         '<div style="font-size:10.5px; color:var(--text-muted); white-space:nowrap;">รวม VAT ' + fmt(plankGirderVat(p[c.key])) + '</div>' +
       '</div>';
     }).join("");
 
-    var smallBtn = "min-height:30px; padding:3px 8px; border-radius:6px; font-size:11.5px; cursor:pointer; font-family:inherit; line-height:1.2;";
+    var smallBtn = "min-height:28px; padding:2px 6px; border-radius:6px; font-size:11.5px; cursor:pointer; font-family:inherit; line-height:1.2;";
     var buttons = "";
     if (isAdmin) {
       buttons = isEditingThis
         ? '<button data-action="save-edit-plank-girder" data-id="' + esc(p.id) + '" title="บันทึก" style="' + smallBtn + ' border:none; background:var(--navy-action); color:#fff;">✓</button>' +
           '<button data-action="cancel-edit-plank-girder" title="ยกเลิก" style="' + smallBtn + ' border:1px solid oklch(0.85 0.01 60); background:#fff; color:var(--text-body);">✕</button>'
         : '<button data-action="start-edit-plank-girder" data-id="' + esc(p.id) + '" title="แก้ไขราคา" style="' + smallBtn + ' border:none; background:var(--bg-subtle);">✏️</button>';
-      buttons = '<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:6px;">' + buttons + '</div>';
     }
 
-    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid var(--border-light); align-items:stretch; background:#fff;">' +
-      '<div style="' + groupCellStyle("#fff", stickyStyle) + '">' +
-        '<div style="font-size:12.5px; font-weight:700; line-height:1.3;">' + fmtN(p.lengthM, 2) + '</div>' +
+    return '<div style="display:grid; grid-template-columns:' + colWidths + '; gap:0; border-top:1px solid var(--border-light); align-items:center; background:' + rowBg + ';">' +
+      '<div style="' + groupCellStyle(rowBg, "align-self:stretch; padding:6px; display:flex; align-items:center; justify-content:center; gap:4px; " + stickyStyle) + '">' +
+        '<span style="font-size:12.5px; font-weight:700; line-height:1.3;">' + fmtN(p.lengthM, 2) + '</span>' +
         buttons +
       '</div>' +
       numCell(fmtN(p.heightM, 2)) +
       numCell(fmtN(p.weightTon, 2)) +
       priceCells +
-      numCell(tripText(p.perTripTrailer18), tripBg) +
-      numCell(tripText(p.perTrip10Wheel), tripBg) +
+      numCell(tripText(p.perTripTrailer18)) +
+      numCell(tripText(p.perTrip10Wheel)) +
     '</div>';
   }).join("");
 
@@ -6962,8 +6964,8 @@ Dashboard.prototype.renderPlankGirderTable = function (std) {
       '<div style="font-size:12.5px; color:var(--text-body); line-height:1.6;">' + esc(std.section) + '</div>' +
     '</div>' +
     this.renderPlankGirderNote(std) +
-    '<div style="background:#fff; border:1px solid var(--border); border-radius:14px; overflow-x:auto; -webkit-overflow-scrolling:touch;">' +
-      '<div style="min-width:' + minWidth + 'px;">' + tableHeader + rows + '</div>' +
+    '<div style="width:fit-content; max-width:min(100%, 1100px); background:#fff; border:1px solid var(--border); border-radius:14px; overflow-x:auto; -webkit-overflow-scrolling:touch;">' +
+      '<div style="width:' + tableWidth + 'px;">' + tableHeader + rows + '</div>' +
     '</div>' +
   '</div>';
 };
