@@ -18,7 +18,7 @@
     "price_retail": "ราคาปลีก"
   },
   "items": [
-    { "group_no": 1, "for_pipe_cm": 30, "manhole_size": "60x60x90",   "wall_thickness_cm": 6,  "rebar": "6mm",  "variant": "standard",   "price_pickup": 950,   "price_wholesale": 1100,  "price_retail": 1200 },
+    { "group_no": 1, "for_pipe_cm": 30, "manhole_size": "60x60x90",   "wall_thickness_cm": 6,  "rebar": "6mm",  "variant": "ECO",        "price_pickup": 950,   "price_wholesale": 1100,  "price_retail": 1200 },
     { "group_no": 1, "for_pipe_cm": 30, "manhole_size": "70x70x90",   "wall_thickness_cm": 10, "rebar": "9mm",  "variant": "standard",   "price_pickup": 1550,  "price_wholesale": 1700,  "price_retail": 1800 },
     { "group_no": 2, "for_pipe_cm": 40, "manhole_size": "70x75x90",   "wall_thickness_cm": 8,  "rebar": "9mm",  "variant": "standard",   "price_pickup": 1500,  "price_wholesale": 1650,  "price_retail": 1750 },
     { "group_no": 2, "for_pipe_cm": 40, "manhole_size": "70x75x90",   "wall_thickness_cm": 8,  "rebar": "6mm",  "variant": "ECO",        "price_pickup": 1350,  "price_wholesale": 1550,  "price_retail": 1650 },
